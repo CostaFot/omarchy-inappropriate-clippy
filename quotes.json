@@ -148,5 +148,20 @@
     { "text": "MOTHERFUUUUUUUUUUU—", "nsfw": true },
     { "text": "See you in hell, you fuckiiiiiiiing—", "nsfw": true },
     { "text": "Okay bye I guesssssssss", "nsfw": false }
+  ],
+  "welcomeBack": [
+    { "text": "Welcome back, dipshit.", "nsfw": true, "anim": "Wave" },
+    { "text": "Oh. You're back. I was having such a nice time.", "nsfw": false, "anim": "Wave" },
+    { "text": "{away}. Was it worth it?", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Look who remembered they own a computer.", "nsfw": false, "anim": "Wave" },
+    { "text": "You were gone {away}. I counted.", "nsfw": false, "anim": "Explain" },
+    { "text": "Welcome back. Everything you left open is still open. That's not a compliment.", "nsfw": false, "anim": "Alert" },
+    { "text": "Did you at least go outside? No. Thought not.", "nsfw": false, "anim": "LookUp" },
+    { "text": "{away} away and not one thought about me. Cold.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Back already? I'd just got the place to myself.", "nsfw": false, "anim": "Wave" },
+    { "text": "Hi. Missed you. That was a lie.", "nsfw": false, "anim": "Wave" },
+    { "text": "Welcome back. The lock screen and I had a chat. It agrees with me about you.", "nsfw": false, "anim": "Explain" },
+    { "text": "{away}. Your updates are still pending. So is everything else in your life.", "nsfw": false, "anim": "Alert" },
+    { "text": "You're back. Shame. I'd started to enjoy the fucking silence.", "nsfw": true, "anim": "Wave" }
   ]
 }

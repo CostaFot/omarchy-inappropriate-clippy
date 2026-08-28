@@ -31,6 +31,12 @@ Ten slaps inside six seconds and he's out cold, same as a kill; `slapsToKill`
 below changes the number (`0` and he takes it forever). Snooze moved to the
 menu to make room for the slap; `"slap": false` gives middle-click back to it.
 
+He sleeps when you're away: the screen locked or off, or Omarchy's idle
+screensaver up. No pacing, no lines, and no calls to your agent for an
+audience of nobody. He's back the moment you are, and if you were gone more
+than a minute he has something to say about it ("Welcome back, dipshit.").
+If his respawn came due while you were gone, he comes back with it.
+
 ## Configuration
 
 The menu covers the common ones (clean mode, sounds, how much he walks, size) and
@@ -60,6 +66,7 @@ into the bar himself, settings and all.
 | `speed` | `40` | Walking speed, px/s |
 | `restless` | `0.3` | 0–1, how often he decides to walk (about once a minute at the default; `1` is constant pacing) |
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
+| `pauseWhenAway` | `true` | He sleeps while the screen is locked or off, or the idle screensaver is up. `false` and he carries on regardless |
 | `screen` | focused | A monitor name (`hyprctl monitors`) to pin him to one screen |
 | `quotesFile` | — | Path to your own quotes JSON, merged into his |
 | `slap` | `true` | `false` turns slapping off. Middle-click snoozes again |
@@ -75,8 +82,9 @@ into the bar himself, settings and all.
 
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
-`quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`
-and `flung` arrays.
+`quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`,
+`flung` and `welcomeBack` arrays. `{away}` in a `welcomeBack` line becomes how
+long you were gone ("47 minutes", "3 hours").
 
 ## Letting your AI agent write his lines
 
@@ -130,7 +138,7 @@ omarchy-shell costafot.clippy respawn
 omarchy-shell costafot.clippy hide        # show brings him back, from hidden or dead
 omarchy-shell costafot.clippy toggle
 omarchy-shell costafot.clippy showMenu  # the menu; hideMenu closes it
-omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden
+omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden | asleep
 omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"
 omarchy-shell costafot.clippy set clean true   # any key from the table; "unset" puts the default back
 omarchy-shell costafot.clippy get clean        # the value in effect, as JSON
@@ -141,7 +149,7 @@ That is also enough for your coding agent to run him: point it at this file
 (`~/.config/omarchy/plugins/costafot.clippy/README.md`) and "make Clippy
 clean, I'm sharing my screen" or "snooze him for an hour" is one command
 away. `set` writes the key to `shell.json` for you, same as the menu does.
-Replies come back on stdout (`ok`, `not now`, `hidden`...), and
+Replies come back on stdout (`ok`, `not now`, `hidden`, `asleep`...), and
 `qs ipc -n -p "$OMARCHY_PATH/shell" show` lists every method with its arguments.
 
 `say` works from anywhere, so an Omarchy hook can feed him lines:

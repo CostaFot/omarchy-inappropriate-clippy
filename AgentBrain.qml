@@ -21,6 +21,8 @@ Item {
 
   property string script: ""
   property bool enabled: false
+  // No calls while he's asleep (screen locked/off); the next take() refills.
+  property bool paused: false
   property bool clean: false
   // Override for the agent; "" means whatever `omarchy default agent` says.
   property string agentOverride: ""
@@ -101,7 +103,7 @@ Item {
   }
 
   function topUp() {
-    if (!enabled || proc.running || script === "") return
+    if (!enabled || paused || proc.running || script === "") return
     var gap = minGapMs * Math.pow(2, Math.min(5, store.failures))
     if (Date.now() - store.lastRun < gap) {
       retry.interval = Math.max(1000, gap - (Date.now() - store.lastRun))

@@ -52,6 +52,36 @@ loader, like omarchy.menu — not to the bar widget.
     (there is no ydotool on the box; that is how it was screenshotted).
   - `PersistentProperties { reloadableId: "costafotClippy" }` for `deadUntil`
     (0 alive, -1 dead until `respawn`, >0 epoch ms), `snoozedUntil`, `lastX`.
+  - `asleep` (`pauseWhenAway`, default true): he stops while nobody can see
+    him. Three sources, all bindings: `shell.serviceFor("omarchy.lock").locked`
+    (the shell's own lock, `$OMARCHY_PATH/shell/plugins/lock/Service.qml`; it
+    also DPMS-blanks 5 s after locking), `shell.serviceFor("omarchy.idle")
+    .idledThisCycle` (`plugins/services/idle`: `IdleMonitor` → screensaver
+    at `idle.screensaver` s, lock at `idle.lock` s; the screensaver is a
+    fullscreen *window*, and our layer is Overlay, so without this he'd walk
+    on top of it), and `screensOff` = every non-disabled
+    `Hyprland.monitors` entry has `lastIpcObject.dpmsStatus === false`.
+    Hyprland has no DPMS event, so `dpmsPoll` calls
+    `Hyprland.refreshMonitors()` (socket, no fork) every 10 s, 2 s while
+    off, and unlock/idle-end refresh at once. `serviceFor` works as a binding
+    because the shell reassigns `_services` on registration (navbar-cat
+    relies on the same). `fallAsleep()` stops walk/brain/quote/bubble/drag
+    timers, stops the sprite and drops the bubble (idle/walking/talking
+    only; dying/reviving finish on their own), and `shown` hides the window.
+    `decide()`, `unprompted()`, `say()` and `maybeBoot()` gate on it;
+    `respawnTimer` swallows a revive while asleep and `wakeUp()` runs it if
+    `deadUntil` has passed, else `idleAnim()` + `scheduleQuote()`.
+    `AgentBrain.paused` blocks `topUp()` (the retry timer would otherwise
+    fire a call into a lock screen). IPC `state` → `asleep`, `say` → `asleep`.
+    Waking after ≥ `welcomeAfterMs` (60 s; a blank cancelled by the mouse is
+    not a trip) says a `welcomeBack` line 1.5 s later (`welcomeTimer`, so the
+    window is mapped and the unlock has faded), `{away}` → `awayText()`
+    ("47 minutes"/"3 hours"/"2 days"), and `agentBrain.remember()` gets
+    "came back after N away" so agent lines can pick it up. Book only: the
+    agent cache is about the screen from before the lock.
+    Tested by hand with `omarchy-brightness-display off|on`; the lock and
+    idle paths are the same kind of binding but were not exercised (needs
+    Costa's password / 150 s idle with stay-awake off).
 - `ClippySprite.qml` — port of clippy.js `src/animator.js`. The full sheet is
   one `Image` inside a `clip: true` 124×93 viewport, translated to the cell
   (`x = -cell.x`) — the CSS background-position approach, so a frame change is
@@ -182,7 +212,7 @@ loader, like omarchy.menu — not to the bar widget.
   dropped — too slow to read at any speed that still looked like typing.
   The kill and fling paths write `bubble.text` directly and set
   `bubble.ai = false` first.
-- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut, dragged, dropped, flung }`
+- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut, dragged, dropped, flung, welcomeBack }`
   (the key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
   merged in (same shape, or a bare array).
@@ -223,8 +253,9 @@ Working end to end on Costa's machine: walks, talks on a timer, left/middle
 click, slap (with knockout at 10), long-press drag, fling-to-death,
 right-click menu (actions + clean/sounds/restless/size), bar icon → same menu
 (dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
-snooze, top and bottom bars, IPC, settings inline on the bar-layout entry.
-On GitHub at the README install URL, v1.4.0 (no tag yet). Not on the
+snooze, sleep while locked/idle/screens-off with a welcome-back line, top and
+bottom bars, IPC, settings inline on the bar-layout entry.
+On GitHub at the README install URL, v1.6.0 (no tag yet). Not on the
 marketplace: see `PUBLISHING.md` for the flow, prior submissions and the
 gap list.
 
@@ -266,6 +297,13 @@ powered by the user's AI agent on omarchy"; the answer is yes, via each
 agent's one-shot CLI mode, not via anything Omarchy provides. Agent lines
 are marked in the bubble (accent border + sparkle, see `Bubble.qml`) so
 you can tell which book a line came from without the journal.
+
+Sleeping done (2026-08-28, v1.6.0): locked / idle-screensaver / DPMS-off
+pauses everything, including agent calls, and a `welcomeBack` line greets
+you after a minute or more away. Costa's question was whether he fires while
+the screen is off or locked; he did, ~4 agent calls an hour all night with
+`ai: true`. See the `asleep` bullet above. DPMS path tested by hand; lock
+and idle paths not yet.
 
 Ideas, in rough order of payoff:
 - Reactive lines without the agent: battery, CPU, pending updates, hour of

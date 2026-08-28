@@ -108,7 +108,8 @@ Item {
     size: 30, clean: false, intervalMin: 90, intervalMax: 420, speed: 40, restless: 0.3,
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
-    drag: true, fling: true, ai: false, aiAgent: "", aiModel: ""
+    drag: true, fling: true, ai: false, aiAgent: "", aiModel: "",
+    pauseWhenAway: true
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
   function isSettingKey(key) { return Object.prototype.hasOwnProperty.call(settingDefaults, key) }
@@ -188,7 +189,107 @@ Item {
   readonly property int defaultBarSize: barVertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
   readonly property int barSize: shell && shell.bar ? Math.max(0, shell.bar.barSize) : defaultBarSize
   readonly property int bubbleReserve: 150
-  readonly property bool shown: opened && !barVertical && !barHidden
+  readonly property bool shown: opened && !barVertical && !barHidden && !asleep
+
+  // Asleep while nobody can see him: the session is locked, the shell's idle
+  // cycle is on (screensaver up, lock on its way; our layer is Overlay, so
+  // he'd otherwise pace across the screensaver), or every screen is off. No
+  // walking, no lines, no agent calls. Lock and idle are the shell's own
+  // services (`plugins/lock`, `plugins/services/idle`), live properties via
+  // `serviceFor`, which re-evaluates as services register. DPMS has no
+  // Hyprland event, so `dpmsPoll` asks the monitor list over the socket.
+  // `pauseWhenAway: false` keeps him going regardless.
+  readonly property bool pauseWhenAway: setting("pauseWhenAway", true) !== false
+  readonly property var lockService: shell && typeof shell.serviceFor === "function" ? shell.serviceFor("omarchy.lock") : null
+  readonly property var idleService: shell && typeof shell.serviceFor === "function" ? shell.serviceFor("omarchy.idle") : null
+  readonly property bool sessionLocked: !!(lockService && lockService.locked === true)
+  readonly property bool userIdle: !!(idleService && idleService.idledThisCycle === true)
+  readonly property bool screensOff: {
+    var list = Hyprland.monitors ? Hyprland.monitors.values : []
+    var known = 0, lit = 0
+    for (var i = 0; i < list.length; i++) {
+      var o = list[i] ? list[i].lastIpcObject : null
+      if (!o || o.disabled === true) continue
+      known++
+      if (o.dpmsStatus !== false) lit++
+    }
+    return known > 0 && lit === 0
+  }
+  readonly property bool asleep: pauseWhenAway && (sessionLocked || userIdle || screensOff)
+  // Computed on demand, not bound: in onAsleepChanged the sibling bindings
+  // may not have caught up yet.
+  function awayReason() { return sessionLocked ? "session locked" : userIdle ? "you're idle" : screensOff ? "screens off" : "" }
+  // Quicker while the screens are off so he's back soon after they light up.
+  Timer {
+    id: dpmsPoll
+    interval: root.screensOff ? 2000 : 10000
+    repeat: true
+    running: root.pauseWhenAway
+    onTriggered: Hyprland.refreshMonitors()
+  }
+  // Unlock turns the screens back on; don't wait a poll to notice.
+  onSessionLockedChanged: if (!sessionLocked) Hyprland.refreshMonitors()
+  onUserIdleChanged: if (!userIdle) Hyprland.refreshMonitors()
+  onAsleepChanged: asleep ? fallAsleep() : wakeUp()
+
+  // A `welcomeBack` line when he wakes, if you were gone long enough to
+  // count (a screen blank you cancelled with the mouse isn't a trip).
+  // `{away}` in a line becomes "47 minutes" / "3 hours" / "2 days".
+  property real asleepSince: 0
+  property real awayMs: 0
+  readonly property int welcomeAfterMs: 60 * 1000
+  Timer { id: welcomeTimer; interval: 1500; repeat: false; onTriggered: root.welcome() }
+  function awayText(ms) {
+    var m = Math.max(1, Math.round(ms / 60000))
+    if (m < 60) return m + (m === 1 ? " minute" : " minutes")
+    var h = Math.round(m / 60)
+    if (h < 48) return h + (h === 1 ? " hour" : " hours")
+    var d = Math.round(h / 24)
+    return d + " days"
+  }
+  function welcome() {
+    if (asleep || mood !== "idle" || dragging || isSnoozed()) return
+    var q = randomQuoteFrom("welcomeBack")
+    var text = (q ? q.text : "Welcome back. I counted.").replace(/\{away\}/g, awayText(awayMs))
+    say(text, q && q.anim ? q.anim : "Wave")
+  }
+
+  function fallAsleep() {
+    console.log("clippy: asleep, " + awayReason())
+    asleepSince = Date.now()
+    walkAnim.stop()
+    shoveAnim.stop()
+    brain.stop()
+    quoteTimer.stop()
+    bubbleTimer.stop()
+    dragTalk.stop()
+    // Dying, dead and reviving run their course (short, and the window is
+    // hidden anyway); a respawn that lands meanwhile waits for wakeUp().
+    if (mood === "walking" || mood === "talking" || mood === "idle") {
+      persisted.lastX = actor.x
+      bubble.shown = false
+      sprite.stop()
+      mood = "idle"
+    }
+  }
+
+  function wakeUp() {
+    var away = asleepSince > 0 ? Date.now() - asleepSince : 0
+    asleepSince = 0
+    if (!booted) return  // maybeBoot() takes it from here
+    console.log("clippy: awake after " + Math.round(away / 1000) + "s")
+    var longEnough = away >= welcomeAfterMs
+    if (longEnough) agentBrain.remember("came back after " + awayText(away) + " away")
+    if (mood === "dead") {
+      if (persisted.deadUntil > 0 && persisted.deadUntil <= Date.now()) revive()
+      return
+    }
+    if (mood === "idle" && !dragging) {
+      idleAnim()
+      if (longEnough) { awayMs = away; welcomeTimer.restart() }
+    }
+    scheduleQuote()
+  }
 
   onBarVerticalChanged: if (barVertical) console.warn("clippy: vertical bars are not supported, hiding")
 
@@ -211,7 +312,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "welcomeBack"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   function emptyBook() {
@@ -262,6 +363,7 @@ Item {
     id: agentBrain
     script: root.pluginDir + "/scripts/clippy-ai"
     enabled: root.aiEnabled
+    paused: root.asleep
     clean: root.clean
     agentOverride: root.aiAgent
     model: root.aiModel
@@ -316,6 +418,7 @@ Item {
     var maxX = Math.max(0, stage.width - actor.width)
     actor.x = persisted.lastX >= 0 ? clamp(persisted.lastX, 0, maxX) : Math.round(rand(0, maxX))
     mood = "idle"
+    if (asleep) return  // wakeUp() starts him
     idleAnim()
     scheduleQuote()
   }
@@ -324,7 +427,7 @@ Item {
   Timer { id: brain; repeat: false; onTriggered: root.decide() }
   Timer { id: quoteTimer; repeat: false; onTriggered: root.unprompted() }
   Timer { id: bubbleTimer; repeat: false; onTriggered: root.hideBubble() }
-  Timer { id: respawnTimer; repeat: false; onTriggered: root.revive() }
+  Timer { id: respawnTimer; repeat: false; onTriggered: if (!root.asleep) root.revive() }
   Timer {
     id: dieTimer
     repeat: false
@@ -341,7 +444,7 @@ Item {
   }
 
   function decide() {
-    if (mood !== "idle" || dragging) return
+    if (mood !== "idle" || dragging || asleep) return
     if (Math.random() < restless) startWalk()
     else idleAnim()
   }
@@ -394,7 +497,7 @@ Item {
   function say(text, anim, ai) {
     text = String(text || "").trim()
     if (text === "") return false
-    if (mood === "dead" || mood === "dying" || mood === "reviving") return false
+    if (mood === "dead" || mood === "dying" || mood === "reviving" || asleep) return false
     walkAnim.stop()
     brain.stop()
     mood = "talking"
@@ -420,6 +523,7 @@ Item {
   }
 
   function unprompted() {
+    if (asleep) return  // wakeUp() reschedules
     scheduleQuote()
     if (mood !== "idle" && mood !== "walking") return
     if (isSnoozed() || dragging) return
@@ -748,7 +852,7 @@ Item {
   IpcHandler {
     target: "costafot.clippy"
     function ping(): string { return "ok" }
-    function say(text: string): string { return !root.opened ? "hidden" : (root.say(text) ? "ok" : "not now") }
+    function say(text: string): string { return !root.opened ? "hidden" : root.asleep ? "asleep" : (root.say(text) ? "ok" : "not now") }
     // A line of his own choosing: what a left-click does.
     function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim, q.ai) ? "ok" : "not now" }
     function shutUp(): string { root.hideBubble(); return "ok" }
@@ -797,6 +901,7 @@ Item {
     function ai(): string { return root.aiEnabled ? agentBrain.status() : "off" }
     function state(): string {
       if (!root.opened) return "hidden"
+      if (root.asleep) return "asleep"
       if (root.mood === "dead") return "dead"
       if (root.isSnoozed()) return "snoozed"
       return root.mood
