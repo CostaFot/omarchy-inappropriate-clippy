@@ -509,6 +509,22 @@ no cloud calls, Costa's rule. Verdict after hearing it live: "it's fun.
 not amazing" — the clone carries the accent and cadence, not the game's
 filter. Don't oversell it and don't chase clone quality without a new ask.
 
+C-3PO cloned (2026-08-29): the current voice on Costa's box, replacing the
+espeak robot (`tts` was back to `true` when the ask came; Rubick's wav still
+stands). The blessed default was already the C-3PO homage ("a fussy English
+droid"), so the real thing was the obvious first clone. Source is a
+voice-line compilation Costa supplied (youtu.be/Z_OjTojCNm0, audio rip);
+the approved take is the Tatooine monologue run at seconds 26.9–46.9
+("How did we get into this mess… made to suffer… what a desolate place"),
+picked by transcribing the clip (throwaway faster-whisper venv — every line
+in it is 3PO, that window had the quietest inter-line floor at −22 dB),
+normalized +10 dB, exaggeration 0.5, cfg 0.5. The exact wav is
+`~/.local/share/chatterbox-tts/voices/c3po.wav` — same rule as Rubick,
+don't regenerate it. Verdict: "it sounds fine" — the clone carries Daniels'
+accent and fret, not the metallic sheen; a gentle ffmpeg chain appended to
+the `tts` string is the known fix if that ever gets asked for. Nothing of
+this lands in the repo — reference and setting are home-dir state.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin
