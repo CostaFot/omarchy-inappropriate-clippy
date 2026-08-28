@@ -58,13 +58,6 @@ the right monitor, he lands on the left one instead of dying. More work
 (the PanelWindow is per-screen), but multi-monitor is a common Omarchy
 setup and it doubles his territory.
 
-## Update nagging
-
-The one thing the real Clippy would do: Omarchy knows about pending
-updates, so "It looks like you have 34 pending updates. It looks like
-you're ignoring them." — a fact fed to `clippy-ai`, or a book line with an
-`{updates}` placeholder. Peak lore-accuracy per line of code.
-
 ## Done
 
 - Tombstone + epitaph — a grave at the death spot, click it and he talks
@@ -72,6 +65,13 @@ you're ignoring them." — a fact fed to `clippy-ai`, or a book line with an
 
 ## Decided against
 
+- **Update nagging** — the count is one `checkupdates --nocolor | wc -l`
+  away (`omarchy-update-available` only covers Omarchy itself, and
+  checkupdates network-syncs a temp DB, so hourly at most). Scratched
+  (2026-08-29): we don't want him actually nagging. He's a heckler, not a
+  chore reminder — an update nag would be *useful*, and useful is the
+  wrong kind of annoying. (The welcomeBack line about pending updates
+  stays: it's a gag, it checks nothing.)
 - **Eyes on the cursor** — investigated (2026-08-28) and entirely doable:
   all eight Look* animations are in the atlas and return to neutral on
   their own, and a lazy `hyprctl cursorpos` poll while idle is cheap.

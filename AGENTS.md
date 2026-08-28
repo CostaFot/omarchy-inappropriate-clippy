@@ -386,11 +386,11 @@ keep the totals, and a shell restart resets them — that's the
 PersistentProperties trade, same as `deadUntil`.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
-- Reactive lines without the agent: battery, CPU, pending updates, hour of
+- Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin
   state are reachable from a panel — see ~/Work/omarchy-navbar-cat for how
   it listens to Hyprland/MPRIS/UPower). Or feed more of that into
-  `clippy-ai`'s facts: pending updates, notifications, the workspace.
+  `clippy-ai`'s facts: notifications, the workspace.
 - Let the agent pick the animation too (`anim` per line).
 - The 15 original Clippy sounds live base64-encoded in clippy.js
   `agents/Clippy/sounds-mp3.js`; frames carry `sound` ids already. The
