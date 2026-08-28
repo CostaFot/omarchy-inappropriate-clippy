@@ -1,0 +1,99 @@
+# Publishing to the Omarchy plugin marketplace
+
+Written 2026-08-28. Status: **not submitted yet.** Everything below is what an
+agent needs to take it from here; it mirrors what was done for
+`costafot.autoduck` and `costafot.yeet`.
+
+## The flow (https://omarchyplugins.com/publish.html)
+
+Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
+(docs there: `SUBMISSION.md`, `SECURITY.md`, `VERIFICATION.md`).
+
+1. Repo prep: root `manifest.json` with every field, README with install
+   **and remove** commands, `LICENSE`, optional root `preview.png`
+   (the marketplace generates card + detail images from it itself; ≤50 MB,
+   ≤40 MP). Public GitHub repo, pushed.
+2. `omarchy plugin validate ~/Work/omarchy-inappropriate-clippy` — the real
+   checkout, not the symlink in `~/.config/omarchy/plugins`.
+3. Open the "Submit a plugin" issue form:
+   https://github.com/HANCORE-linux/omarchy-plugin-marketplace/issues/new?template=submit-plugin.yml
+   Title `[Plugin]: <name>`. Fields: repository URL, category (dropdown:
+   Appearance, Desktop, Developer Tools, Hardware, Productivity, System,
+   Widgets, Other), 1–3 tags (AI, Bar, Games, Hyprland, Launcher, Media,
+   Power management, Quickshell, Security, System, Workspaces), optional
+   suggested tag, maintainer notes, five checkboxes (all required). The
+   six headings must stay in order or the bot ignores the issue.
+4. Bots comment: "Marketplace validation" (structure + Quattro
+   compatibility at the exact HEAD commit) and "Automated security
+   baseline" (`passed` / `review-required` / `needs-fixes`). A maintainer
+   then applies `approved-and-verified` and it goes live at
+   `https://omarchyplugins.com/plugin.html?id=costafot.clippy`.
+5. **Every later release needs its own "Verify plugin" issue** with the
+   exact target SHA (template `verify-plugin.yml`, action "Verify and
+   publish a newer upstream commit"). The listing is pinned to a commit;
+   until you file one, new pushes show as "Update unverified".
+
+## Prior art to copy from
+
+- Autoduck submission: HANCORE-linux/omarchy-plugin-marketplace#2272
+  (Desktop; media, quickshell, bar; suggested "audio"; baseline `passed`;
+  published the same day). Update: #2516 (Verify form, target commit SHA).
+- Yeet submission: #2651 (Productivity; bar, quickshell, media; suggested
+  "sharing"). Got `review-required` for the native-messaging host, a
+  maintainer found two real bugs, fixed at a new commit and answered in
+  the thread. Still open as of 2026-08-28.
+- Both shipped with a `v1.0.0` GitHub release and a ~16:9 `preview.png`
+  (4267×2400).
+- `gh issue view <n> -R HANCORE-linux/omarchy-plugin-marketplace --json body`
+  gives the exact body shape; `SUBMISSION.md` there also has a
+  `gh issue create` heredoc for doing it from the CLI.
+
+## What Clippy already has
+
+- Manifest: all required fields, id `costafot.clippy`, version 1.4.0,
+  kinds `panel` + `bar-widget`. Validate passes (exit 0, silent).
+- LICENSE (MIT), README, `preview.png` (2400×260), `main` pushed and
+  clean at the time of writing.
+- Nothing that trips the baseline's documented patterns: the only `curl`
+  is `scripts/fetch-assets`, which pipes into `sed | jq > file` (never a
+  shell); no install/setup-named files, no sudo, no binaries. Expect
+  `passed`.
+
+## Gaps — do these first
+
+1. **README removal line.** Checklist item 1 is "installation and removal
+   instructions". Add `omarchy plugin remove costafot.clippy` under the
+   install command (autoduck's README has the same line).
+2. **Tag/release.** Repo has zero tags although the manifest says 1.4.0.
+   Not required by the marketplace, but both others had `v1.0.0` at
+   submission. Tag the submitted commit (`git tag v1.4.0` or whatever the
+   manifest says then; `gh release create`). Pushing/tagging is Costa's
+   call — prepare, don't push, unless asked.
+3. **Preview aspect.** 2400×260 is a bar strip; the marketplace card will
+   crop or letterbox it. Take a ~16:9 screenshot of him mid-insult on the
+   bar with some desktop under it and put that at `preview.png`; the strip
+   can move to `assets/` and stay as the README banner. Costa takes the
+   shot (the menu can be driven via `omarchy-shell costafot.clippy
+   showMenu`, `say "..."` for a chosen line).
+4. **Maintainer notes** (the form's free text) — say all of this:
+   - Profane by default; `clean: true` (menu row "Clean") drops every line
+     tagged `nsfw`. The marketplace has no content policy, but disclose it.
+   - Clippy artwork/name are Microsoft's; sprites from clippy.js
+     (`scripts/fetch-assets`, results committed); code is MIT. The
+     marketplace has a `rights-request.yml` template, so disclose up front.
+   - Config writes: only its own entry in `~/.config/omarchy/shell.json` —
+     settings the user picks in the menu, plus a one-time move of a
+     pre-icon entry from `plugins[]` into `bar.layout.right` on mount
+     (`adoptIntoBar()`). Never touches other keys or files.
+   - Plays WAV sounds via QtMultimedia (stock quickshell); reads an
+     optional user-supplied `quotesFile`; no external dependencies; install
+     and remove via the standard `omarchy plugin add/remove` flow.
+5. **Category/tags.** Desktop (same as autoduck) or Other; tags Bar +
+   Quickshell (Games is a stretch); suggest "Fun" as the missing tag.
+
+## After it's listed
+
+- Add the marketplace URL to the README install section (autoduck's
+  README does not, but it's the obvious place).
+- On each release: bump `manifest.json` version, tag, push, then the
+  Verify issue with the full 40-char SHA. Record the issue numbers here.

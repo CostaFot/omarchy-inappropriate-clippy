@@ -165,7 +165,9 @@ click, slap (with knockout at 10), long-press drag, fling-to-death,
 right-click menu (actions + clean/sounds/restless/size), bar icon → same menu
 (dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
 snooze, top and bottom bars, IPC, settings inline on the bar-layout entry.
-On GitHub at the README install URL, v1.4.0.
+On GitHub at the README install URL, v1.4.0 (no tag yet). Not on the
+marketplace: see `PUBLISHING.md` for the flow, prior submissions and the
+gap list.
 
 Movement is a random brain (`decide()`): idle beats 10-30 s apart, each one
 turns into a walk with probability `restless` (default 0.3), walks are mostly
