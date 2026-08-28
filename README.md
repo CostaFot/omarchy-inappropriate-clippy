@@ -28,7 +28,8 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 Left-click the bubble to dismiss it.
 
 Ten slaps inside six seconds and he's out cold, same as a kill; `slapsToKill`
-below changes the number (`0` and he takes it forever). Snooze moved to the
+below changes the number (`0` and he takes it forever). However he goes, a
+little tombstone marks the spot until he's back. Snooze moved to the
 menu to make room for the slap; `"slap": false` gives middle-click back to it.
 
 He sleeps when you're away: the screen locked or off, or Omarchy's idle
@@ -66,6 +67,7 @@ into the bar himself, settings and all.
 | `speed` | `40` | Walking speed, px/s |
 | `restless` | `0.3` | 0–1, how often he decides to walk (about once a minute at the default; `1` is constant pacing) |
 | `avoidWidgets` | `true` | When he picks where to walk he tries not to park on the clock, the tray or your workspaces. Soft — a drag or a slap still leaves him wherever it leaves him |
+| `tombstone` | `true` | A little headstone where he died, up until the respawn. It parks in a widget gap like he does, and clicks pass straight through it |
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
 | `pauseWhenAway` | `true` | He sleeps while the screen is locked or off, or the idle screensaver is up. `false` and he carries on regardless |
 | `screen` | focused | A monitor name (`hyprctl monitors`) to pin him to one screen |

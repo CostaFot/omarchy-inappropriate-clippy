@@ -109,7 +109,7 @@ Item {
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
     drag: true, fling: true, ai: false, aiAgent: "", aiModel: "",
-    pauseWhenAway: true, avoidWidgets: true
+    pauseWhenAway: true, avoidWidgets: true, tombstone: true
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
   function isSettingKey(key) { return Object.prototype.hasOwnProperty.call(settingDefaults, key) }
@@ -132,6 +132,9 @@ Item {
   // He tries not to park on top of bar widgets when picking a walk target.
   // Soft: drags, shoves and flings still land him anywhere.
   readonly property bool avoidWidgets: setting("avoidWidgets", true) !== false
+  // A headstone at the death spot until the respawn. It is never part of
+  // the window's input mask, so it cannot block a click on the bar.
+  readonly property bool tombstoneEnabled: setting("tombstone", true) !== false
 
   // Writes one inline key on our shell.json entry (undefined removes it).
   // The shell rewrites shell.json and remounts us; persisted state carries over.
@@ -403,6 +406,7 @@ Item {
     property real deadUntil: 0
     property real snoozedUntil: 0
     property real lastX: -1
+    property real graveX: -1
   }
 
   function isSnoozed() { return persisted.snoozedUntil > Date.now() }
@@ -498,12 +502,13 @@ Item {
     return merged
   }
 
-  // Position intervals [lo, hi] where the whole actor (x .. x+width)
-  // overlaps no widget. An empty bar layout is one gap spanning everything.
-  function freeGaps() {
+  // Position intervals [lo, hi] where a thing of width `w` (the actor,
+  // unless told otherwise — the tombstone is narrower) overlaps no widget.
+  // An empty bar layout is one gap spanning everything.
+  function freeGaps(w) {
     var occ = occupiedIntervals()
     if (occ === null) return null
-    var w = actor.width
+    w = w || actor.width
     var maxX = Math.max(0, stage.width - w)
     var gaps = [], lo = 0
     for (var i = 0; i <= occ.length; i++) {
@@ -665,8 +670,21 @@ Item {
 
   function finishDeath() {
     mood = "dead"
+    placeGrave()
     persisted.deadUntil = respawnSeconds > 0 ? Date.now() + respawnSeconds * 1000 : -1
     armRespawn()
+  }
+
+  // The tombstone marks where he died, snapped into a widget gap the same
+  // way his walk targets are (it is narrower than him, so it fits in more
+  // places). A fling carried him off-stage: its grave stands at the edge
+  // he left by, which the clamp on his centre works out to.
+  function placeGrave() {
+    if (!tombstoneEnabled) { persisted.graveX = -1; return }
+    var w = grave.width
+    var maxX = Math.max(0, stage.width - w)
+    var cx = clamp(actor.x + actor.width / 2, 0, stage.width)
+    persisted.graveX = Math.round(nudge(clamp(cx - w / 2, 0, maxX), freeGaps(w)))
   }
 
   function armRespawn() {
@@ -1159,6 +1177,16 @@ Item {
             if (q) root.say(q.text, q.anim, q.ai)
           }
         }
+      }
+
+      // Where he died. Not in the window's input mask, so it can never
+      // block a click on whatever it stands over — it only shades it.
+      Tombstone {
+        id: grave
+        size: root.spriteSize
+        x: persisted.graveX
+        y: root.barBottom ? stage.height - height : root.actorHeight - height
+        shown: root.tombstoneEnabled && root.mood === "dead" && persisted.graveX >= 0
       }
 
       Bubble {

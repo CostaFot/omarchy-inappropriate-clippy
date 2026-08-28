@@ -158,6 +158,18 @@ loader, like omarchy.menu — not to the bar widget.
   kHz from mp3s Costa picked) through the same `SoundBank` Instantiator
   component as the slaps; `flingSound` defaults to `slapSoundOn` so the
   menu's "Sounds" row mutes both.
+- `Tombstone.qml` — a headstone at the death spot while `mood == "dead"`
+  (`tombstone: true`): tooltip-coloured stone, paperclip-over-RIP engraving,
+  mound, OutBounce thud on appear, 500 ms fade out when `revive()` flips the
+  mood. `placeGrave()` (called from `finishDeath()`) snaps it into a widget
+  gap with the walk machinery — `freeGaps(w)` takes a width now, and the
+  stone is narrower than him, so it fits more places; a fling's grave is
+  placed by clamping his (off-stage) centre to the stage, so it stands at
+  the edge he left by, nudged off whatever occupies it (the workspaces, on
+  the left). `persisted.graveX` (-1 = none) survives remounts; verified two
+  `set`-triggered remounts keep it pixel-identical. **Never in the window's
+  input mask**: a widget that grows under it (tray drawer) is shaded, never
+  blocked — that was the covering worry, and the mask answers it.
 - `AgentBrain.qml` + `scripts/clippy-ai` — lines from the user's default
   coding agent (`ai: true`, off by default). Omarchy's "default agent" is
   only a name in `~/.config/omarchy/defaults/agent` (`omarchy-default-agent`
@@ -256,7 +268,7 @@ right-click menu (actions + clean/sounds/restless/size), bar icon → same menu
 (dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
 snooze, sleep while locked/idle/screens-off with a welcome-back line, top and
 bottom bars, IPC, settings inline on the bar-layout entry.
-On GitHub at the README install URL, v1.7.0 (no tag yet). Not on the
+On GitHub at the README install URL, v1.8.0 (no tag yet). Not on the
 marketplace: see `PUBLISHING.md` for the flow, prior submissions and the
 gap list.
 
@@ -329,6 +341,14 @@ only busier-making change. Boot and revive placement prefer a gap too
 `shell.bar`, a shell without `moduleSlots`, or no gap he fits in all fall
 back to raw targets. Verified with `restless 1` and screenshot pairs against
 `omarchy-shell shell debugBarGeometry` (same coordinate space).
+
+Tombstone done (2026-08-28, v1.8.0): every death leaves a grave until the
+respawn (see `Tombstone.qml` above). Costa's worry was covering the bar; the
+answer is the input mask (it never takes clicks) plus gap-snapping (it
+rarely even overlaps). Verified over IPC: kill mid-bar, fling off the left
+edge (grave nudged right of the workspaces/media cluster), two remounts
+while dead, respawn fade. The thud/bounce on appear is not
+pointer-verifiable from a terminal; it's a 450 ms OutBounce on the stone.
 
 Ideas, in rough order of payoff:
 - Reactive lines without the agent: battery, CPU, pending updates, hour of
