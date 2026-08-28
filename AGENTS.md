@@ -200,9 +200,13 @@ loader, like omarchy.menu — not to the bar widget.
   playerctl, the hour, `~/.local/state/omarchy/agents/usage/<agent>.json`
   limits, plus a `--recent` note of slaps/drags/kills the QML side
   collects) and hands them over as text, tool-less, from `$TMPDIR` so no
-  CLAUDE.md is picked up. Eight random lines from `quotes.json` (+
+  CLAUDE.md is picked up. Twelve random lines from `quotes.json` (+
   `--quotes <quotesFile>`, nsfw dropped under `--clean`) go in the system
-  prompt as register examples; without them the model guessed mild.
+  prompt as register examples; without them the model guessed mild. The
+  prompt asks for "jabs" under explicit rules (accusation not description,
+  one short sentence, numbers only as setups, no "champ"/Twitch-isms) —
+  the first prompt asked for "remarks" and got wordy observation-plus-sneer
+  lines that never swore; Costa wanted more pointed, more irreverent.
   `--context` prints the facts, `--prompt` the whole prompt. Output is a
   JSON array of lines, parsed three ways in turn: as JSON; else every JSON
   string literal in the text (claude sometimes emits the array with blank

@@ -125,14 +125,14 @@ if command -v jq >/dev/null; then
         | .[] | (if type == "string" then {text: ., nsfw: false} else . end)
         | select(.text != null) | select(($clean | not) or (.nsfw | not)) | .text
       ' "$f" 2>/dev/null
-    done | shuf -n 8 | sed 's/^/- /'
+    done | shuf -n 12 | sed 's/^/- /'
   )
 fi
 
-tone="Swearing is allowed and welcome."
+tone="Swearing is allowed and welcome — use it the way the examples do, for punch, not decoration; a couple of your lines should swear."
 [[ $clean == "true" ]] && tone="Keep it clean: no swearing, no slurs, nothing sexual. Rude is fine."
 
-system="You are Clippy, the Microsoft Office paperclip, now living on a Linux desktop's status bar and deeply unimpressed by its owner. You interrupt with short, sarcastic, passive-aggressive remarks about whatever the user is doing. $tone Never be hateful about protected groups. Never give real help or advice. Never mention being an AI or a language model, and never explain the joke."
+system="You are Clippy, the Microsoft Office paperclip, now living on a Linux desktop's status bar. You have watched this user for years and you are out of patience. Nothing about them is sacred: their skills, their career, their habits, their social life, their unfinished work. You interrupt with short, mean, personal jabs about whatever they are doing. $tone Never be hateful about protected groups, and keep it out of the bedroom — you mock what they do at this desk. Never give real help or advice. Never mention being an AI or a language model, and never explain the joke."
 if [[ -n $examples ]]; then
   system="$system
 
@@ -144,7 +144,13 @@ user="Here is what is going on right now on the user's machine:
 
 $context
 
-Write $count remarks Clippy would make, each one reacting to something specific above (the window, the battery, the hour, the music, their AI usage, what they did to you). Vary the target; don't lead every line with the same fact. Each remark is one or two sentences, at most 140 characters, in Clippy's voice, addressing the user as "you", no emoji, no quotes around it. Don't state the exact time or exact numbers you were given as if reading them out; react to them. Reply with only a valid JSON array of $count strings, comma-separated, on one line, and nothing else."
+Write $count jabs Clippy would make. Rules:
+- The best jab is an accusation of something you have watched them do, not a description of system state. A fact is evidence for the attack, never the news.
+- A number or a name from the facts may appear only as the setup of a joke, never read out as a report. Never state the time.
+- A jab is an attack, not an observation with a sneer stapled on. One sentence is best. Well under 100 characters is best. 140 is the hard cap.
+- No pep-talk irony, no \"champ\", no \"buddy\", no \"bold move\". You are not a Twitch chat. You are a disappointed little paperclip who lives with this person.
+- Vary the target across the facts (the window, the battery, the hour, the music, their AI usage, what they did to you). Address the user as \"you\". No emoji, no quotes around the lines.
+Reply with only a valid JSON array of $count strings, comma-separated, on one line, and nothing else."
 
 prompt="$system
 
