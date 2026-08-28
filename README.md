@@ -83,6 +83,9 @@ into the bar himself, settings and all.
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |
 | `tts` | `false` | `true` and he says every line out loud through `espeak-ng` (install that yourself); a shell command as a string gets each line on stdin instead. See below |
+| `ttsVoice` | `en+m3` | The built-in voice — any name from `espeak-ng --voices`. Death still whispers |
+| `ttsSpeed` | `155` | Words per minute for the built-in voice (espeak-ng `-s`, 80–450) |
+| `ttsPitch` | `45` | Pitch for the built-in voice (espeak-ng `-p`, 0–99) |
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
@@ -143,16 +146,56 @@ install espeak-ng", and for agents and scripts `voice` answers with what's
 wrong and the fix, `set tts true` and a silent `say` warn in their replies,
 and one line lands in the journal. Epitaphs are whispered, because he's dead.
 
-If you'd rather he sounded good (why?), set `tts` to a shell command instead.
+The robot takes tuning before you replace him: `ttsVoice` is any name from
+`espeak-ng --voices` (`en+f3`, `en+croak`, `en+Tweaky`, ...), `ttsSpeed` and
+`ttsPitch` are espeak-ng's `-s` and `-p`. One command, from you or your agent:
+
+```bash
+omarchy-shell costafot.clippy set ttsVoice en+croak
+```
+
+Epitaphs stay whispered whatever you pick.
+
+If you'd rather he sounded good (why?), `scripts/setup-voice` does the whole
+thing locally: it installs a small neural TTS into a venv, downloads one
+voice, and points `tts` at it. No cloud calls, a model on your disk, and the
+robot is one `set tts true` away. Bare, you get the blessed voice —
+[kokoro](https://github.com/thewh1teagle/kokoro-onnx)'s `bm_george` (~340 MB)
+put through a ring-modulated robot chain: a fussy English droid, dialed in by
+ear. Pass a name for any
+[kokoro voice](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md)
+unprocessed (`af_heart`, `am_adam`, `jf_alpha`, ...) or, with a dash in the name, any
+[piper catalog](https://rhasspy.github.io/piper-samples/) voice like
+`en_US-ryan-high` — a lighter engine (~60–120 MB) that sounds it.
+
+And the fun one — give him **any voice you have a sample of**, yours
+included:
+
+```bash
+scripts/setup-voice --clone ~/rubick-voice-lines.mp4 rubick
+```
+
+Ten to twenty seconds of clean speech, any format ffmpeg reads. Cloning uses
+[chatterbox](https://github.com/resemble-ai/chatterbox), so it needs an
+NVIDIA GPU and pulls ~8 GB on first run. A small daemon keeps the model warm
+between lines and exits after 15 idle minutes to give your VRAM back; every
+line is cached, so anything he's said before plays instantly and a fresh
+line costs a few seconds of GPU. The menu reads "Voice · custom" while any
+custom voice is wired, and IPC `voice` tells your agent the whole story.
+Temper your expectations: the clone gets the accent and the cadence, not
+the soul. It's fun. It is not amazing.
+
+Or set `tts` to any shell command yourself.
 It runs through `bash -c` and gets each line on stdin, so any engine that
 reads text from stdin plugs in:
 
 ```bash
-omarchy-shell costafot.clippy set tts "piper --model ~/voices/en_US-lessac-medium.onnx --output-raw | pw-play --rate 22050 --format s16 --channels 1 -"
+omarchy-shell costafot.clippy set tts "piper --model ~/voices/en_US-lessac-medium.onnx --output-raw | aplay -q -t raw -r 22050 -f S16_LE -c 1 -"
 ```
 
-Whatever hides the bubble — a slap, a lock, his death — kills the voice
-mid-word. A pipeline like the piper one may finish its sentence anyway;
+A custom command ignores the three tuning keys — it's one string, it gets
+stdin, you own everything. Whatever hides the bubble — a slap, a lock, his
+death — kills the voice mid-word. A pipeline like the piper one may finish its sentence anyway;
 that's between bash and its children.
 
 ## Scripting him

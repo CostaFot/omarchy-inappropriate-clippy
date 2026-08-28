@@ -209,6 +209,14 @@ loader, like omarchy.menu — not to the bar widget.
   installed…", and `say`/`talk` answer "ok — but silent: …" via
   `ipcOkVoice()` instead of a bare ok. The probe is async, so a `set`
   in the same breath as the install may still warn once (v1.11.1).
+  Tuning (v1.12.0): `ttsVoice` (default `en+m3`; single quotes stripped so
+  the quoting in `startTts()` holds), `ttsSpeed` (80–450), `ttsPitch`
+  (0–99) shape the built-in command only — a custom command stays one
+  opaque string and ignores all three, and dead still overrides to
+  `en+whisper` whatever `ttsVoice` says. Agent-first: `voice` appends
+  "— <voice>, <speed> wpm, pitch <pitch>" when the engine is ready, and
+  `set` on the three keys answers "ok — but …" when a custom command,
+  a missing engine or `tts` off means the change can't be heard.
 - `Tombstone.qml` — a headstone at the death spot while `mood == "dead"`
   (`tombstone: true`): tooltip-coloured stone, paperclip-over-RIP engraving,
   mound, OutBounce thud on appear, 500 ms fade out when `revive()` flips the
@@ -446,6 +454,60 @@ child, and `hide` didn't stop speech. Menu "Voice" row verified by
 screenshot. espeak-ng was installed and heard on 2026-08-29 ("he sounds
 like a robot" — Costa, delighted); the `-v en+m3 -s 155 -p 45` tuning is
 approved as-is.
+
+Voice tuning done (2026-08-29, v1.12.0): `ttsVoice`/`ttsSpeed`/`ttsPitch`
+for the built-in espeak-ng path (see the Voice bullet). Costa's ask was
+"anyone can use the voice they prefer", agent-pluggable — the answer is the
+same `set` surface everything else uses, one key per knob, no menu picker
+(same call as `aiModel`: the names are engine-specific). Candidate defaults
+were auditioned out loud (Tweaky, UniRobot, helium m3, HL announcer, then a
+deep "sportscaster" batch — espeak's low-pitch register sounds terrible);
+Costa kept `en+m3 -s 155 -p 45` as shipped. The voice hunt for his box ran
+the same day: fish.audio and ElevenLabs were rejected mid-flight ("we do not
+want cloud calls"), piper auditions crowned `en_US-ryan-high` for about ten
+minutes, then "a female oniichan stupid voice, not too high" landed on
+kokoro `af_heart` — until "the initial voice should be a fkin male dork"
+crowned `am_adam` from a five-male audition as both the blessed default
+and Costa's own `tts` — then "can we make the default voice funnier" ran
+through C-3PO, "deeper", "more distorted, robotic", "higher", and settled
+on ring-mod George: `bm_george` through ffmpeg (`asetrate` +15%,
+`tremolo f=45`, `acrusher bits=6`, 250–3400 band). Bare setup-voice gets
+that chain; a named voice comes through unprocessed; `say.py` phonemizes
+`b*` voices as en-gb (George read American before that).
+`scripts/setup-voice` ships the whole path: bare = the blessed robot
+George (venv + ~340 MB in
+`~/.local/share/kokoro-tts`, a generated `say.py` reading stdin), a name
+with a dash = that piper catalog voice (`~/.local/share/piper-{tts,voices}`);
+both end in `set tts` on a stdin→aplay pipeline (aplay, not pw-play —
+sndfile can't read raw audio from a pipe; bit us) with a spoken hello
+first. ~1.8 s per line for kokoro, model load included. Nothing is bundled
+in the repo — engines are 60-340 MB, so the script downloads on demand.
+
+Voice cloning done (2026-08-29, v1.13.0): `scripts/setup-voice --clone
+<sample> [name]` gives him any voice from a 10-20 s sample. Costa's pick is
+Rubick (Dota 2), cloned from a YouTube compilation he supplied; the approved
+take is exaggeration 0.5, cfg 0.5, reference = seconds 2.6–22.6 of the rip,
+and that exact wav is `~/.local/share/chatterbox-tts/voices/rubick.wav` —
+don't regenerate it, a re-cut sounds subtly different. Engine is chatterbox
+on CUDA in a uv venv (`--python 3.12`: system 3.14 has no torch wheels and
+pip backtracks forever — use uv; `setuptools<81` pinned or perth's
+watermarker import dies on missing pkg_resources and `from_pretrained`
+throws "'NoneType' object is not callable"). Per-line spawn would reload
+2 GB onto the GPU, so `speak-clone` (client, stdlib python3) talks to
+`daemon.py` (venv python) over `$XDG_RUNTIME_DIR/clippy-voice.sock`; the
+daemon self-starts on demand, exits after 15 idle minutes to free ~4 GB
+VRAM, and lines are cached in `~/.cache/clippy-voice` by (ref, knobs,
+text) — repeats instant, fresh line ~5 s warm, ~25 s cold (the bubble's
+SIGTERM just skips that line's audio). TARS (Interstellar) was auditioned
+and dropped — movie-scene audio is too dirty next to a voice-line
+compilation. Explicitness (Costa: "be explicit in the instructions on the
+UI and agent"): the menu Voice row reads "Voice · custom" whenever a
+command string is set, IPC `voice` answers off with the setup-voice
+pointer and appends it to the espeak-ready reply, and the README documents
+every mode. ElevenLabs and fish.audio were explored and rejected mid-hunt:
+no cloud calls, Costa's rule. Verdict after hearing it live: "it's fun.
+not amazing" — the clone carries the accent and cadence, not the game's
+filter. Don't oversell it and don't chase clone quality without a new ask.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

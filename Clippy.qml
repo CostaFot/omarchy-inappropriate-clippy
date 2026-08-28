@@ -108,7 +108,8 @@ Item {
     size: 30, clean: false, intervalMin: 90, intervalMax: 420, speed: 40, restless: 0.3,
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
-    drag: true, fling: true, tts: false, ai: false, aiAgent: "", aiModel: "",
+    drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
+    ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
@@ -191,6 +192,12 @@ Item {
   // stdin. The machinery lives next to the SoundBanks below.
   readonly property var ttsSetting: setting("tts", false)
   readonly property bool ttsOn: ttsSetting === true || (typeof ttsSetting === "string" && ttsSetting !== "")
+  // Tuning for the built-in engine only — a custom command is one opaque
+  // string on stdin and ignores all three. The voice sheds single quotes so
+  // the quoting in startTts() can't be broken by one.
+  readonly property string ttsVoice: String(setting("ttsVoice", "en+m3")).replace(/'/g, "") || "en+m3"
+  readonly property real ttsSpeed: clamp(Number(setting("ttsSpeed", 155)) || 155, 80, 450)
+  readonly property real ttsPitch: clamp(Number(setting("ttsPitch", 45)), 0, 99)
   // An inline `set` doesn't remount us (keepLoaded — the binding just
   // updates), so a changed engine gets its failure warning back here, and
   // turning the voice off shuts him up instead of finishing the line. Two
@@ -871,8 +878,10 @@ Item {
     // exit 127 in onExited — QProcess swallows a straight fail-to-start and
     // exited would never fire. exec so the kill lands on espeak, not on a
     // wrapper; a custom pipeline keeps its bash and may finish the line.
+    // Dead overrides ttsVoice: epitaphs whisper no matter who he was.
     var cmd = typeof ttsSetting === "string" ? ttsSetting
-            : "exec espeak-ng -v " + (mood === "dead" ? "en+whisper" : "en+m3") + " -s 155 -p 45"
+            : "exec espeak-ng -v '" + (mood === "dead" ? "en+whisper" : ttsVoice)
+              + "' -s " + ttsSpeed + " -p " + ttsPitch
     ttsProc.command = ["bash", "-c", cmd]
     ttsProc.stdinEnabled = true
     ttsProc.running = true
@@ -1154,12 +1163,13 @@ Item {
     // Agent-first status for the voice: what `tts` resolves to and whether
     // it can actually be heard right now.
     function voice(): string {
-      if (!root.ttsOn) return "off"
+      if (!root.ttsOn) return "off — set tts true for the robot voice, or run scripts/setup-voice in the plugin dir for a real one (--clone <sample.wav> clones any voice, GPU required)"
       var s = typeof root.ttsSetting === "string"
             ? "custom command: " + root.ttsSetting
             : (root.ttsEngineMissing
                ? "espeak-ng: not installed — silent (sudo pacman -S espeak-ng, or set tts to a shell command)"
-               : "espeak-ng: ready")
+               : "espeak-ng: ready — " + root.ttsVoice + ", " + root.ttsSpeed + " wpm, pitch " + root.ttsPitch
+                 + " (a better voice: scripts/setup-voice in the plugin dir)")
       if (root.ttsWarned) s += "; failing, see journal"
       if (ttsProc.running) s += "; speaking"
       return s
@@ -1185,6 +1195,11 @@ Item {
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
       if (key === "tts" && parsed === true && root.ttsEngineMissing)
         return "ok — but espeak-ng isn't installed, so he stays silent until it is (or set tts to a shell command)"
+      if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
+        if (typeof root.ttsSetting === "string") return "ok — but tts is a custom command, which ignores the built-in tuning"
+        if (root.ttsEngineMissing) return "ok — but espeak-ng isn't installed, so he stays silent until it is"
+        if (!root.ttsOn) return "ok — heard once tts is on"
+      }
       return "ok"
     }
     // The value in effect, as JSON (so "" and 0 and false are tellable apart).

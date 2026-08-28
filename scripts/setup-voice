@@ -1,0 +1,238 @@
+#!/bin/bash
+
+# Give Clippy a real voice, locally — no cloud calls, the model runs on your
+# machine. Three modes:
+#   scripts/setup-voice                    # the blessed voice: robot George
+#   scripts/setup-voice af_heart           # any kokoro voice (af_*, am_*, bm_*, ...)
+#   scripts/setup-voice en_US-ryan-high    # any voice from the piper catalog
+#   scripts/setup-voice --clone ~/sample.mp4 [name]   # clone ANY voice from a
+#                                          # 10-20 s sample — yours included.
+#                                          # Needs an NVIDIA GPU.
+# kokoro (~340 MB) sounds better; piper (~60-120 MB) is lighter. Catalogs:
+#   https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
+#   https://rhasspy.github.io/piper-samples/
+# All modes talk to `tts` the same way: the line on stdin, raw samples to
+# aplay (not pw-play — sndfile can't read raw audio from a pipe).
+
+set -euo pipefail
+
+MODE=voice
+if [ "${1:-}" = "--clone" ]; then
+  MODE=clone
+  SAMPLE="${2:?usage: setup-voice --clone <sample.wav|mp3|mp4> [name]}"
+  NAME="${3:-$(basename "${SAMPLE%.*}" | tr -cd 'A-Za-z0-9_-')}"
+fi
+
+# Bare = the blessed voice: kokoro's bm_george put through a robot — pitch up
+# 15%, ring-mod tremolo, bit-crush, band-limit. Dialed in by ear, one knob at
+# a time. A named voice comes through unprocessed.
+BLESSED=""
+[ $# -eq 0 ] && BLESSED=1
+VOICE="${1:-bm_george}"
+ROBOT_FX="asetrate=24000*1.15,aresample=24000,atempo=0.870,tremolo=f=45:d=0.8,acrusher=bits=6:mode=log:aa=1,highpass=f=250,lowpass=f=3400"
+HELLO="Oh my! It looks like you're giving me a voice. You will regret this."
+
+setup_kokoro() {
+  local base="$HOME/.local/share/kokoro-tts" venv="$HOME/.local/share/kokoro-tts/venv"
+  if [ ! -x "$venv/bin/python" ]; then
+    echo "installing kokoro into $venv ..."
+    python3 -m venv "$venv"
+    "$venv/bin/pip" install --quiet kokoro-onnx
+  fi
+  for f in kokoro-v1.0.onnx voices-v1.0.bin; do
+    [ -s "$base/$f" ] && continue
+    echo "downloading $f ..."
+    curl -fsSL --retry 2 -o "$base/$f" \
+      "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/$f"
+  done
+  cat > "$base/say.py" <<PY
+#!$venv/bin/python
+# Line on stdin -> raw s16 mono 24 kHz on stdout. KOKORO_VOICE/KOKORO_SPEED to taste.
+import sys, os
+text = sys.stdin.read().strip()
+if not text:
+    sys.exit(0)
+import numpy as np
+from kokoro_onnx import Kokoro
+d = os.path.dirname(os.path.realpath(__file__))
+k = Kokoro(f"{d}/kokoro-v1.0.onnx", f"{d}/voices-v1.0.bin")
+voice = os.environ.get("KOKORO_VOICE", "am_adam")
+lang = "en-gb" if voice.startswith("b") else "en-us"
+samples, sr = k.create(text, voice=voice,
+                       speed=float(os.environ.get("KOKORO_SPEED", "1.0")), lang=lang)
+sys.stdout.buffer.write((np.clip(samples, -1, 1) * 32767).astype(np.int16).tobytes())
+PY
+  chmod +x "$base/say.py"
+  CMD="KOKORO_VOICE=$VOICE $base/say.py"
+  [ -n "$BLESSED" ] && CMD="$CMD | ffmpeg -hide_banner -loglevel quiet -f s16le -ar 24000 -ac 1 -i - -af '$ROBOT_FX' -f s16le -"
+  CMD="$CMD | aplay -q -t raw -r 24000 -f S16_LE -c 1 -"
+}
+
+setup_piper() {
+  local venv="$HOME/.local/share/piper-tts/venv" voices="$HOME/.local/share/piper-voices"
+  local locale speaker quality lang
+  IFS=- read -r locale speaker quality <<< "$VOICE"
+  lang="${locale%%_*}"
+  if [ ! -x "$venv/bin/piper" ]; then
+    echo "installing piper into $venv ..."
+    python3 -m venv "$venv"
+    "$venv/bin/pip" install --quiet piper-tts
+  fi
+  mkdir -p "$voices"
+  local ext f
+  for ext in onnx onnx.json; do
+    f="$VOICE.$ext"
+    [ -s "$voices/$f" ] && continue
+    echo "downloading $f ..."
+    curl -fsSL --retry 2 -o "$voices/$f" \
+      "https://huggingface.co/rhasspy/piper-voices/resolve/main/$lang/$locale/$speaker/$quality/$f"
+  done
+  local rate; rate="$(jq -r .audio.sample_rate "$voices/$VOICE.onnx.json")"
+  CMD="$venv/bin/piper -m $voices/$VOICE.onnx --output-raw 2>/dev/null | aplay -q -t raw -r $rate -f S16_LE -c 1 -"
+}
+
+setup_clone() {
+  local base="$HOME/.local/share/chatterbox-tts" venv="$HOME/.local/share/chatterbox-tts/venv"
+  command -v nvidia-smi >/dev/null || {
+    echo "cloning synthesizes every line with chatterbox, which needs an NVIDIA GPU" >&2
+    exit 1
+  }
+  export PATH="$HOME/.local/bin:$PATH"
+  command -v uv >/dev/null || {
+    echo "installing uv (chatterbox needs a pinned python; uv brings its own) ..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1
+  }
+  if [ ! -x "$venv/bin/python" ]; then
+    echo "installing chatterbox into $venv (~6 GB of torch — be patient) ..."
+    uv venv "$venv" --python 3.12 >/dev/null
+    # setuptools<81: chatterbox's perth watermarker still imports pkg_resources
+    uv pip install --python "$venv/bin/python" --quiet chatterbox-tts "setuptools<81"
+  fi
+  mkdir -p "$base/voices"
+  # 20 s of clean mono speech is what the cloner wants; ffmpeg reads anything
+  ffmpeg -y -v quiet -i "$SAMPLE" -vn -ac 1 -ar 24000 -t 20 "$base/voices/$NAME.wav"
+
+  cat > "$base/daemon.py" <<'PY'
+#!VENV_PYTHON
+# Keeps the chatterbox model on the GPU; speak-clone talks to it over a unix
+# socket. Exits after 15 idle minutes so the VRAM comes back.
+import json, os, socket, sys
+RUN = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
+SOCK = os.path.join(RUN, "clippy-voice.sock")
+s = socket.socket(socket.AF_UNIX)
+try:
+    s.bind(SOCK)
+except OSError:
+    probe = socket.socket(socket.AF_UNIX)
+    try:
+        probe.connect(SOCK)
+        probe.close()
+        sys.exit(0)  # another daemon is alive
+    except OSError:
+        os.unlink(SOCK)
+        s.bind(SOCK)
+s.listen(4)
+s.settimeout(900)
+import torchaudio
+from chatterbox.tts import ChatterboxTTS
+model = ChatterboxTTS.from_pretrained(device="cuda")
+while True:
+    try:
+        c, _ = s.accept()
+    except socket.timeout:
+        break
+    try:
+        req = json.loads(c.makefile().readline())
+        wav = model.generate(req["text"], audio_prompt_path=req["ref"],
+                             exaggeration=req.get("exag", 0.5), cfg_weight=req.get("cfg", 0.5))
+        tmp = req["out"] + ".tmp.wav"
+        torchaudio.save(tmp, wav.cpu(), model.sr)
+        os.replace(tmp, req["out"])
+        c.sendall(b"ok\n")
+    except Exception as e:
+        try:
+            c.sendall(("err " + str(e)).encode() + b"\n")
+        except OSError:
+            pass
+    finally:
+        c.close()
+os.unlink(SOCK)
+PY
+  sed -i "1s|.*|#!$venv/bin/python|" "$base/daemon.py"
+  chmod +x "$base/daemon.py"
+
+  cat > "$base/speak-clone" <<'PY'
+#!/usr/bin/env python3
+# Clippy voice-clone client: the line on stdin, played in the cloned voice.
+# Cached by (ref, knobs, text); cache hits never touch the daemon.
+import argparse, hashlib, json, os, socket, subprocess, sys, time
+p = argparse.ArgumentParser()
+p.add_argument("--ref", required=True)
+p.add_argument("--exag", type=float, default=0.5)
+p.add_argument("--cfg", type=float, default=0.5)
+a = p.parse_args()
+text = sys.stdin.read().strip()
+if not text:
+    sys.exit(0)
+ref = os.path.realpath(os.path.expanduser(a.ref))
+key = hashlib.sha256(f"{ref}|{a.exag}|{a.cfg}|{text}".encode()).hexdigest()[:24]
+cache = os.path.expanduser("~/.cache/clippy-voice")
+os.makedirs(cache, exist_ok=True)
+out = f"{cache}/{key}.wav"
+if not os.path.exists(out):
+    sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "clippy-voice.sock")
+    here = os.path.dirname(os.path.realpath(__file__))
+    def ask():
+        c = socket.socket(socket.AF_UNIX)
+        c.settimeout(120)
+        c.connect(sockp)
+        c.sendall((json.dumps({"text": text, "ref": ref, "exag": a.exag,
+                               "cfg": a.cfg, "out": out}) + "\n").encode())
+        r = c.makefile().readline().strip()
+        c.close()
+        if r != "ok":
+            sys.exit(f"speak-clone: {r}")
+    try:
+        ask()
+    except (FileNotFoundError, ConnectionRefusedError):
+        log = open(f"{cache}/daemon.log", "ab")
+        subprocess.Popen([f"{here}/daemon.py"], start_new_session=True, stdout=log, stderr=log)
+        for _ in range(240):  # first start loads the model, ~20 s
+            time.sleep(0.5)
+            try:
+                ask()
+                break
+            except (FileNotFoundError, ConnectionRefusedError):
+                continue
+        else:
+            sys.exit("speak-clone: daemon never came up (see ~/.cache/clippy-voice/daemon.log)")
+subprocess.run(["aplay", "-q", out])
+PY
+  chmod +x "$base/speak-clone"
+
+  CMD="exec $base/speak-clone --ref $base/voices/$NAME.wav --exag 0.5 --cfg 0.5"
+  HELLO="Behold! It looks like you're giving me someone else's voice. How deliciously unethical."
+  echo "the first line loads (and on the very first run, downloads) the model — give it a minute"
+}
+
+mkdir -p "$HOME/.local/share/kokoro-tts" "$HOME/.local/share/piper-tts"
+if [ "$MODE" = clone ]; then
+  setup_clone
+else
+  # piper names carry a dash (en_US-ryan-high); kokoro ids don't (af_heart)
+  case "$VOICE" in
+    *-*) setup_piper ;;
+    *) setup_kokoro ;;
+  esac
+fi
+
+echo "${NAME:-$VOICE} says hello:"
+echo "$HELLO" | bash -c "$CMD"
+
+if command -v omarchy-shell >/dev/null && [ "$(omarchy-shell costafot.clippy state 2>/dev/null)" ]; then
+  omarchy-shell costafot.clippy set tts "$CMD"
+  echo "done — tts set. \`set tts true\` brings the robot back."
+else
+  echo "clippy isn't running; set it yourself:"
+  echo "  omarchy-shell costafot.clippy set tts \"$CMD\""
+fi
