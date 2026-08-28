@@ -607,6 +607,22 @@ unset keeps the stash); the menu path shares setVoiceEnabled so only the
 label was eyeballed. PUBLISHING.md's version reference was refreshed at
 the same time.
 
+Discoverability papercuts closed (2026-08-29, v1.17.0): the two gaps from
+the new-user audit. IPC `help` lists every verb one per line with a
+half-line description and ends with the README path — the blind-agent
+bootstrap quickshell's "Function not found" never gave (it also went into
+the README's scripting block, first line). The menu's `Entry` grew an
+optional `hint` (dim second line, fontSize−2, only sized when non-empty)
+and the Voice row uses it — "better voices: scripts/setup-voice in the
+plugin dir" — shown only in the `!needs && !custom` state: the espeak-only
+audience that was stranded; engine-missing and custom/stashed users keep
+their existing labels, no hint. No new settings keys. Verified live after
+a shell restart: `help` output from the terminal, journal clean, menu
+screenshot shows the hint under "Voice". PUBLISHING.md's version reference
+refreshed. Note the dev symlink is back in place (the new-user clone below
+is history) and `ai: true` with claude lines was live on the box during
+the check.
+
 New-user simulation (2026-08-29): the box left the dev loop — plugin
 disabled, symlink removed, then a real `omarchy plugin add
 https://github.com/CostaFot/omarchy-inappropriate-clippy --enable --yes`

@@ -96,28 +96,42 @@ PanelWindow {
         bottomPadding: Style.space(4)
       }
 
-      // One full-width tappable row. `mark` is an optional leading glyph.
+      // One full-width tappable row. `mark` is an optional leading glyph,
+      // `hint` an optional dim second line (the Voice row's setup-voice nudge).
       component Entry: Rectangle {
         id: row
         property string label: ""
         property string mark: ""
+        property string hint: ""
         property bool active: false
         signal tapped()
 
         width: card.rowWidth
-        implicitHeight: rowText.implicitHeight + Style.space(9)
+        implicitHeight: rowLines.implicitHeight + Style.space(9)
         radius: Style.cornerRadius
         color: rowHover.hovered ? card.fill : "transparent"
 
-        Text {
-          id: rowText
+        Column {
+          id: rowLines
           x: Style.space(8)
           anchors.verticalCenter: parent.verticalCenter
-          text: (row.mark !== "" ? row.mark + " " : "") + row.label
-          color: Color.popups.text
-          opacity: row.active ? 1.0 : 0.75
-          font.family: Style.fontFamily
-          font.pixelSize: card.fontSize
+          spacing: Style.space(1)
+
+          Text {
+            text: (row.mark !== "" ? row.mark + " " : "") + row.label
+            color: Color.popups.text
+            opacity: row.active ? 1.0 : 0.75
+            font.family: Style.fontFamily
+            font.pixelSize: card.fontSize
+          }
+          Text {
+            visible: row.hint !== ""
+            text: row.hint
+            color: Color.popups.text
+            opacity: 0.45
+            font.family: Style.fontFamily
+            font.pixelSize: card.fontSize - 2
+          }
         }
 
         HoverHandler { id: rowHover }
@@ -243,6 +257,9 @@ PanelWindow {
         readonly property bool custom: menu.clippy ? (typeof menu.clippy.ttsSetting === "string"
           || String(menu.clippy.setting("ttsSaved", "") || "") !== "") : false
         label: needs ? "Voice · install espeak-ng" : (custom ? "Voice · custom" : "Voice")
+        // The robot is the floor, not the ceiling — say so, but only to the
+        // audience still on it (a custom voice, parked or live, knows already).
+        hint: !needs && !custom ? "better voices: scripts/setup-voice in the plugin dir" : ""
         mark: on ? "●" : "○"
         active: on
         onTapped: menu.set("tts", !on)

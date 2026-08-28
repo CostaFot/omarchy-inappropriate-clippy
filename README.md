@@ -223,6 +223,7 @@ that's between bash and its children.
 ## Scripting him
 
 ```bash
+omarchy-shell costafot.clippy help       # every verb, one per line — start here
 omarchy-shell costafot.clippy say "Another theme. That'll fix it."
 omarchy-shell costafot.clippy talk       # a line of his own, what a click does
 omarchy-shell costafot.clippy shutUp
@@ -246,7 +247,10 @@ omarchy-shell costafot.clippy settings         # all of them
 That is also enough for your coding agent to run him: point it at this file
 (`~/.config/omarchy/plugins/costafot.clippy/README.md`) and "make Clippy
 clean, I'm sharing my screen" or "snooze him for an hour" is one command
-away. `set` writes the key to `shell.json` for you, same as the menu does.
+away. An agent that has never seen this file can bootstrap from `help`
+alone: it lists every verb, and `voice`, `ai` and the `set` replies say
+what's wrong and how to fix it.
+`set` writes the key to `shell.json` for you, same as the menu does.
 Replies come back on stdout (`ok`, `not now`, `hidden`, `asleep`...), and
 `qs ipc -n -p "$OMARCHY_PATH/shell" show` lists every method with its arguments.
 

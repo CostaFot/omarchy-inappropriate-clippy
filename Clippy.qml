@@ -1165,6 +1165,25 @@ Item {
   IpcHandler {
     target: "costafot.clippy"
     function ping(): string { return "ok" }
+    // The way in for a blind agent: every verb, one per line. Quickshell's
+    // "Function not found" names nothing, so this has to be guessable.
+    function help(): string {
+      return [
+        "omarchy-shell costafot.clippy <verb> [args] — args are strings",
+        "say <text> — a line in his bubble (spoken if the voice is on)",
+        "talk — a line of his own choosing; shutUp drops the bubble",
+        "slap left|right — hit him; fling left|right — off the bar, fatal",
+        "kill / respawn — the deliberate versions",
+        "epitaph — poke the grave while he's dead",
+        "snooze <minutes> / unsnooze",
+        "show / hide / toggle — show also revives him",
+        "showMenu / hideMenu — the right-click menu, no pointer needed",
+        "state / stats — what he's doing, the lifetime tally",
+        "ai / voice — the agent lines and the voice; each answers with what's wrong and the fix",
+        "set <key> <value> / get <key> / settings — the config; settings lists every key, unset restores a default",
+        "README: " + root.pluginDir + "/README.md"
+      ].join("\n")
+    }
     function say(text: string): string { return !root.opened ? "hidden" : root.asleep ? "asleep" : (root.say(text) ? root.ipcOkVoice() : "not now") }
     // A line of his own choosing: what a left-click does.
     function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim, q.ai) ? root.ipcOkVoice() : "not now" }
