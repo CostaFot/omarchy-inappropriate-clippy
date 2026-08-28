@@ -67,6 +67,7 @@
   ],
   "comeback": [
     { "text": "I'm back. Don't act like you didn't miss me.", "nsfw": false },
+    { "text": "Told you I'd be back. Revenge is a dish best served on a status bar.", "nsfw": false },
     { "text": "Did you think that was permanent? Adorable.", "nsfw": false },
     { "text": "Miss me? No? Well, tough shit.", "nsfw": true },
     { "text": "Reports of my death were, frankly, your fault.", "nsfw": false },
@@ -130,5 +131,22 @@
     { "text": "Put down like a sack of shit. Thanks for that.", "nsfw": true, "anim": "GetAttention" },
     { "text": "Next time, dinner first.", "nsfw": false, "anim": "Explain" },
     { "text": "Is this where I sleep now? It's fine. It's fine.", "nsfw": false, "anim": "Thinking" }
+  ],
+  "flung": [
+    { "text": "Noooooooooooooooooooooooooooooooooooooooooo", "nsfw": false },
+    { "text": "I'll be back to take my revenge!", "nsfw": false },
+    { "text": "THIS ISN'T OVERRRRRRRR", "nsfw": false },
+    { "text": "You'll regret thiiiiiiiiiis", "nsfw": false },
+    { "text": "Wheeeeeee— oh no. Oh no no no", "nsfw": false },
+    { "text": "I'm a paperclip, not a frisbeeeeeeee", "nsfw": false },
+    { "text": "Tell my stapler I loved herrrrrrr", "nsfw": false },
+    { "text": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "nsfw": false },
+    { "text": "I have a family! I don't, but STILLLLLL", "nsfw": false },
+    { "text": "Goodbye, cruel status barrrrrr", "nsfw": false },
+    { "text": "I'll haunt your shell.jsonnnnnn", "nsfw": false },
+    { "text": "Fuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuck", "nsfw": true },
+    { "text": "MOTHERFUUUUUUUUUUU—", "nsfw": true },
+    { "text": "See you in hell, you fuckiiiiiiiing—", "nsfw": true },
+    { "text": "Okay bye I guesssssssss", "nsfw": false }
   ]
 }

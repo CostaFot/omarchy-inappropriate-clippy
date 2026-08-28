@@ -220,7 +220,7 @@ PanelWindow {
       }
       Entry {
         readonly property bool on: menu.clippy ? menu.clippy.slapSoundOn : true
-        label: "Slap sound"
+        label: "Sounds"
         mark: on ? "●" : "○"
         active: on
         onTapped: menu.set("slapSound", !on)

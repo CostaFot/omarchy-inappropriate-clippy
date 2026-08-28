@@ -130,19 +130,25 @@ Item {
   readonly property bool slapEnabled: setting("slap", true) !== false
   // Dragging: hold left on him, then move. `drag: false` turns it off.
   readonly property bool dragEnabled: setting("drag", true) !== false
+  // Letting go of him mid-fling throws him off the bar, fatally.
+  readonly property bool flingEnabled: setting("fling", true) !== false
+  readonly property real flingSpeed: 1.8 // px/ms at release
   readonly property bool slapSwipe: setting("slapSwipe", true) !== false
   readonly property int slapsToKill: Math.max(0, Number(setting("slapsToKill", 10)))
-  // `slapSound`: true for the built-in ones, false for silence, or a path to
-  // a WAV of your own.
+  // `slapSound` / `flingSound`: true for the built-in ones, false for
+  // silence, or a path to a WAV of your own. `flingSound` follows
+  // `slapSound` unless set, so the menu's one toggle mutes both.
   readonly property var slapSoundSetting: setting("slapSound", true)
   readonly property bool slapSoundOn: slapSoundSetting !== false
-  readonly property var slapSounds: {
-    if (slapSoundSetting === false) return []
-    if (typeof slapSoundSetting === "string" && slapSoundSetting !== "")
-      return ["file://" + expandHome(slapSoundSetting)]
+  readonly property var flingSoundSetting: setting("flingSound", slapSoundOn)
+  function soundList(value, builtins) {
+    if (value === false) return []
+    if (typeof value === "string" && value !== "") return ["file://" + expandHome(value)]
     var dir = "file://" + pluginDir + "/assets/sounds/"
-    return [dir + "slap-crack.wav", dir + "slap-punch.wav", dir + "slap-ahh.wav"]
+    return builtins.map(function (f) { return dir + f })
   }
+  readonly property var slapSounds: soundList(slapSoundSetting, ["slap-crack.wav", "slap-punch.wav", "slap-ahh.wav"])
+  readonly property var flingSounds: soundList(flingSoundSetting, ["fall-cartoon.wav", "fall-mario.wav"])
 
   // ---- bar geometry (same idiom as plugins/notifications/Service.qml) -----
   readonly property string barPosition: shell && shell.barConfig ? String(shell.barConfig.position || "top") : "top"
@@ -175,7 +181,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   function emptyBook() {
@@ -418,6 +424,7 @@ Item {
     persisted.deadUntil = 0
     if (actor.x < 0 || actor.x > stage.width - actor.width)
       actor.x = Math.round(rand(0, Math.max(0, stage.width - actor.width)))
+    actor.rotation = 0
     mood = "reviving"
     sprite.play("Greeting", false, function () {
       root.mood = "idle"
@@ -469,23 +476,25 @@ Item {
     return true
   }
 
-  function playSlapSound() {
-    if (!slapSounds.length) return
-    var fx = slapFx.objectAt(Math.floor(Math.random() * slapFx.count))
+  function playSlapSound() { playOneOf(slapFx) }
+  function playFlingSound() { playOneOf(flingFx) }
+  function playOneOf(fxs) {
+    if (!fxs.count) return
+    var fx = fxs.objectAt(Math.floor(Math.random() * fxs.count))
     if (fx && fx.status === SoundEffect.Ready) fx.play()
   }
 
   // One SoundEffect per file, decoded up front, so a slap lands without a
-  // load stall. Three built-ins, or the one from `slapSound`.
-  Instantiator {
-    id: slapFx
-    model: root.slapSounds
+  // load stall. The built-ins, or the one from `slapSound` / `flingSound`.
+  component SoundBank: Instantiator {
     delegate: SoundEffect {
       required property string modelData
       source: modelData
-      onStatusChanged: if (status === SoundEffect.Error) console.warn("clippy: can't load slap sound " + source)
+      onStatusChanged: if (status === SoundEffect.Error) console.warn("clippy: can't load sound " + source)
     }
   }
+  SoundBank { id: slapFx; model: root.slapSounds }
+  SoundBank { id: flingFx; model: root.flingSounds }
 
   NumberAnimation {
     id: shoveAnim
@@ -512,7 +521,10 @@ Item {
   // on him the pointer took hold, so he doesn't jump under the cursor.
   property bool dragging: false
   property real grabX: 0
-  property real dragVel: 0
+  property real dragVel: 0     // px per event, for the lean
+  property real dragSpeed: 0   // px/ms, smoothed pointer speed, for the fling
+  property real dragLastPx: 0
+  property real dragLastT: 0
 
   function grab(atX) {
     if (!dragEnabled || dragging) return false
@@ -525,6 +537,8 @@ Item {
     dragging = true
     grabX = atX
     dragVel = 0
+    dragSpeed = 0
+    dragLastT = 0
     actor.rotation = 0
     complain("dragged", "Where are you taking me???", "Alert")
     dragTalk.interval = Math.round(rand(3000, 6000))
@@ -536,6 +550,16 @@ Item {
   // the delta from `grabX` is how far the pointer got ahead of him).
   function dragTo(atX) {
     if (!dragging) return
+    // Pointer speed from its stage position, so it still counts when he is
+    // pinned against an edge and can't follow.
+    var px = actor.x + atX
+    var now = Date.now()
+    if (dragLastT > 0) {
+      var dt = Math.max(1, now - dragLastT)
+      dragSpeed = dragSpeed * 0.5 + ((px - dragLastPx) / dt) * 0.5
+    }
+    dragLastPx = px
+    dragLastT = now
     var dx = atX - grabX
     var maxX = Math.max(0, stage.width - actor.width)
     var next = clamp(actor.x + dx, 0, maxX)
@@ -552,13 +576,77 @@ Item {
     dragging = false
     dragTalk.stop()
     dragSettle.stop()
-    persisted.lastX = actor.x
     if (mood === "dead" || mood === "dying" || mood === "reviving") return
+    // Still moving fast at release: that's a throw, and he doesn't survive it.
+    if (flingEnabled && Math.abs(dragSpeed) >= flingSpeed && Date.now() - dragLastT < 100) {
+      flingOff(dragSpeed < 0 ? -1 : 1)
+      return
+    }
+    persisted.lastX = actor.x
     // Swing on with the momentum he had, then settle.
     wobble.stop()
     wobble.dir = dragVel < 0 ? -1 : 1
     wobble.start()
     complain("dropped", "Fine. I live here now.", "Alert")
+  }
+
+  // Off the end of the bar, spinning, yelling the whole way. The flight is
+  // too quick to read a line in, so the bubble hangs at the edge he left
+  // by for `flingHoldMs` after he's gone, then trails off over
+  // `flingEchoMs`. Lands in the normal dead state, so respawn and the bar
+  // icon work as usual.
+  function flingOff(dir) {
+    if (mood === "dead" || mood === "dying" || mood === "reviving") return false
+    dir = Number(dir) < 0 ? -1 : 1
+    dragging = false
+    dragTalk.stop()
+    dragSettle.stop()
+    walkAnim.stop()
+    shoveAnim.stop()
+    wobble.stop()
+    brain.stop()
+    quoteTimer.stop()
+    bubbleTimer.stop()
+    mood = "dying"
+    playFlingSound()
+    bubble.text = randomLine("flung", "Noooooooooooooooooooooooooooo")
+    bubble.shown = true
+    var to = dir > 0 ? stage.width + actor.width : -actor.width * 2
+    flingAnim.stop()
+    flingX.to = to
+    flingSpin.to = dir * 540
+    flingAnim.duration = Math.round(clamp(Math.abs(to - actor.x) / 1.4, 600, 1600))
+    flingAnim.start()
+    return true
+  }
+
+  readonly property int flingHoldMs: 1500
+  readonly property int flingEchoMs: 1500
+  Timer {
+    id: flingHold
+    interval: root.flingHoldMs
+    onTriggered: {
+      if (root.mood !== "dying") return
+      bubble.fadeMs = root.flingEchoMs
+      bubble.shown = false
+      flingEcho.start()
+    }
+  }
+  Timer {
+    id: flingEcho
+    interval: root.flingEchoMs
+    onTriggered: {
+      bubble.fadeMs = 140
+      if (root.mood === "dying") root.finishDeath()
+    }
+  }
+
+  ParallelAnimation {
+    id: flingAnim
+    property int duration: 400
+    NumberAnimation { id: flingX; target: actor; property: "x"; duration: flingAnim.duration; easing.type: Easing.Linear }
+    NumberAnimation { id: flingSpin; target: actor; property: "rotation"; duration: flingAnim.duration; easing.type: Easing.Linear }
+    onFinished: if (root.mood === "dying") flingHold.start()
   }
 
   function complain(key, fallback, anim) {
@@ -619,6 +707,12 @@ Item {
       var d = String(direction || "").toLowerCase()
       var dir = d === "left" ? -1 : (d === "right" ? 1 : (Math.random() < 0.5 ? -1 : 1))
       return root.slap(dir) ? "ok" : (root.slapEnabled ? "not now" : "off")
+    }
+    // `fling left|right`: throws him off that end of the bar. Fatal.
+    function fling(direction: string): string {
+      var d = String(direction || "").toLowerCase()
+      var dir = d === "left" ? -1 : (d === "right" ? 1 : (Math.random() < 0.5 ? -1 : 1))
+      return root.flingOff(dir) ? "ok" : "not now"
     }
     function toggle(): string { root.opened = !root.opened; return root.opened ? "shown" : "hidden" }
     function hideMenu(): string { menu.open = false; return "ok" }

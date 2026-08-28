@@ -21,6 +21,7 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 | Middle-click | slaps him. He yelps, gets shoved along the bar, and has something to say about it |
 | Fling the pointer across him | also a slap. Fast and sideways; a pointer merely passing over him on the way to the tray doesn't count |
 | Hold left-click, then drag | picks him up. Put him down anywhere on the bar; he objects to the trip and to where it ends |
+| Let go mid-fling | throws him off the end of the bar. He doesn't survive it, but he does get a last word in |
 | Right-click | opens his menu: say something, snooze, kill him, and the settings below |
 | Click the paperclip on the bar | the same menu. When he's dead or hidden it says "Bring him back", which is the point of the paperclip |
 
@@ -32,7 +33,7 @@ menu to make room for the slap; `"slap": false` gives middle-click back to it.
 
 ## Configuration
 
-The menu covers the common ones (clean mode, slap sound, how much he walks, size) and
+The menu covers the common ones (clean mode, sounds, how much he walks, size) and
 writes them for you. Everything goes on his entry in
 `~/.config/omarchy/shell.json`. He has a bar icon, so that entry lives in the
 bar layout with the other widgets. All optional.
@@ -64,13 +65,15 @@ into the bar himself, settings and all.
 | `slap` | `true` | `false` turns slapping off. Middle-click snoozes again |
 | `slapSwipe` | `true` | `false` keeps middle-click but stops the pointer-fling counting as a slap |
 | `slapSound` | `true` | `false` mutes it; a path to a WAV plays that instead of the built-in three |
+| `flingSound` | follows `slapSound` | The falling sound when he's thrown. `false`, or a path to a WAV instead of the built-in two |
 | `slapsToKill` | `10` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
 | `drag` | `true` | `false` stops the long-press drag |
+| `fling` | `true` | `false` makes a fast release just a drop, not a throw |
 
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
-`quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged` and `dropped`
-arrays.
+`quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`
+and `flung` arrays.
 
 ## Scripting him
 
@@ -79,6 +82,7 @@ omarchy-shell costafot.clippy say "Another theme. That'll fix it."
 omarchy-shell costafot.clippy shutUp
 omarchy-shell costafot.clippy snooze 30
 omarchy-shell costafot.clippy slap left   # or right: the way he flies
+omarchy-shell costafot.clippy fling left  # off that end of the bar; fatal
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
 omarchy-shell costafot.clippy toggle

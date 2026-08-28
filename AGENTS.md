@@ -101,10 +101,29 @@ loader, like omarchy.menu — not to the bar widget.
   post-bubble reschedule so he doesn't walk off mid-carry. No `clicked`
   follows a hold, so a drag never fires the say-something click. `drag:
   false` turns it off.
+- Flinging (in `Clippy.qml`): `dragTo` also keeps a smoothed pointer speed
+  in px/ms from the pointer's *stage* position (so it counts while he's
+  pinned at an edge). `drop()` with `|dragSpeed| ≥ flingSpeed` (1.8) and a
+  motion event inside the last 100 ms → `flingOff(dir)`: mood `dying`, a
+  `flung` line in the bubble (it clamps to the stage, so it stays at the
+  edge he left by), `flingAnim` carries `actor.x` past the edge at ~1.4
+  px/ms (600-1600 ms) and spins `rotation` 540°. That's too quick to read
+  a line in, so when it finishes the bubble stays at the edge at full
+  opacity for `flingHoldMs` (1500, `flingHold`), then is hidden with
+  `Bubble.fadeMs` stretched to `flingEchoMs` (1500) so it trails off, then
+  `flingEcho` restores `fadeMs` and runs `finishDeath()`. (First cut ended
+  the line at the edge; unreadable. Second faded immediately; Costa wanted
+  it to linger.)
+  `revive()` resets `rotation` and re-places him. IPC `fling left|right`.
+  `fling: false` makes a fast release a plain drop. `flingOff` plays one of
+  two falling sounds (`flingSounds`, `assets/sounds/fall-*.wav`, mono 44.1
+  kHz from mp3s Costa picked) through the same `SoundBank` Instantiator
+  component as the slaps; `flingSound` defaults to `slapSoundOn` so the
+  menu's "Sounds" row mutes both.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the join.
-- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut, dragged, dropped }`
+- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut, dragged, dropped, flung }`
   (the key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
   merged in (same shape, or a bare array).
@@ -165,7 +184,8 @@ Middle-click used to snooze; `slap: false` restores that. Costa supplied the
 three sounds.
 
 Dragging done (2026-08-28, v1.3.0): long-press and carry him along the bar,
-with lines on the way and on landing. Not pointer-testable from a terminal
+with lines on the way and on landing. Flinging (v1.4.0): let go while
+moving fast and he's thrown off the bar and dies, with a `flung` line. Not pointer-testable from a terminal
 (no ydotool); Costa verifies by hand.
 
 Bar icon done (2026-08-28, v1.1.0): opens the same `ClippyMenu`, and is the

@@ -8,6 +8,9 @@ Item {
 
   property string text: ""
   property bool shown: false
+  // How long a show/hide takes. The fling stretches the hide so his last
+  // word trails off after he's gone.
+  property int fadeMs: 140
   property bool above: false          // bottom bar: tail on the bottom edge
   property real tailX: width / 2      // local x the tail points at
   property int maxWidth: 320
@@ -22,7 +25,7 @@ Item {
   height: implicitHeight
   visible: opacity > 0
   opacity: shown ? 1 : 0
-  Behavior on opacity { NumberAnimation { duration: 140 } }
+  Behavior on opacity { NumberAnimation { duration: root.fadeMs } }
 
   Text {
     id: metrics
