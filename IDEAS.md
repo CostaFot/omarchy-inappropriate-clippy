@@ -13,13 +13,6 @@ with the question appended to the facts, answer lands in the bubble
 doesn't race the cache top-up. Turns him from a heckler into an oracle who
 is also a heckler. The feature people would screenshot.
 
-## Eyes on the cursor
-
-`hyprctl cursorpos` works (the input mask only limits *our* motion events,
-not IPC). Poll it lazily while idle and play LookLeft/LookRight/LookUp
-toward the pointer. Cheap, and it's the single biggest "he's alive" signal
-the original had.
-
 ## Kill counter with a grudge
 
 Done in v1.10.0, the simple half: slap/kill totals persist across remounts
@@ -79,6 +72,13 @@ you're ignoring them." — a fact fed to `clippy-ai`, or a book line with an
 
 ## Decided against
 
+- **Eyes on the cursor** — investigated (2026-08-28) and entirely doable:
+  all eight Look* animations are in the atlas and return to neutral on
+  their own, and a lazy `hyprctl cursorpos` poll while idle is cheap.
+  Scratched anyway: a mascot that visibly tracks your pointer is annoying,
+  and the tuning direction has always been "mostly still". (If ever
+  revived: the Look names may be character-mirrored like the Gestures —
+  crop the frames before wiring directions.)
 - **Clipboard snooping** — on-brand for the joke, but with `ai: true` it
   means shipping clipboard contents to an LLM. A real privacy footgun even
   opt-in.
