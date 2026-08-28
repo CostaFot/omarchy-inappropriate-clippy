@@ -160,6 +160,15 @@ away. `set` writes the key to `shell.json` for you, same as the menu does.
 Replies come back on stdout (`ok`, `not now`, `hidden`, `asleep`...), and
 `qs ipc -n -p "$OMARCHY_PATH/shell" show` lists every method with its arguments.
 
+Omarchy is keyboard-first and these are plain commands, so any of them
+drops straight into a Hyprland bind:
+
+```conf
+# ~/.config/hypr/bindings.conf
+bindd = SUPER SHIFT C, C, Toggle Clippy, exec, omarchy-shell costafot.clippy toggle
+bindd = SUPER SHIFT C, T, Clippy talks, exec, omarchy-shell costafot.clippy talk
+```
+
 `say` works from anywhere, so an Omarchy hook can feed him lines:
 
 ```bash
