@@ -137,8 +137,11 @@ what he'd send, or try an agent by hand:
 `"tts": true` and every line in the bubble is also said out loud, in the most
 correctly stupid robot voice available: `espeak-ng`. It isn't installed with
 the plugin — `sudo pacman -S espeak-ng` and he starts talking; without it he
-stays silent and leaves one line in the journal. Epitaphs are whispered,
-because he's dead.
+stays silent and tells on himself everywhere you might look: he says so in a
+bubble the moment you switch the voice on, the menu row reads "Voice ·
+install espeak-ng", and for agents and scripts `voice` answers with what's
+wrong and the fix, `set tts true` and a silent `say` warn in their replies,
+and one line lands in the journal. Epitaphs are whispered, because he's dead.
 
 If you'd rather he sounded good (why?), set `tts` to a shell command instead.
 It runs through `bash -c` and gets each line on stdin, so any engine that
@@ -168,6 +171,7 @@ omarchy-shell costafot.clippy toggle
 omarchy-shell costafot.clippy showMenu  # the menu; hideMenu closes it
 omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden | asleep
 omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"
+omarchy-shell costafot.clippy voice      # off, "espeak-ng: ready", "espeak-ng: not installed — silent (...)", or the custom command
 omarchy-shell costafot.clippy stats      # the lifetime tally: "34 slaps, 5 kills"
 omarchy-shell costafot.clippy set clean true   # any key from the table; "unset" puts the default back
 omarchy-shell costafot.clippy get clean        # the value in effect, as JSON

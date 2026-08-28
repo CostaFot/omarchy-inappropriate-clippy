@@ -194,7 +194,21 @@ loader, like omarchy.menu — not to the bar widget.
   the turn-off kill lives in `onTtsOnChanged` (bit us). The built-in
   voice is `en+m3`, or `en+whisper` while `mood == "dead"` (epitaphs are
   whispered). Verified engine-less end to end by pointing `tts` at
-  `cat >> file` and `sleep 30` — the contract is just stdin.
+  `cat >> file` and `sleep 30` — the contract is just stdin. The missing
+  engine is surfaced, not just journaled (Costa: always point it out in
+  the UI and to agents): `ttsProbe` (`command -v espeak-ng`) runs at
+  mount, on `tts` changes and on menu open, feeding `ttsEngineMissing`;
+  `ttsNeedsEngine` (false when a custom command is set) turns the menu
+  row into "Voice · install espeak-ng", makes him say "Install espeak-ng.
+  I'll wait." in a bubble when the voice is switched on engine-less
+  (`onTtsOnChanged`, `Qt.callLater` so it runs outside the binding
+  update), and drives the agent-first IPC: `voice` → off / "espeak-ng:
+  ready" / "espeak-ng: not installed — silent (fix)" / "custom command:
+  …" (+ "; failing, see journal" after a warn, "; speaking" while
+  audible), `set tts true` answers "ok — but espeak-ng isn't
+  installed…", and `say`/`talk` answer "ok — but silent: …" via
+  `ipcOkVoice()` instead of a bare ok. The probe is async, so a `set`
+  in the same breath as the install may still warn once (v1.11.1).
 - `Tombstone.qml` — a headstone at the death spot while `mood == "dead"`
   (`tombstone: true`): tooltip-coloured stone, paperclip-over-RIP engraving,
   mound, OutBounce thud on appear, 500 ms fade out when `revive()` flips the
@@ -429,8 +443,9 @@ displayed lines across say/talk/slapped/flung/epitaph; `sleep 30` as the
 engine proved the kills (replacement line, `hide`, `set tts false`, DPMS
 sleep) — and caught two real bugs: `running = false` doesn't kill the
 child, and `hide` didn't stop speech. Menu "Voice" row verified by
-screenshot. espeak-ng itself has not been heard yet — install it and the
-`-v en+m3 -s 155 -p 45` tuning is a by-ear TODO.
+screenshot. espeak-ng was installed and heard on 2026-08-29 ("he sounds
+like a robot" — Costa, delighted); the `-v en+m3 -s 155 -p 45` tuning is
+approved as-is.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

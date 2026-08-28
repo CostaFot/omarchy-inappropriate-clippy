@@ -196,8 +196,28 @@ Item {
   // turning the voice off shuts him up instead of finishing the line. Two
   // handlers: inside onTtsSettingChanged the dependent ttsOn binding hasn't
   // re-evaluated yet, so a `!ttsOn` check there reads stale (bit us).
-  onTtsSettingChanged: ttsWarned = false
-  onTtsOnChanged: if (!ttsOn) stopSpeaking()
+  onTtsSettingChanged: { ttsWarned = false; ttsProbe.running = true }
+  // Whether the built-in engine exists — the menu row and the IPC `set`
+  // reply point at it, so nobody wonders why the voice is silent. Probed at
+  // mount, on `tts` changes and on menu open (fresh right after an
+  // install). A custom command is the user's own problem.
+  property bool ttsEngineMissing: false
+  readonly property bool ttsNeedsEngine: ttsEngineMissing && typeof ttsSetting !== "string"
+  Process {
+    id: ttsProbe
+    command: ["bash", "-c", "command -v espeak-ng >/dev/null"]
+    onExited: function (code) { root.ttsEngineMissing = code !== 0 }
+    Component.onCompleted: running = true
+  }
+  // Turning the voice on with nothing to speak through gets told to your
+  // face, in a bubble — the journal and the IPC reply aren't where a user
+  // looks. ttsSetting is fresh here (it fired first); ttsNeedsEngine may
+  // not be, hence the inline typeof.
+  onTtsOnChanged: {
+    if (!ttsOn) { stopSpeaking(); return }
+    if (ttsEngineMissing && typeof ttsSetting !== "string")
+      Qt.callLater(function () { root.say("You want me to actually talk? Install espeak-ng. I'll wait.") })
+  }
   // `hide` only flips `opened` — the bubble props stay put, and without this
   // he'd keep talking out of an invisible window.
   onOpenedChanged: if (!opened) stopSpeaking()
@@ -837,6 +857,8 @@ Item {
       else startTts()
     } else stopSpeaking()
   }
+  // IPC replies that would say "ok" while the voice can't be heard say so.
+  function ipcOkVoice() { return ttsOn && ttsNeedsEngine ? "ok — but silent: espeak-ng not installed" : "ok" }
   function stopSpeaking() {
     ttsLine = ""      // cleared first so onExited knows the kill was ours
     ttsQueued = ""
@@ -862,6 +884,7 @@ Item {
     Component.onDestruction: signal(15)
     onStarted: { write(root.ttsLine + "\n"); stdinEnabled = false }
     onExited: function (code) {
+      if (code === 0) root.ttsWarned = false // heard again — stop claiming "failing"
       if (root.ttsQueued !== "") {
         root.ttsQueued = ""
         root.startTts()
@@ -1057,6 +1080,7 @@ Item {
   // Opens the menu with its card under screen x `atX`, on `onScreen` (null
   // means the monitor Clippy is on). The bar icon calls this from any bar.
   function showMenuAt(atX, onScreen) {
+    ttsProbe.running = true // the Voice row's install hint, kept fresh
     menu.anchorScreen = onScreen || null
     menu.anchorPos = atX
     menu.open = true
@@ -1073,9 +1097,9 @@ Item {
   IpcHandler {
     target: "costafot.clippy"
     function ping(): string { return "ok" }
-    function say(text: string): string { return !root.opened ? "hidden" : root.asleep ? "asleep" : (root.say(text) ? "ok" : "not now") }
+    function say(text: string): string { return !root.opened ? "hidden" : root.asleep ? "asleep" : (root.say(text) ? root.ipcOkVoice() : "not now") }
     // A line of his own choosing: what a left-click does.
-    function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim, q.ai) ? "ok" : "not now" }
+    function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim, q.ai) ? root.ipcOkVoice() : "not now" }
     function shutUp(): string { root.hideBubble(); return "ok" }
     // The grave's line, same as clicking the tombstone.
     function epitaph(): string {
@@ -1127,6 +1151,19 @@ Item {
     function showMenu(): string { root.showMenu(); return "ok" }
     // What the agent side is doing: "off", or "<agent>: N cached[, busy]".
     function ai(): string { return root.aiEnabled ? agentBrain.status() : "off" }
+    // Agent-first status for the voice: what `tts` resolves to and whether
+    // it can actually be heard right now.
+    function voice(): string {
+      if (!root.ttsOn) return "off"
+      var s = typeof root.ttsSetting === "string"
+            ? "custom command: " + root.ttsSetting
+            : (root.ttsEngineMissing
+               ? "espeak-ng: not installed — silent (sudo pacman -S espeak-ng, or set tts to a shell command)"
+               : "espeak-ng: ready")
+      if (root.ttsWarned) s += "; failing, see journal"
+      if (ttsProc.running) s += "; speaking"
+      return s
+    }
     function state(): string {
       if (!root.opened) return "hidden"
       if (root.asleep) return "asleep"
@@ -1144,7 +1181,11 @@ Item {
     function set(key: string, value: string): string {
       key = String(key || "")
       if (!root.isSettingKey(key)) return "unknown key " + key + "; one of " + Object.keys(root.settingDefaults).join(", ")
-      return root.setSetting(key, root.parseSettingValue(value)) ? "ok" : "can't write shell.json"
+      var parsed = root.parseSettingValue(value)
+      if (!root.setSetting(key, parsed)) return "can't write shell.json"
+      if (key === "tts" && parsed === true && root.ttsEngineMissing)
+        return "ok — but espeak-ng isn't installed, so he stays silent until it is (or set tts to a shell command)"
+      return "ok"
     }
     // The value in effect, as JSON (so "" and 0 and false are tellable apart).
     function get(key: string): string {

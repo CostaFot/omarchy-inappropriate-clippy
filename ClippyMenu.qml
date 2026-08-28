@@ -237,7 +237,8 @@ PanelWindow {
       }
       Entry {
         readonly property bool on: menu.clippy ? menu.clippy.ttsOn : false
-        label: "Voice"
+        readonly property bool needs: menu.clippy ? menu.clippy.ttsNeedsEngine : false
+        label: needs ? "Voice · install espeak-ng" : "Voice"
         mark: on ? "●" : "○"
         active: on
         onTapped: menu.set("tts", !on)
