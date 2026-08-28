@@ -101,6 +101,27 @@ Item {
     var v = settings[key]
     return v === undefined || v === null ? fallback : v
   }
+  // Every key a user (or their agent, over IPC `set`/`get`) may touch, with
+  // its default. The README table and this list say the same thing.
+  // `flingSound` is null here because its default is whatever `slapSound` is.
+  readonly property var settingDefaults: ({
+    size: 30, clean: false, intervalMin: 90, intervalMax: 420, speed: 40, restless: 0.3,
+    respawn: 300, screen: "", quotesFile: "",
+    slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
+    drag: true, fling: true, ai: false, aiAgent: "", aiModel: ""
+  })
+  function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
+  function isSettingKey(key) { return Object.prototype.hasOwnProperty.call(settingDefaults, key) }
+  // IPC hands us strings. true/false and numbers become themselves, "unset"
+  // (or "default", or nothing) removes the key, anything else stays a string.
+  function parseSettingValue(s) {
+    s = String(s === undefined || s === null ? "" : s).trim()
+    if (s === "" || s === "unset" || s === "default") return undefined
+    if (s === "true") return true
+    if (s === "false") return false
+    if (!isNaN(Number(s))) return Number(s)
+    return s
+  }
   readonly property real spriteSize: clamp(Number(setting("size", 30)) || 30, 20, 200)
   readonly property int intervalMin: Math.max(5, Number(setting("intervalMin", 90)) || 90)
   readonly property int intervalMax: Math.max(intervalMin, Number(setting("intervalMax", 420)) || 420)
@@ -108,14 +129,15 @@ Item {
   // 0..1: how often an idle beat turns into a walk. Idle beats are 10-30 s apart.
   readonly property real restless: clamp(Number(setting("restless", 0.3)), 0, 1)
 
-  // Writes one inline key on our plugins[] entry. The shell rewrites
-  // shell.json and remounts us; persisted state carries over.
+  // Writes one inline key on our shell.json entry (undefined removes it).
+  // The shell rewrites shell.json and remounts us; persisted state carries over.
   function setSetting(key, value) {
-    if (!shell || typeof shell.updateEntryInline !== "function") return
+    if (!shell || typeof shell.updateEntryInline !== "function") return false
     var entry = { id: pluginId }
-    for (var k in settings) if (k !== "id") entry[k] = settings[k]
-    entry[key] = value
+    for (var k in settings) if (k !== "id" && k !== key) entry[k] = settings[k]
+    if (value !== undefined) entry[key] = value
     shell.updateEntryInline(pluginId, entry)
+    return true
   }
   readonly property bool clean: setting("clean", false) === true
   readonly property int respawnSeconds: Math.max(0, Number(setting("respawn", 300)))
@@ -722,17 +744,23 @@ Item {
   IpcHandler {
     target: "costafot.clippy"
     function ping(): string { return "ok" }
-    function say(text: string): string { return root.say(text) ? "ok" : "not now" }
+    function say(text: string): string { return !root.opened ? "hidden" : (root.say(text) ? "ok" : "not now") }
     // A line of his own choosing: what a left-click does.
     function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim) ? "ok" : "not now" }
     function shutUp(): string { root.hideBubble(); return "ok" }
     function kill(): string { root.kill(); return "ok" }
     function respawn(): string {
+      if (root.mood === "dying" || root.mood === "reviving") return root.mood
       if (root.mood !== "dead") return "alive"
       root.revive()
       return "ok"
     }
     function snooze(minutes: string): string { root.snooze(minutes); return "ok" }
+    function unsnooze(): string {
+      if (!root.isSnoozed()) return "not snoozed"
+      root.unsnooze()
+      return "ok"
+    }
     // `slap left|right` is the way he flies; anything else picks one.
     function slap(direction: string): string {
       var d = String(direction || "").toLowerCase()
@@ -746,6 +774,19 @@ Item {
       return root.flingOff(dir) ? "ok" : "not now"
     }
     function toggle(): string { root.opened = !root.opened; return root.opened ? "shown" : "hidden" }
+    // Idempotent show/hide for scripts and agents. `show` also revives him if
+    // he is dead: what the bar icon's "Bring him back" does.
+    function show(): string {
+      if (root.mood === "dying" || root.mood === "reviving") return root.mood
+      if (root.opened && root.mood !== "dead") return "already"
+      root.bringBack()
+      return "ok"
+    }
+    function hide(): string {
+      if (!root.opened) return "already"
+      root.opened = false
+      return "ok"
+    }
     function hideMenu(): string { menu.open = false; return "ok" }
     function showMenu(): string { root.showMenu(); return "ok" }
     // What the agent side is doing: "off", or "<agent>: N cached[, busy]".
@@ -755,6 +796,26 @@ Item {
       if (root.mood === "dead") return "dead"
       if (root.isSnoozed()) return "snoozed"
       return root.mood
+    }
+    // The settings, same keys as shell.json and the menu: `set clean true`,
+    // `set size 40`, `set aiModel unset`. Writes shell.json, so we remount.
+    function set(key: string, value: string): string {
+      key = String(key || "")
+      if (!root.isSettingKey(key)) return "unknown key " + key + "; one of " + Object.keys(root.settingDefaults).join(", ")
+      return root.setSetting(key, root.parseSettingValue(value)) ? "ok" : "can't write shell.json"
+    }
+    // The value in effect, as JSON (so "" and 0 and false are tellable apart).
+    function get(key: string): string {
+      key = String(key || "")
+      if (!root.isSettingKey(key)) return "unknown key " + key + "; one of " + Object.keys(root.settingDefaults).join(", ")
+      return JSON.stringify(root.setting(key, root.defaultFor(key)))
+    }
+    // Every key with the value in effect, defaults filled in. JSON object.
+    function settings(): string {
+      var out = {}
+      var keys = Object.keys(root.settingDefaults)
+      for (var i = 0; i < keys.length; i++) out[keys[i]] = root.setting(keys[i], root.defaultFor(keys[i]))
+      return JSON.stringify(out)
     }
   }
 

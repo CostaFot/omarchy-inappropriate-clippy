@@ -40,6 +40,14 @@ loader, like omarchy.menu — not to the bar widget.
     cue is `GestureLeft` for screen-right (gesture names are the character's
     left/right, verified by cropping the frames).
   - `IpcHandler { target: "costafot.clippy" }` — string args only.
+    `set key value` / `get key` / `settings` are the config surface for
+    scripts and the user's coding agent: keys come from `settingDefaults`
+    (keep it equal to the README table), values are parsed by
+    `parseSettingValue` (true/false/number/"unset"→remove/else string) and
+    written through the same `setSetting()` the menu uses. `show`/`hide`
+    are the idempotent pair next to `toggle` (`show` = `bringBack()`, so it
+    also revives), `unsnooze` next to `snooze`; `say` answers `hidden`
+    when `opened` is false rather than talking into an invisible window.
     `showMenu`/`hideMenu` exist so the menu can be driven without a pointer
     (there is no ydotool on the box; that is how it was screenshotted).
   - `PersistentProperties { reloadableId: "costafotClippy" }` for `deadUntil`

@@ -120,16 +120,27 @@ what he'd send, or try an agent by hand:
 omarchy-shell costafot.clippy say "Another theme. That'll fix it."
 omarchy-shell costafot.clippy talk       # a line of his own, what a click does
 omarchy-shell costafot.clippy shutUp
-omarchy-shell costafot.clippy snooze 30
+omarchy-shell costafot.clippy snooze 30  # unsnooze wakes him early
 omarchy-shell costafot.clippy slap left   # or right: the way he flies
 omarchy-shell costafot.clippy fling left  # off that end of the bar; fatal
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
+omarchy-shell costafot.clippy hide        # show brings him back, from hidden or dead
 omarchy-shell costafot.clippy toggle
 omarchy-shell costafot.clippy showMenu  # the menu; hideMenu closes it
 omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden
 omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"
+omarchy-shell costafot.clippy set clean true   # any key from the table; "unset" puts the default back
+omarchy-shell costafot.clippy get clean        # the value in effect, as JSON
+omarchy-shell costafot.clippy settings         # all of them
 ```
+
+That is also enough for your coding agent to run him: point it at this file
+(`~/.config/omarchy/plugins/costafot.clippy/README.md`) and "make Clippy
+clean, I'm sharing my screen" or "snooze him for an hour" is one command
+away. `set` writes the key to `shell.json` for you, same as the menu does.
+Replies come back on stdout (`ok`, `not now`, `hidden`...), and
+`qs ipc -n -p "$OMARCHY_PATH/shell" show` lists every method with its arguments.
 
 `say` works from anywhere, so an Omarchy hook can feed him lines:
 
