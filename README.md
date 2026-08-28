@@ -82,6 +82,7 @@ into the bar himself, settings and all.
 | `slapsToKill` | `10` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |
+| `tts` | `false` | `true` and he says every line out loud through `espeak-ng` (install that yourself); a shell command as a string gets each line on stdin instead. See below |
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
@@ -130,6 +131,26 @@ what he'd send, or try an agent by hand:
 ~/.config/omarchy/plugins/costafot.clippy/scripts/clippy-ai --prompt
 ~/.config/omarchy/plugins/costafot.clippy/scripts/clippy-ai --agent opencode
 ```
+
+## Giving him a voice
+
+`"tts": true` and every line in the bubble is also said out loud, in the most
+correctly stupid robot voice available: `espeak-ng`. It isn't installed with
+the plugin — `sudo pacman -S espeak-ng` and he starts talking; without it he
+stays silent and leaves one line in the journal. Epitaphs are whispered,
+because he's dead.
+
+If you'd rather he sounded good (why?), set `tts` to a shell command instead.
+It runs through `bash -c` and gets each line on stdin, so any engine that
+reads text from stdin plugs in:
+
+```bash
+omarchy-shell costafot.clippy set tts "piper --model ~/voices/en_US-lessac-medium.onnx --output-raw | pw-play --rate 22050 --format s16 --channels 1 -"
+```
+
+Whatever hides the bubble — a slap, a lock, his death — kills the voice
+mid-word. A pipeline like the piper one may finish its sentence anyway;
+that's between bash and its children.
 
 ## Scripting him
 

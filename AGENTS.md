@@ -166,6 +166,35 @@ loader, like omarchy.menu — not to the bar widget.
   kHz from mp3s Costa picked) through the same `SoundBank` Instantiator
   component as the slaps; `flingSound` defaults to `slapSoundOn` so the
   menu's "Sounds" row mutes both.
+- Voice (in `Clippy.qml`, v1.11.0): `tts` — `false` (default) silent, `true`
+  speaks every bubble line through espeak-ng, a string is a user shell
+  command. Tri-state like `slapSound`. The hook is two handlers on the
+  Bubble instance (`onShownChanged`/`onTextChanged` → `Qt.callLater(
+  syncSpeech)`, coalescing say()'s text+shown double-fire) rather than
+  calls in the say paths, so the three direct `bubble.text` writes
+  (`kill`, `epitaph`, `flingOff`) are covered and every bubble hide —
+  slap, sleep, death fade, dismissal — cuts the voice mid-word;
+  `fallAsleep()` hides the bubble, so sleep gating is free, and
+  `onOpenedChanged` stops it on `hide` (close() only flips `opened`; the
+  bubble props stay put, so without that he talks out of an invisible
+  window — caught in testing). `syncSpeech` → `startTts()` runs
+  `["bash", "-c", cmd]` with the line on stdin (bash always starts, so a
+  missing engine is exit 127 in `onExited` — a raw fail-to-start never
+  fires `exited`; `exec` prepended to the built-in so the kill lands on
+  espeak itself; a custom pipeline keeps its bash and may finish the
+  line). One `ttsProc`. **Kills are `signal(15)`, never `running = false`
+  — that quietly leaves the child alive** (verified with a sleep-30
+  stand-in; same reason there's `Component.onDestruction: signal(15)`).
+  A replacement line parks in `ttsQueued` until the old process's
+  `onExited`, since the SIGTERM is async. Deliberate kills clear
+  `ttsLine` first so `onExited` doesn't mistake them for failures; real
+  failures warn once per engine (`ttsWarned`, reset by
+  `onTtsSettingChanged`). Two change handlers on purpose: inside
+  `onTtsSettingChanged` the dependent `ttsOn` binding is still stale, so
+  the turn-off kill lives in `onTtsOnChanged` (bit us). The built-in
+  voice is `en+m3`, or `en+whisper` while `mood == "dead"` (epitaphs are
+  whispered). Verified engine-less end to end by pointing `tts` at
+  `cat >> file` and `sleep 30` — the contract is just stdin.
 - `Tombstone.qml` — a headstone at the death spot while `mood == "dead"`
   (`tombstone: true`): tooltip-coloured stone, paperclip-over-RIP engraving,
   mound, OutBounce thud on appear, 500 ms fade out when `revive()` flips the
@@ -267,6 +296,11 @@ loader, like omarchy.menu — not to the bar widget.
 - Every write to `shell.json` (by anyone — `omarchy bar move`, a widget saving
   a setting) rebuilds the panel Instantiator and remounts us. That's why
   dead/snooze/x live in `PersistentProperties`. Keep mount cheap.
+  (Observed 2026-08-29 while testing the voice: an inline `set` on our own
+  entry did *not* remount — plain properties survived and no destructors
+  ran; the new value arrived as a live binding update through
+  `shellConfig`. Don't rely on a `set` to reset plain state; layout-shaped
+  writes may still rebuild.)
 - `shell.bar` is null while the bar loads and is reassigned on bar reload —
   every geometry read guards it and falls back to `Style.bar.*`.
 - Never name a property on any Item-derived object after an Item property
@@ -290,7 +324,7 @@ right-click menu (actions + clean/sounds/restless/size), bar icon → same menu
 (dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
 snooze, sleep while locked/idle/screens-off with a welcome-back line, top and
 bottom bars, IPC, settings inline on the bar-layout entry.
-On GitHub at the README install URL, v1.10.0 (no tag yet). Not on the
+On GitHub at the README install URL, v1.11.0 (no tag yet). Not on the
 marketplace: see `PUBLISHING.md` for the flow, prior submissions and the
 gap list.
 
@@ -384,6 +418,19 @@ and kills increment, a fling counts exactly one kill (it lands in
 `finishDeath()` like every other death), two `set`-triggered remounts
 keep the totals, and a shell restart resets them — that's the
 PersistentProperties trade, same as `deadUntil`.
+
+Voice done (2026-08-29, v1.11.0): optional TTS, `tts` false/true/command
+(see the Voice bullet above). Costa's ask was stupid/funny by default and
+pluggable — extensibility, not crashing — and explicitly **no TTS engine
+installed** for the first pass: the whole thing was verified engine-less.
+Missing espeak-ng → one journal warning per engine, lines still display,
+nothing else changes; `cat >> file` as the engine collected exactly the
+displayed lines across say/talk/slapped/flung/epitaph; `sleep 30` as the
+engine proved the kills (replacement line, `hide`, `set tts false`, DPMS
+sleep) — and caught two real bugs: `running = false` doesn't kill the
+child, and `hide` didn't stop speech. Menu "Voice" row verified by
+screenshot. espeak-ng itself has not been heard yet — install it and the
+`-v en+m3 -s 155 -p 45` tuning is a by-ear TODO.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

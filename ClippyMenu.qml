@@ -235,6 +235,13 @@ PanelWindow {
         active: on
         onTapped: menu.set("slapSound", !on)
       }
+      Entry {
+        readonly property bool on: menu.clippy ? menu.clippy.ttsOn : false
+        label: "Voice"
+        mark: on ? "●" : "○"
+        active: on
+        onTapped: menu.set("tts", !on)
+      }
       Choice {
         label: "Walks"
         options: [

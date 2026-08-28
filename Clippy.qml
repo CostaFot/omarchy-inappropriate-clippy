@@ -108,7 +108,7 @@ Item {
     size: 30, clean: false, intervalMin: 90, intervalMax: 420, speed: 40, restless: 0.3,
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
-    drag: true, fling: true, ai: false, aiAgent: "", aiModel: "",
+    drag: true, fling: true, tts: false, ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
@@ -186,6 +186,21 @@ Item {
   }
   readonly property var slapSounds: soundList(slapSoundSetting, ["slap-crack.wav", "slap-punch.wav", "slap-ahh.wav"])
   readonly property var flingSounds: soundList(flingSoundSetting, ["fall-cartoon.wav", "fall-mario.wav"])
+  // `tts`: false for silence (the default), true for espeak-ng — install that
+  // yourself — or your own shell command as a string, handed every line on
+  // stdin. The machinery lives next to the SoundBanks below.
+  readonly property var ttsSetting: setting("tts", false)
+  readonly property bool ttsOn: ttsSetting === true || (typeof ttsSetting === "string" && ttsSetting !== "")
+  // An inline `set` doesn't remount us (keepLoaded — the binding just
+  // updates), so a changed engine gets its failure warning back here, and
+  // turning the voice off shuts him up instead of finishing the line. Two
+  // handlers: inside onTtsSettingChanged the dependent ttsOn binding hasn't
+  // re-evaluated yet, so a `!ttsOn` check there reads stale (bit us).
+  onTtsSettingChanged: ttsWarned = false
+  onTtsOnChanged: if (!ttsOn) stopSpeaking()
+  // `hide` only flips `opened` — the bubble props stay put, and without this
+  // he'd keep talking out of an invisible window.
+  onOpenedChanged: if (!opened) stopSpeaking()
 
   // ---- bar geometry (same idiom as plugins/notifications/Service.qml) -----
   readonly property string barPosition: shell && shell.barConfig ? String(shell.barConfig.position || "top") : "top"
@@ -804,6 +819,60 @@ Item {
   SoundBank { id: slapFx; model: root.slapSounds }
   SoundBank { id: flingFx; model: root.flingSounds }
 
+  // ---- the voice ----------------------------------------------------------
+  // Speaks whatever the bubble shows. Driven by watching the bubble itself
+  // (handlers on the Bubble instance) rather than the say paths, so the
+  // death lines and the epitaph — which write bubble.text directly — get
+  // spoken too, and everything that hides the bubble cuts him off mid-word.
+  // One process at a time; a replacement line queues until the old process
+  // has actually died, because the SIGTERM is asynchronous.
+  property string ttsLine: ""    // what the running process is speaking
+  property string ttsQueued: ""  // spoken once the old process has died
+  property bool ttsWarned: false // one journal line per engine, not per quote
+  function syncSpeech() {
+    if (ttsOn && opened && bubble.shown && bubble.text !== "") {
+      if (ttsLine === bubble.text && (ttsProc.running || ttsQueued !== "")) return
+      ttsLine = bubble.text
+      if (ttsProc.running) { ttsQueued = ttsLine; ttsProc.signal(15) }
+      else startTts()
+    } else stopSpeaking()
+  }
+  function stopSpeaking() {
+    ttsLine = ""      // cleared first so onExited knows the kill was ours
+    ttsQueued = ""
+    // signal, not running=false — the latter quietly leaves the child alive
+    // (verified with a sleep-30 stand-in engine).
+    if (ttsProc.running) ttsProc.signal(15)
+  }
+  function startTts() {
+    // Always through bash: bash itself always starts, so a missing engine is
+    // exit 127 in onExited — QProcess swallows a straight fail-to-start and
+    // exited would never fire. exec so the kill lands on espeak, not on a
+    // wrapper; a custom pipeline keeps its bash and may finish the line.
+    var cmd = typeof ttsSetting === "string" ? ttsSetting
+            : "exec espeak-ng -v " + (mood === "dead" ? "en+whisper" : "en+m3") + " -s 155 -p 45"
+    ttsProc.command = ["bash", "-c", cmd]
+    ttsProc.stdinEnabled = true
+    ttsProc.running = true
+  }
+  Process {
+    id: ttsProc
+    // Belt and braces for a real unload (plugin disable, shell exit):
+    // nothing else kills the child there, and running=false wouldn't either.
+    Component.onDestruction: signal(15)
+    onStarted: { write(root.ttsLine + "\n"); stdinEnabled = false }
+    onExited: function (code) {
+      if (root.ttsQueued !== "") {
+        root.ttsQueued = ""
+        root.startTts()
+      } else if (code !== 0 && root.ttsLine !== "" && !root.ttsWarned) {
+        root.ttsWarned = true
+        console.warn("clippy: tts failed (exit " + code + ") — "
+          + (typeof root.ttsSetting === "string" ? root.ttsSetting : "is espeak-ng installed?"))
+      }
+    }
+  }
+
   NumberAnimation {
     id: shoveAnim
     target: actor
@@ -1256,6 +1325,11 @@ Item {
                           : (grave.shown ? grave.y + grave.height : actor.y + actor.height) + 2
         tailX: stage.mouthX - x
         onDismissed: root.hideBubble()
+        // The voice rides on the bubble: whatever shows it speaks, whatever
+        // hides it shuts him up. callLater coalesces say()'s text+shown
+        // double-fire into one sync.
+        onShownChanged: Qt.callLater(root.syncSpeech)
+        onTextChanged: Qt.callLater(root.syncSpeech)
       }
     }
   }
