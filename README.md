@@ -93,14 +93,16 @@ The agent is whichever `omarchy default agent` picked, run the way `omarchy
 agent prompt` runs it but in its one-shot mode with tools off: it gets the
 facts as text and can only answer. Nothing on your machine is touched. It does
 mean the window title and the rest of that list are sent wherever that agent
-sends its prompts, and every batch spends a little of your plan — one small
+sends its prompts, and every batch spends a little of your plan: one small
 call every 15 minutes or so at the default pace, more if you keep clicking
-him (never more than one a minute). It runs on the
-agent's default model unless `aiModel` says otherwise; for claude that is the
-CLI's default (opus), not the `model` from your `settings.json`, because the
-call runs with your settings off so it doesn't load your CLAUDE.md and hooks.
-A smaller model does this job fine (`claude-sonnet-5` answered in 4 s, same as opus; haiku 4.5 oddly took a minute). `clean` applies to these lines too. Whenever the agent is unset, not logged in, offline or slow,
-the book takes over and you won't notice.
+him, never more than one a minute. It runs on the agent's default model
+unless `aiModel` says otherwise. For claude that is the CLI's default (opus),
+not the `model` in your `settings.json`, because the call runs with your
+settings off so it doesn't load your CLAUDE.md and hooks. A smaller model
+does the job fine (`claude-sonnet-5` answered in 4 s, same as opus; haiku 4.5
+oddly took a minute). `clean` applies to these lines too. Whenever the agent
+is unset, not logged in, offline or slow, the book takes over and you won't
+notice.
 
 Verified with `claude` and `opencode`; `codex` and `pi` are wired the same way
 but weren't run here, and the rest are best guesses from their docs. To see

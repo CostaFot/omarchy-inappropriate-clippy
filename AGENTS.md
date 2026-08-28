@@ -127,34 +127,41 @@ loader, like omarchy.menu — not to the bar widget.
   no headless API, so the script carries its own one-shot table mirroring
   `omarchy-agent`'s `case` (`claude -p --tools "" --setting-sources ""
   --system-prompt`, `codex exec -o`, `pi -p --no-tools`, `opencode run
-  --pure`, the rest from docs). It gathers the facts itself (hyprctl
-  window/clients, battery, load, mem, uptime, playerctl, the hour,
-  `~/.local/state/omarchy/agents/usage/<agent>.json` limits, plus a
-  `--recent` note of slaps/drags/kills the QML side collects) and hands
-  them over as text, tool-less, from `$TMPDIR` so no CLAUDE.md is picked
-  up. Eight random lines from `quotes.json` (+ `--quotes <quotesFile>`,
-  nsfw dropped under `--clean`) go in the system prompt as register
-  examples; without them the model guessed mild. `--prompt` prints it; prints a JSON array of lines (three parsers: raw array, first `[..]`
-  block, one-per-line). ~8 s for claude, ~16 s opencode. `AgentBrain` runs
-  it through a `Process`, caches the lines in `PersistentProperties`
-  (`costafotClippyBrain`: remounts must not cost a call), expires them at
-  20 min, refills when ≤1 left with a 60 s minimum gap doubling on failure
+  --pure`, the rest from docs; `--model` mapped per agent). It gathers the
+  facts itself (hyprctl window/clients, battery, load, mem, uptime,
+  playerctl, the hour, `~/.local/state/omarchy/agents/usage/<agent>.json`
+  limits, plus a `--recent` note of slaps/drags/kills the QML side
+  collects) and hands them over as text, tool-less, from `$TMPDIR` so no
+  CLAUDE.md is picked up. Eight random lines from `quotes.json` (+
+  `--quotes <quotesFile>`, nsfw dropped under `--clean`) go in the system
+  prompt as register examples; without them the model guessed mild.
+  `--context` prints the facts, `--prompt` the whole prompt. Output is a
+  JSON array of lines, parsed three ways in turn: as JSON; else every JSON
+  string literal in the text (claude sometimes emits the array with blank
+  lines and **no commas** between items, which is what this catches —
+  before it, 1 of 3-5 lines survived); else one per non-empty line. ~4-8 s
+  for claude, ~16 s opencode.
+  `AgentBrain` runs it through a `Process`, caches the lines in
+  `PersistentProperties` (`costafotClippyBrain`: remounts must not cost a
+  call; verified a shell.json write keeps the cache), expires them at 20
+  min, refills when ≤1 left with a 60 s minimum gap doubling on failure
   (cap 32 min) — batch 5, so ~one call per 15 min at the default quote
-  cadence, and `take()` returns null on anything wrong. Root's
+  cadence — and `take()` returns null on anything wrong. Root's
   `nextQuote()` prefers it over `randomQuote()` for unprompted lines,
   left-click, menu "Say something" and IPC `talk`; `slapped`/`dragged`/etc
-  stay on the book (they must be instant). IPC `ai` reports
-  "`<agent>: N cached[, busy]`". `aiModel` → `--model`, mapped per agent;
-  unset is the agent's default, which for claude is the CLI default (opus-5
-  today), *not* settings.json's `model`, because `--setting-sources ""` is
-  on (verified: with it, `modelUsage` shows opus-5; without, Costa's
-  fable-5). Costa asked; kept the isolation and made the model a setting.
-  Timed on the real prompt: opus-5 and sonnet-5 ~4 s, haiku-4-5 44-63 s
-  (twice; bare "say hi" is 3 s on all three), so don't suggest haiku.
-  The shell's env has the mise shims on
-  PATH, so the agent binaries resolve. codex and pi are installed here but
-  not logged in (401 / no key), so only claude and opencode were actually
-  run.
+  stay on the book (they must be instant). IPC `ai` → `status()`:
+  "`<agent>: N cached (Ns old), last call Ns ago[, N failed][, busy]`";
+  `take()` logs what it took and a short answer is logged with the raw
+  output, so `journalctl --user -o cat | grep clippy` tells the story.
+  `aiModel`: unset is the agent's default, which for claude is the CLI
+  default (opus-5 today), *not* settings.json's `model`, because
+  `--setting-sources ""` is on (verified: with it `modelUsage` shows
+  opus-5, without it Costa's fable-5). Costa asked; kept the isolation and
+  made the model a setting. Timed on the real prompt: opus-5 and sonnet-5
+  ~4 s, haiku-4-5 44-63 s (twice; bare "say hi" is 3 s on all three), so
+  don't suggest haiku. The shell's env has the mise shims on PATH, so the
+  agent binaries resolve. codex and pi are installed here but not logged
+  in (401 / no key), so only claude and opencode were actually run.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the join.
