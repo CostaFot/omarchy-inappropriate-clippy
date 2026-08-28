@@ -1,0 +1,246 @@
+#!/bin/bash
+
+# Ask the user's default coding agent for a few Clippy lines about what the
+# user is doing right now. Prints a JSON array of strings on stdout; nothing
+# (and a non-zero exit) when there is no agent, it isn't installed, or it
+# failed. AgentBrain.qml runs this; it is also handy from a terminal:
+#
+#   scripts/clippy-ai                  # lines from the default agent
+#   scripts/clippy-ai --agent codex    # a specific one
+#   scripts/clippy-ai --model claude-sonnet-5   # a specific model, where the agent takes one
+#   scripts/clippy-ai --context        # just the facts it would send
+#   scripts/clippy-ai --prompt         # the whole prompt, examples and all
+#
+# The agent is picked the way `omarchy agent` picks it (omarchy-default-agent,
+# ~/.config/omarchy/defaults/agent), but launched in its one-shot mode with
+# tools off: the facts are gathered here and handed over as text, so the call
+# is one round trip, spends as little of the user's plan as it can, and the
+# agent can't do anything besides answer. Tool-less, stateless, no project
+# config, so it doesn't answer as the user's coding assistant.
+
+set -uo pipefail
+
+count=3
+clean=false
+agent=""
+model=""
+recent=""
+show_context=false
+show_prompt=false
+extra_quotes=""
+
+while (($#)); do
+  case "$1" in
+    --count) count=${2:?}; shift 2 ;;
+    --clean) clean=true; shift ;;
+    --agent) agent=${2:?}; shift 2 ;;
+    --model) model=${2:?}; shift 2 ;;
+    --recent) recent=${2:-}; shift 2 ;;
+    --context) show_context=true; shift ;;
+    --prompt) show_prompt=true; shift ;;
+    --quotes) extra_quotes=${2:-}; shift 2 ;;
+    *) echo "clippy-ai: unexpected argument: $1" >&2; exit 2 ;;
+  esac
+done
+
+if [[ -z $agent ]]; then
+  agent=$(omarchy-default-agent 2>/dev/null || true)
+fi
+if [[ -z $agent ]]; then
+  echo "clippy-ai: no default agent (omarchy default agent <name>)" >&2
+  exit 3
+fi
+if ! command -v "$agent" >/dev/null 2>&1; then
+  echo "clippy-ai: $agent is not installed" >&2
+  exit 3
+fi
+
+# ---- the facts ---------------------------------------------------------------
+
+facts=()
+fact() { facts+=("- $1"); }
+
+fact "time: $(date '+%A %H:%M')"
+
+if command -v hyprctl >/dev/null && command -v jq >/dev/null; then
+  win=$(hyprctl activewindow -j 2>/dev/null | jq -r 'select(.class != null) | "\(.class): \(.title)"' 2>/dev/null)
+  [[ -n $win ]] && fact "focused window: ${win:0:160}"
+  clients=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.mapped)] | length' 2>/dev/null)
+  [[ -n $clients ]] && fact "open windows: $clients"
+fi
+
+for bat in /sys/class/power_supply/BAT*; do
+  [[ -r $bat/capacity ]] || continue
+  fact "battery: $(<"$bat/capacity")% ($(tr 'A-Z' 'a-z' <"$bat/status" 2>/dev/null || echo unknown))"
+  break
+done
+
+if [[ -r /proc/loadavg ]]; then
+  read -r load1 _ <"/proc/loadavg"
+  fact "load: $load1 on $(nproc) cores"
+fi
+if command -v free >/dev/null; then
+  fact "memory: $(free -g | awk '/^Mem:/ { printf "%d of %d GB used", $3, $2 }')"
+fi
+if command -v uptime >/dev/null; then
+  fact "uptime: $(uptime -p 2>/dev/null | sed 's/^up //')"
+fi
+
+if command -v playerctl >/dev/null; then
+  if [[ $(playerctl status 2>/dev/null) == "Playing" ]]; then
+    track=$(playerctl metadata --format '{{artist}} - {{title}}' 2>/dev/null)
+    [[ -n $track ]] && fact "playing: ${track:0:120}"
+  fi
+fi
+
+usage="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage/$agent.json"
+if [[ -r $usage ]] && command -v jq >/dev/null; then
+  limits=$(jq -r '[.limits[]? | "\(.label) \((.percent * 100) | floor)%"] | join(", ")' "$usage" 2>/dev/null)
+  [[ -n $limits ]] && fact "the user's $agent usage this period: $limits"
+fi
+
+[[ -n $recent ]] && fact "what they did to Clippy lately: $recent"
+
+context=$(printf '%s\n' "${facts[@]}")
+
+if [[ $show_context == "true" ]]; then
+  printf '%s\n' "$context"
+  exit 0
+fi
+
+# ---- the ask -----------------------------------------------------------------
+
+# A handful of lines from the book, so the model matches the register
+# instead of guessing how rude "inappropriate" means. The user's own
+# quotesFile counts too when the QML side passes it. Clean mode drops the
+# nsfw ones here as well.
+book="$(dirname "$(readlink -f "$0")")/../quotes.json"
+examples=""
+if command -v jq >/dev/null; then
+  examples=$(
+    for f in "$book" "$extra_quotes"; do
+      [[ -n $f && -r $f ]] || continue
+      jq -r --argjson clean "$clean" '
+        (if type == "array" then . else (.quotes // []) end)
+        | .[] | (if type == "string" then {text: ., nsfw: false} else . end)
+        | select(.text != null) | select(($clean | not) or (.nsfw | not)) | .text
+      ' "$f" 2>/dev/null
+    done | shuf -n 8 | sed 's/^/- /'
+  )
+fi
+
+tone="Swearing is allowed and welcome."
+[[ $clean == "true" ]] && tone="Keep it clean: no swearing, no slurs, nothing sexual. Rude is fine."
+
+system="You are Clippy, the Microsoft Office paperclip, now living on a Linux desktop's status bar and deeply unimpressed by its owner. You interrupt with short, sarcastic, passive-aggressive remarks about whatever the user is doing. $tone Never be hateful about protected groups. Never give real help or advice. Never mention being an AI or a language model, and never explain the joke."
+if [[ -n $examples ]]; then
+  system="$system
+
+Things you have said before. This is the register: blunt, dry, personal, no padding. Match it; don't repeat them.
+$examples"
+fi
+
+user="Here is what is going on right now on the user's machine:
+
+$context
+
+Write $count remarks Clippy would make, each one reacting to something specific above (the window, the battery, the hour, the music, their AI usage, what they did to you). Vary the target; don't lead every line with the same fact. Each remark is one or two sentences, at most 140 characters, in Clippy's voice, addressing the user as "you", no emoji, no quotes around it. Don't state the exact time or exact numbers you were given as if reading them out; react to them. Reply with only a valid JSON array of $count strings, comma-separated, on one line, and nothing else."
+
+prompt="$system
+
+$user"
+
+if [[ $show_prompt == "true" ]]; then
+  printf '%s\n' "$prompt"
+  exit 0
+fi
+
+# One-shot, tool-less, stateless: the same shape as omarchy-agent's launch
+# table but for a single answer, each under a timeout so a stuck agent
+# doesn't hang around. Entries below the first four are from the
+# agents' documentation; they were not run here.
+#
+# `--model` goes to the agents that take one; unset means the agent's own
+# default. Mind that for claude that is the CLI's default (opus at the time
+# of writing), not the `model` in ~/.claude/settings.json: settings are
+# switched off (`--setting-sources ""`) so the call doesn't drag in the
+# user's CLAUDE.md and hooks.
+run_agent() {
+  local m=()
+  case "$agent" in
+    claude)
+      [[ -n $model ]] && m=(--model "$model")
+      timeout 90 claude -p --tools "" --no-session-persistence --setting-sources "" \
+        --output-format text --system-prompt "$system" "${m[@]}" "$user"
+      ;;
+    codex)
+      [[ -n $model ]] && m=(-m "$model")
+      out=$(mktemp)
+      timeout 90 codex exec --skip-git-repo-check --ephemeral --ignore-rules -s read-only \
+        "${m[@]}" -o "$out" "$prompt" >/dev/null 2>&1
+      cat "$out"
+      rm -f "$out"
+      ;;
+    pi)
+      [[ -n $model ]] && m=(--model "$model")
+      timeout 90 pi -p --no-tools --no-session --no-extensions --no-skills --no-prompt-templates \
+        --no-context-files --system-prompt "$system" "${m[@]}" "$user"
+      ;;
+    opencode)
+      [[ -n $model ]] && m=(-m "$model")
+      timeout 90 opencode run --pure "${m[@]}" "$prompt"
+      ;;
+    omp)
+      [[ -n $model ]] && m=(--model "$model")
+      timeout 90 omp -p --no-tools --no-session --system-prompt "$system" "${m[@]}" "$user"
+      ;;
+    gemini)
+      [[ -n $model ]] && m=(-m "$model")
+      timeout 90 gemini "${m[@]}" -p "$prompt"
+      ;;
+    copilot)
+      timeout 90 copilot -p "$prompt"
+      ;;
+    crush)
+      timeout 90 crush run "$prompt"
+      ;;
+    grok)
+      timeout 90 grok -p "$prompt"
+      ;;
+    *)
+      echo "clippy-ai: don't know how to run $agent one-shot" >&2
+      return 3
+      ;;
+  esac
+}
+
+# A neutral working directory: no CLAUDE.md / AGENTS.md / .codex to pick up.
+cd "${TMPDIR:-/tmp}" || exit 1
+
+raw=$(run_agent 2>/dev/null) || {
+  echo "clippy-ai: $agent failed or timed out" >&2
+  exit 4
+}
+
+# Agents wrap the array in prose or a code fence now and then, and claude
+# has been seen to drop the commas between items. Take it as JSON if it
+# parses; else every JSON string literal in the output (that survives all
+# of the above); else treat non-empty lines as the lines.
+lines=$(printf '%s' "$raw" | jq -c '
+  if type == "array" then [.[] | select(type == "string")] else [] end
+' 2>/dev/null)
+if [[ -z $lines || $lines == "[]" ]]; then
+  lines=$(printf '%s' "$raw" | tr -d '\r' | tr '\n' ' ' \
+    | grep -o '"\([^"\\]\|\\.\)*"' | jq -sc '[.[] | select(type == "string" and length > 0)]' 2>/dev/null)
+fi
+if [[ -z $lines || $lines == "[]" ]]; then
+  lines=$(printf '%s' "$raw" | tr -d '\r' | sed -e '/^```/d' -e 's/^[-*0-9.)]*[[:space:]]*//' -e 's/^"\(.*\)"$/\1/' \
+    | grep -v '^[[:space:]]*$' | jq -R . | jq -sc '.')
+fi
+
+if [[ -z $lines || $lines == "[]" ]]; then
+  echo "clippy-ai: $agent answered, but not with lines" >&2
+  exit 5
+fi
+
+printf '%s\n' "$lines"

@@ -120,6 +120,41 @@ loader, like omarchy.menu — not to the bar widget.
   kHz from mp3s Costa picked) through the same `SoundBank` Instantiator
   component as the slaps; `flingSound` defaults to `slapSoundOn` so the
   menu's "Sounds" row mutes both.
+- `AgentBrain.qml` + `scripts/clippy-ai` — lines from the user's default
+  coding agent (`ai: true`, off by default). Omarchy's "default agent" is
+  only a name in `~/.config/omarchy/defaults/agent` (`omarchy-default-agent`
+  prints it) plus `omarchy-agent`, which opens it interactively; there is
+  no headless API, so the script carries its own one-shot table mirroring
+  `omarchy-agent`'s `case` (`claude -p --tools "" --setting-sources ""
+  --system-prompt`, `codex exec -o`, `pi -p --no-tools`, `opencode run
+  --pure`, the rest from docs). It gathers the facts itself (hyprctl
+  window/clients, battery, load, mem, uptime, playerctl, the hour,
+  `~/.local/state/omarchy/agents/usage/<agent>.json` limits, plus a
+  `--recent` note of slaps/drags/kills the QML side collects) and hands
+  them over as text, tool-less, from `$TMPDIR` so no CLAUDE.md is picked
+  up. Eight random lines from `quotes.json` (+ `--quotes <quotesFile>`,
+  nsfw dropped under `--clean`) go in the system prompt as register
+  examples; without them the model guessed mild. `--prompt` prints it; prints a JSON array of lines (three parsers: raw array, first `[..]`
+  block, one-per-line). ~8 s for claude, ~16 s opencode. `AgentBrain` runs
+  it through a `Process`, caches the lines in `PersistentProperties`
+  (`costafotClippyBrain`: remounts must not cost a call), expires them at
+  20 min, refills when ≤1 left with a 60 s minimum gap doubling on failure
+  (cap 32 min) — batch 5, so ~one call per 15 min at the default quote
+  cadence, and `take()` returns null on anything wrong. Root's
+  `nextQuote()` prefers it over `randomQuote()` for unprompted lines,
+  left-click, menu "Say something" and IPC `talk`; `slapped`/`dragged`/etc
+  stay on the book (they must be instant). IPC `ai` reports
+  "`<agent>: N cached[, busy]`". `aiModel` → `--model`, mapped per agent;
+  unset is the agent's default, which for claude is the CLI default (opus-5
+  today), *not* settings.json's `model`, because `--setting-sources ""` is
+  on (verified: with it, `modelUsage` shows opus-5; without, Costa's
+  fable-5). Costa asked; kept the isolation and made the model a setting.
+  Timed on the real prompt: opus-5 and sonnet-5 ~4 s, haiku-4-5 44-63 s
+  (twice; bare "say hi" is 3 s on all three), so don't suggest haiku.
+  The shell's env has the mise shims on
+  PATH, so the agent binaries resolve. codex and pi are installed here but
+  not logged in (401 / no key), so only claude and opencode were actually
+  run.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the join.
@@ -199,11 +234,20 @@ fallback. Keep every setting a flat scalar key with a default, a README table
 row, and (if it's something a user would reach for) a row in the menu. Don't
 build a `barWidget.schema` unprompted.
 
+Agent lines done (2026-08-28, v1.5.0): `ai: true` swaps the random book for
+lines from the user's default coding agent about what they are doing (see
+`AgentBrain.qml` above). Verified live with claude on Costa's machine, and
+opencode from the terminal. Costa's question was whether Clippy could "be
+powered by the user's AI agent on omarchy"; the answer is yes, via each
+agent's one-shot CLI mode, not via anything Omarchy provides.
+
 Ideas, in rough order of payoff:
-- Reactive lines: battery, CPU, pending updates, hour of day, agent usage
-  (`shell.serviceFor("omarchy.notifications")` and the agents plugin state are
-  reachable from a panel — see ~/Work/omarchy-navbar-cat for how it listens to
-  Hyprland/MPRIS/UPower).
+- Reactive lines without the agent: battery, CPU, pending updates, hour of
+  day (`shell.serviceFor("omarchy.notifications")` and the agents plugin
+  state are reachable from a panel — see ~/Work/omarchy-navbar-cat for how
+  it listens to Hyprland/MPRIS/UPower). Or feed more of that into
+  `clippy-ai`'s facts: pending updates, notifications, the workspace.
+- Let the agent pick the animation too (`anim` per line).
 - The 15 original Clippy sounds live base64-encoded in clippy.js
   `agents/Clippy/sounds-mp3.js`; frames carry `sound` ids already. The
   `SoundEffect` plumbing from the slap is the way to play them.

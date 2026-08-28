@@ -69,16 +69,54 @@ into the bar himself, settings and all.
 | `slapsToKill` | `10` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |
+| `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
+| `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
+| `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip |
 
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
 `quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`
 and `flung` arrays.
 
+## Letting your AI agent write his lines
+
+Turn on "Lines from claude" in the menu (or `"ai": true`) and the random book
+is replaced with remarks about what you are actually doing. Every so often he
+looks at the focused window, how many windows are open, the battery, the load,
+the uptime, what's playing, the hour, how much of your agent plan you've burned
+this week, and what you've done to him lately (slaps, drags, the odd murder),
+and asks your coding agent for five lines in his voice, with a handful of
+lines from the book (and your `quotesFile`) as examples of how far to go.
+They're cached and handed out one at a time, so a click never waits on a model.
+
+The agent is whichever `omarchy default agent` picked, run the way `omarchy
+agent prompt` runs it but in its one-shot mode with tools off: it gets the
+facts as text and can only answer. Nothing on your machine is touched. It does
+mean the window title and the rest of that list are sent wherever that agent
+sends its prompts, and every batch spends a little of your plan — one small
+call every 15 minutes or so at the default pace, more if you keep clicking
+him (never more than one a minute). It runs on the
+agent's default model unless `aiModel` says otherwise; for claude that is the
+CLI's default (opus), not the `model` from your `settings.json`, because the
+call runs with your settings off so it doesn't load your CLAUDE.md and hooks.
+A smaller model does this job fine (`claude-sonnet-5` answered in 4 s, same as opus; haiku 4.5 oddly took a minute). `clean` applies to these lines too. Whenever the agent is unset, not logged in, offline or slow,
+the book takes over and you won't notice.
+
+Verified with `claude` and `opencode`; `codex` and `pi` are wired the same way
+but weren't run here, and the rest are best guesses from their docs. To see
+what he'd send, or try an agent by hand:
+
+```bash
+~/.config/omarchy/plugins/costafot.clippy/scripts/clippy-ai --context
+~/.config/omarchy/plugins/costafot.clippy/scripts/clippy-ai --prompt
+~/.config/omarchy/plugins/costafot.clippy/scripts/clippy-ai --agent opencode
+```
+
 ## Scripting him
 
 ```bash
 omarchy-shell costafot.clippy say "Another theme. That'll fix it."
+omarchy-shell costafot.clippy talk       # a line of his own, what a click does
 omarchy-shell costafot.clippy shutUp
 omarchy-shell costafot.clippy snooze 30
 omarchy-shell costafot.clippy slap left   # or right: the way he flies
@@ -88,6 +126,7 @@ omarchy-shell costafot.clippy respawn
 omarchy-shell costafot.clippy toggle
 omarchy-shell costafot.clippy showMenu  # the menu; hideMenu closes it
 omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden
+omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"
 ```
 
 `say` works from anywhere, so an Omarchy hook can feed him lines:
@@ -101,7 +140,8 @@ omarchy-shell -q costafot.clippy say "Oh good, another theme. That'll fix it."
 
 - Top and bottom bars only. On a vertical bar he doesn't show up.
 - The bubble draws over the top of your windows. He is, after all, in the way.
-- The lines are random; he doesn't actually know what you did. Yet.
+- Out of the box the lines are random; he doesn't know what you did. With
+  `ai` on he does, roughly.
 - Clippy, the name and the artwork are Microsoft's. The sprites come from
   [clippy.js](https://github.com/clippyjs/clippy.js); the code here is MIT, the
   paperclip is not.

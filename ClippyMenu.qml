@@ -219,6 +219,14 @@ PanelWindow {
         onTapped: menu.set("clean", !on)
       }
       Entry {
+        readonly property bool on: menu.clippy ? menu.clippy.aiEnabled : false
+        readonly property string agent: menu.clippy ? menu.clippy.aiAgentName : ""
+        label: "Lines from " + (agent !== "" ? agent : "your AI agent")
+        mark: on ? "●" : "○"
+        active: on
+        onTapped: menu.set("ai", !on)
+      }
+      Entry {
         readonly property bool on: menu.clippy ? menu.clippy.slapSoundOn : true
         label: "Sounds"
         mark: on ? "●" : "○"

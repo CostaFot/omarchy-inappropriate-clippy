@@ -132,6 +132,14 @@ Item {
   readonly property bool dragEnabled: setting("drag", true) !== false
   // Letting go of him mid-fling throws him off the bar, fatally.
   readonly property bool flingEnabled: setting("fling", true) !== false
+  // `ai: true` has his unprompted and clicked lines come from the user's
+  // default coding agent (scripts/clippy-ai), reacting to what's on screen,
+  // battery, the hour. The book stays the fallback. `aiAgent` overrides
+  // which agent, else whatever `omarchy default agent` says.
+  readonly property bool aiEnabled: setting("ai", false) === true
+  readonly property string aiAgent: String(setting("aiAgent", "") || "")
+  readonly property string aiModel: String(setting("aiModel", "") || "")
+  readonly property string aiAgentName: agentBrain.agent
   readonly property real flingSpeed: 1.8 // px/ms at release
   readonly property bool slapSwipe: setting("slapSwipe", true) !== false
   readonly property int slapsToKill: Math.max(0, Number(setting("slapsToKill", 10)))
@@ -220,6 +228,23 @@ Item {
     return q ? q.text : fallback
   }
   function randomQuoteFrom(key) { return randomFrom(pool(key)) }
+  // What he says when nothing in particular happened: an agent line if one
+  // is cached, else one from the book.
+  function nextQuote() {
+    var line = agentBrain.take()
+    if (line) return { text: line }
+    return randomQuote()
+  }
+
+  AgentBrain {
+    id: agentBrain
+    script: root.pluginDir + "/scripts/clippy-ai"
+    enabled: root.aiEnabled
+    clean: root.clean
+    agentOverride: root.aiAgent
+    model: root.aiModel
+    quotesFile: root.quotesFile
+  }
 
   FileView {
     path: root.pluginDir + "/quotes.json"
@@ -374,7 +399,7 @@ Item {
     scheduleQuote()
     if (mood !== "idle" && mood !== "walking") return
     if (isSnoozed() || dragging) return
-    var q = randomQuote()
+    var q = nextQuote()
     if (q) say(q.text, q.anim)
   }
 
@@ -398,6 +423,7 @@ Item {
     quoteTimer.stop()
     bubbleTimer.stop()
     mood = "dying"
+    agentBrain.remember(lineKey === "knockedOut" ? "knocked him out with slaps" : "killed him")
     var words = randomLine(lineKey || "lastWords", "Fine. Fuck off then.")
     bubble.text = words
     bubble.shown = true
@@ -450,6 +476,7 @@ Item {
     recent.push(now)
     slapTimes = recent
 
+    agentBrain.remember("slapped him")
     playSlapSound()
     walkAnim.stop()
     brain.stop()
@@ -535,6 +562,7 @@ Item {
     brain.stop()
     if (mood === "walking") sprite.exit()
     dragging = true
+    agentBrain.remember("picked him up and dragged him along the bar")
     grabX = atX
     dragVel = 0
     dragSpeed = 0
@@ -608,6 +636,7 @@ Item {
     quoteTimer.stop()
     bubbleTimer.stop()
     mood = "dying"
+    agentBrain.remember("threw him off the bar")
     playFlingSound()
     bubble.text = randomLine("flung", "Noooooooooooooooooooooooooooo")
     bubble.shown = true
@@ -694,6 +723,8 @@ Item {
     target: "costafot.clippy"
     function ping(): string { return "ok" }
     function say(text: string): string { return root.say(text) ? "ok" : "not now" }
+    // A line of his own choosing: what a left-click does.
+    function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim) ? "ok" : "not now" }
     function shutUp(): string { root.hideBubble(); return "ok" }
     function kill(): string { root.kill(); return "ok" }
     function respawn(): string {
@@ -717,6 +748,8 @@ Item {
     function toggle(): string { root.opened = !root.opened; return root.opened ? "shown" : "hidden" }
     function hideMenu(): string { menu.open = false; return "ok" }
     function showMenu(): string { root.showMenu(); return "ok" }
+    // What the agent side is doing: "off", or "<agent>: N cached[, busy]".
+    function ai(): string { return root.aiEnabled ? agentBrain.status() : "off" }
     function state(): string {
       if (!root.opened) return "hidden"
       if (root.mood === "dead") return "dead"
@@ -740,7 +773,7 @@ Item {
       }
     }
     onAct: function (name) {
-      if (name === "say") { var q = root.randomQuote(); if (q) root.say(q.text, q.anim) }
+      if (name === "say") { var q = root.nextQuote(); if (q) root.say(q.text, q.anim) }
       else if (name === "shutUp") root.hideBubble()
       else if (name === "snooze") root.snooze(60)
       else if (name === "unsnooze") root.unsnooze()
@@ -849,7 +882,7 @@ Item {
               return
             }
             if (bubble.shown) { root.hideBubble(); return }
-            var q = root.randomQuote()
+            var q = root.nextQuote()
             if (q) root.say(q.text, q.anim)
           }
         }
