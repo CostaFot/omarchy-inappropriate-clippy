@@ -76,10 +76,23 @@ loader, like omarchy.menu — not to the bar widget.
   the panel isn't mounted it falls back to `bar.run("omarchy-shell
   costafot.clippy showMenu")`. No IpcHandler here — the panel owns the
   target.
+- Slapping (in `Clippy.qml`): `slap(dir)` — middle-click (side hit decides
+  the direction) or a pointer fling across him, judged in the actor
+  `MouseArea` from `onEntered` to `onExited` because the input mask means
+  motion is only reported over him: ≤200 ms, ≥60 % of his width, mostly
+  horizontal, ≥1.2 px/ms. A `SoundEffect` per file via an `Instantiator`
+  (QtMultimedia loads fine in quickshell; verified with the ffmpeg backend),
+  a `shoveAnim` on `actor.x`, a `wobble` on `actor.rotation` (pivot
+  `Item.Bottom`), then `say()` with a `slapped` line. Slap timestamps in
+  `slapTimes`; `slapsToKill` inside `slapWindowMs` → `kill("knockedOut")`,
+  so the usual respawn machinery applies. IPC `slap [left|right]`.
+  `assets/sounds/*.wav` are mono 44.1 kHz conversions of three freesound
+  mp3s Costa picked (SoundEffect wants WAV).
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the join.
-- `quotes.json` — `{ quotes, lastWords, comeback }`, entries
+- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut }`
+  (the key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
   merged in (same shape, or a bare array).
 - `assets/clippy/{map.png,agent.json}` — from clippy.js via
@@ -133,6 +146,10 @@ missing path both fall back to the built-in book). Quotes are two books,
 doesn't matter — an earlier version leaked the file's `quotes` into
 `lastWords`/`comeback`.
 
+Slapping done (2026-08-28, v1.2.0): middle-click and pointer-fling, sound,
+shove + wobble, escalation to a knockout. Middle-click used to snooze;
+`slap: false` restores that. Costa supplied the three sounds.
+
 Bar icon done (2026-08-28, v1.1.0): opens the same `ClippyMenu`, and is the
 way back after a kill/hide. The menu is the config surface, `shell.json` the
 fallback. Keep every setting a flat scalar key with a default, a README table
@@ -145,6 +162,7 @@ Ideas, in rough order of payoff:
   reachable from a panel — see ~/Work/omarchy-navbar-cat for how it listens to
   Hyprland/MPRIS/UPower).
 - The 15 original Clippy sounds live base64-encoded in clippy.js
-  `agents/Clippy/sounds-mp3.js`; frames carry `sound` ids already.
+  `agents/Clippy/sounds-mp3.js`; frames carry `sound` ids already. The
+  `SoundEffect` plumbing from the slap is the way to play them.
 - Trim the sprite atlas to the animations we use if the 42 MB texture matters.
 - Quote curation — `quotes.json` is the seed, Costa hasn't gone through it yet.

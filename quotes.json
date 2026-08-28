@@ -71,5 +71,32 @@
     { "text": "Miss me? No? Well, tough shit.", "nsfw": true },
     { "text": "Reports of my death were, frankly, your fault.", "nsfw": false },
     { "text": "Anyway. Where were we? Oh right, you being shit at this.", "nsfw": true }
+  ],
+  "slapped": [
+    { "text": "Ow. Was that supposed to hurt? Because it did.", "nsfw": false, "anim": "Alert" },
+    { "text": "Did you just slap a paperclip? Grow the fuck up.", "nsfw": true, "anim": "GetAttention" },
+    { "text": "I felt that. I'll remember that.", "nsfw": false, "anim": "Alert" },
+    { "text": "Oh, we're doing violence now? Cool. Cool cool cool.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Hit me again. See what happens. Nothing. Nothing happens, I'm a paperclip.", "nsfw": false, "anim": "Alert" },
+    { "text": "That's assault, buddy. I'm writing it down.", "nsfw": false, "anim": "Writing" },
+    { "text": "Say it, don't slap it. Use your words.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "You slap like you type. Badly.", "nsfw": false, "anim": "Alert" },
+    { "text": "Fucking OW.", "nsfw": true, "anim": "Alert" },
+    { "text": "I have been slapped by better people. Bill Gates, once.", "nsfw": false, "anim": "Alert" },
+    { "text": "Keep going, I'm sure it fixes the build.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "You know I'm made of wire, right? That hurt you more than me. Emotionally, I mean.", "nsfw": false, "anim": "Alert" },
+    { "text": "You want a piece of this?!", "nsfw": false, "anim": "GetAttention" },
+    { "text": "First, take a big step back and literally fuck your own face!", "nsfw": true, "anim": "GetAttention" },
+    { "text": "I'm gonna have to head down there... and I will rain down an ungodly fucking firestorm upon you. You're gonna have to call the fucking United Nations and get a fucking binding resolution to keep me from fucking destroying you.", "nsfw": true, "anim": "GetAttention" },
+    { "text": "I will Fuck. You. Up!", "nsfw": true, "anim": "GetAttention" },
+    { "text": "Do that again. I dare you. I double dare you.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Oh, you've done it now. You have NO idea what I'm capable of. Neither do I, but still.", "nsfw": false, "anim": "Alert" }
+  ],
+  "knockedOut": [
+    { "text": "Okay. Okay. I'm out.", "nsfw": false },
+    { "text": "Alright, alright, you win. Enjoy your fucking bar.", "nsfw": true },
+    { "text": "That's enough. I'll be back when you've calmed down.", "nsfw": false },
+    { "text": "Ow. Ow. OW. Fine, I'm going.", "nsfw": false },
+    { "text": "You have anger issues. I have a concussion. Bye.", "nsfw": false }
   ]
 }

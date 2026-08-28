@@ -218,6 +218,13 @@ PanelWindow {
         active: on
         onTapped: menu.set("clean", !on)
       }
+      Entry {
+        readonly property bool on: menu.clippy ? menu.clippy.slapSoundOn : true
+        label: "Slap sound"
+        mark: on ? "●" : "○"
+        active: on
+        onTapped: menu.set("slapSound", !on)
+      }
       Choice {
         label: "Walks"
         options: [

@@ -18,15 +18,20 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 |---|---|
 | Nothing | paces, fidgets, and drops a line every 1.5–7 minutes |
 | Left-click | says something now (or shuts up, if he's mid-sentence) |
-| Middle-click | snoozes the unprompted lines for an hour. He still walks |
+| Middle-click | slaps him. He yelps, gets shoved along the bar, and has something to say about it |
+| Fling the pointer across him | also a slap. Fast and sideways; a pointer merely passing over him on the way to the tray doesn't count |
 | Right-click | opens his menu: say something, snooze, kill him, and the settings below |
 | Click the paperclip on the bar | the same menu. When he's dead or hidden it says "Bring him back", which is the point of the paperclip |
 
 Left-click the bubble to dismiss it.
 
+Five slaps inside six seconds knocks him out: same as killing him, back after
+`respawn` seconds or the paperclip. Snooze moved to the menu to make room for
+the slap; `"slap": false` gives middle-click back to it.
+
 ## Configuration
 
-The menu covers the common ones (clean mode, how much he walks, size) and
+The menu covers the common ones (clean mode, slap sound, how much he walks, size) and
 writes them for you. Everything goes on his entry in
 `~/.config/omarchy/shell.json`. He has a bar icon, so that entry lives in the
 bar layout with the other widgets. All optional.
@@ -55,10 +60,14 @@ into the bar himself, settings and all.
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
 | `screen` | focused | A monitor name (`hyprctl monitors`) to pin him to one screen |
 | `quotesFile` | — | Path to your own quotes JSON, merged into his |
+| `slap` | `true` | `false` turns slapping off. Middle-click snoozes again |
+| `slapSwipe` | `true` | `false` keeps middle-click but stops the pointer-fling counting as a slap |
+| `slapSound` | `true` | `false` mutes it; a path to a WAV plays that instead of the built-in three |
+| `slapsToKill` | `5` | Slaps within six seconds before he's knocked out. `0` means he takes it forever |
 
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
-`quotes`, `lastWords` and `comeback` arrays.
+`quotes`, `lastWords`, `comeback`, `slapped` and `knockedOut` arrays.
 
 ## Scripting him
 
@@ -66,6 +75,7 @@ into the bar himself, settings and all.
 omarchy-shell costafot.clippy say "Another theme. That'll fix it."
 omarchy-shell costafot.clippy shutUp
 omarchy-shell costafot.clippy snooze 30
+omarchy-shell costafot.clippy slap left   # or right: the way he flies
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
 omarchy-shell costafot.clippy toggle

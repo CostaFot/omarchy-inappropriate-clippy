@@ -1,4 +1,5 @@
 import QtQuick
+import QtMultimedia
 import Quickshell
 import Quickshell.Io
 import Quickshell.Wayland
@@ -119,9 +120,26 @@ Item {
   readonly property bool clean: setting("clean", false) === true
   readonly property int respawnSeconds: Math.max(0, Number(setting("respawn", 300)))
   readonly property string screenName: String(setting("screen", "") || "")
-  readonly property string quotesFile: {
-    var p = String(setting("quotesFile", "") || "")
+  function expandHome(p) {
+    p = String(p || "")
     return p.indexOf("~") === 0 ? Quickshell.env("HOME") + p.slice(1) : p
+  }
+  readonly property string quotesFile: expandHome(setting("quotesFile", ""))
+  // Slapping: middle-click, or flinging the pointer across him. `slap: false`
+  // turns both off and gives middle-click back to snooze.
+  readonly property bool slapEnabled: setting("slap", true) !== false
+  readonly property bool slapSwipe: setting("slapSwipe", true) !== false
+  readonly property int slapsToKill: Math.max(0, Number(setting("slapsToKill", 5)))
+  // `slapSound`: true for the built-in ones, false for silence, or a path to
+  // a WAV of your own.
+  readonly property var slapSoundSetting: setting("slapSound", true)
+  readonly property bool slapSoundOn: slapSoundSetting !== false
+  readonly property var slapSounds: {
+    if (slapSoundSetting === false) return []
+    if (typeof slapSoundSetting === "string" && slapSoundSetting !== "")
+      return ["file://" + expandHome(slapSoundSetting)]
+    var dir = "file://" + pluginDir + "/assets/sounds/"
+    return [dir + "slap-crack.wav", dir + "slap-punch.wav", dir + "slap-ahh.wav"]
   }
 
   // ---- bar geometry (same idiom as plugins/notifications/Service.qml) -----
@@ -155,8 +173,14 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  property var book: ({ quotes: [], comeback: [], lastWords: [] })
-  property var extraBook: ({ quotes: [], comeback: [], lastWords: [] })
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut"]
+  property var book: emptyBook()
+  property var extraBook: emptyBook()
+  function emptyBook() {
+    var b = {}
+    for (var i = 0; i < quoteKeys.length; i++) b[quoteKeys[i]] = []
+    return b
+  }
 
   function normalizeQuotes(list) {
     if (!Array.isArray(list)) return []
@@ -172,7 +196,8 @@ Item {
     var data
     try { data = JSON.parse(json) } catch (e) { console.warn("clippy: bad quotes JSON: " + e); return }
     var raw = Array.isArray(data) ? { quotes: data } : (data || {})
-    var b = { quotes: normalizeQuotes(raw.quotes), comeback: normalizeQuotes(raw.comeback), lastWords: normalizeQuotes(raw.lastWords) }
+    var b = {}
+    for (var i = 0; i < quoteKeys.length; i++) b[quoteKeys[i]] = normalizeQuotes(raw[quoteKeys[i]])
     if (extra) extraBook = b
     else book = b
   }
@@ -186,6 +211,7 @@ Item {
     var q = randomFrom(pool(key))
     return q ? q.text : fallback
   }
+  function randomQuoteFrom(key) { return randomFrom(pool(key)) }
 
   FileView {
     path: root.pluginDir + "/quotes.json"
@@ -356,14 +382,15 @@ Item {
     say("Oh good, you missed me. Obviously.")
   }
 
-  function kill() {
+  function kill(lineKey) {
     if (mood === "dead" || mood === "dying") return
     walkAnim.stop()
+    shoveAnim.stop()
     brain.stop()
     quoteTimer.stop()
     bubbleTimer.stop()
     mood = "dying"
-    var words = randomLine("lastWords", "Fine. Fuck off then.")
+    var words = randomLine(lineKey || "lastWords", "Fine. Fuck off then.")
     bubble.text = words
     bubble.shown = true
     dieTimer.interval = 2500
@@ -396,6 +423,87 @@ Item {
     })
   }
 
+  // ---- slapping ----------------------------------------------------------
+  // `dir` is the way he gets shoved: +1 screen-right, -1 screen-left. A
+  // sound, a shove with a wobble, a line. Slaps close together add up;
+  // `slapsToKill` of them inside `slapWindowMs` and he's out cold, through
+  // the normal kill path with a `knockedOut` line, so the respawn timer and
+  // the bar icon work as usual.
+  property var slapTimes: []
+  readonly property int slapWindowMs: 6000
+
+  function slap(dir) {
+    if (!slapEnabled) return false
+    if (mood === "dead" || mood === "dying" || mood === "reviving") return false
+    dir = Number(dir) < 0 ? -1 : 1
+    var now = Date.now()
+    var recent = slapTimes.filter(function (t) { return now - t < root.slapWindowMs })
+    recent.push(now)
+    slapTimes = recent
+
+    playSlapSound()
+    walkAnim.stop()
+    brain.stop()
+    bubbleTimer.stop()
+    bubble.shown = false
+    if (mood === "walking") sprite.exit()
+
+    var maxX = Math.max(0, stage.width - actor.width)
+    var distance = rand(50, 120) * (spriteSize / 30)
+    shoveAnim.stop()
+    shoveAnim.to = Math.round(clamp(actor.x + dir * distance, 0, maxX))
+    shoveAnim.start()
+    wobble.stop()
+    wobble.dir = dir
+    wobble.start()
+
+    if (slapsToKill > 0 && recent.length >= slapsToKill) {
+      slapTimes = []
+      kill("knockedOut")
+      return true
+    }
+    var q = randomQuoteFrom("slapped")
+    say(q ? q.text : "Ow.", q && q.anim ? q.anim : "Alert")
+    return true
+  }
+
+  function playSlapSound() {
+    if (!slapSounds.length) return
+    var fx = slapFx.objectAt(Math.floor(Math.random() * slapFx.count))
+    if (fx && fx.status === SoundEffect.Ready) fx.play()
+  }
+
+  // One SoundEffect per file, decoded up front, so a slap lands without a
+  // load stall. Three built-ins, or the one from `slapSound`.
+  Instantiator {
+    id: slapFx
+    model: root.slapSounds
+    delegate: SoundEffect {
+      required property string modelData
+      source: modelData
+      onStatusChanged: if (status === SoundEffect.Error) console.warn("clippy: can't load slap sound " + source)
+    }
+  }
+
+  NumberAnimation {
+    id: shoveAnim
+    target: actor
+    property: "x"
+    duration: 380
+    easing.type: Easing.OutCubic
+    onFinished: persisted.lastX = actor.x
+  }
+
+  // Head snaps the way he was hit, rebounds, settles. Pivot at his feet.
+  SequentialAnimation {
+    id: wobble
+    property int dir: 1
+    NumberAnimation { target: actor; property: "rotation"; to: wobble.dir * 16; duration: 70; easing.type: Easing.OutQuad }
+    NumberAnimation { target: actor; property: "rotation"; to: -wobble.dir * 9; duration: 140; easing.type: Easing.InOutQuad }
+    NumberAnimation { target: actor; property: "rotation"; to: wobble.dir * 4; duration: 120; easing.type: Easing.InOutQuad }
+    NumberAnimation { target: actor; property: "rotation"; to: 0; duration: 160; easing.type: Easing.OutQuad }
+  }
+
   // Opens the menu with its card under screen x `atX`, on `onScreen` (null
   // means the monitor Clippy is on). The bar icon calls this from any bar.
   function showMenuAt(atX, onScreen) {
@@ -424,6 +532,12 @@ Item {
       return "ok"
     }
     function snooze(minutes: string): string { root.snooze(minutes); return "ok" }
+    // `slap left|right` is the way he flies; anything else picks one.
+    function slap(direction: string): string {
+      var d = String(direction || "").toLowerCase()
+      var dir = d === "left" ? -1 : (d === "right" ? 1 : (Math.random() < 0.5 ? -1 : 1))
+      return root.slap(dir) ? "ok" : (root.slapEnabled ? "not now" : "off")
+    }
     function toggle(): string { root.opened = !root.opened; return root.opened ? "shown" : "hidden" }
     function hideMenu(): string { menu.open = false; return "ok" }
     function showMenu(): string { root.showMenu(); return "ok" }
@@ -442,6 +556,7 @@ Item {
     onOpenChanged: {
       if (open) {
         walkAnim.stop()
+        shoveAnim.stop()
         brain.stop()
         if (root.mood === "walking") { persisted.lastX = actor.x; sprite.exit(); root.mood = "idle" }
       } else if (root.mood === "idle") {
@@ -502,6 +617,7 @@ Item {
         height: sprite.implicitHeight
         y: root.barBottom ? stage.height - height : 0
         visible: root.mood !== "dead"
+        transformOrigin: Item.Bottom
 
         ClippySprite {
           id: sprite
@@ -510,12 +626,42 @@ Item {
         }
 
         MouseArea {
+          id: touch
           anchors.fill: parent
           acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
           cursorShape: Qt.PointingHandCursor
+          hoverEnabled: true
+
+          // Swipe slap: the pointer only reports while it is over him, so
+          // judge the crossing from where it came in to where it left. Fast
+          // and mostly sideways across most of his width is a slap; a
+          // pointer wandering over him on the way to the tray is not.
+          property real enterX: 0
+          property real enterY: 0
+          property real enterT: 0
+          property real lastX: 0
+          property real lastY: 0
+          onEntered: { enterX = mouseX; enterY = mouseY; lastX = mouseX; lastY = mouseY; enterT = Date.now() }
+          onPositionChanged: function (mouse) { lastX = mouse.x; lastY = mouse.y }
+          onExited: {
+            if (!root.slapEnabled || !root.slapSwipe || pressed) return
+            var dx = lastX - enterX
+            var dy = lastY - enterY
+            var dt = Date.now() - enterT
+            if (dt <= 0 || dt > 200) return
+            if (Math.abs(dx) < width * 0.6 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+            if (Math.abs(dx) / dt < 1.2) return
+            root.slap(dx > 0 ? 1 : -1)
+          }
+
           onClicked: function (mouse) {
             if (mouse.button === Qt.RightButton) { root.showMenu(); return }
-            if (mouse.button === Qt.MiddleButton) { root.snooze(60); return }
+            if (mouse.button === Qt.MiddleButton) {
+              // Hit on his left side and he flies right.
+              if (root.slapEnabled) root.slap(mouse.x < width / 2 ? 1 : -1)
+              else root.snooze(60)
+              return
+            }
             if (bubble.shown) { root.hideBubble(); return }
             var q = root.randomQuote()
             if (q) root.say(q.text, q.anim)
