@@ -407,9 +407,14 @@ Item {
     property real snoozedUntil: 0
     property real lastX: -1
     property real graveX: -1
+    property int slapCount: 0
+    property int killCount: 0
   }
 
   function isSnoozed() { return persisted.snoozedUntil > Date.now() }
+  // The running tally: the menu's footer and IPC `stats` read these.
+  readonly property int slapCount: persisted.slapCount
+  readonly property int killCount: persisted.killCount
   readonly property bool talking: bubble.shown
   readonly property int actorHeight: actor.height
 
@@ -670,6 +675,7 @@ Item {
 
   function finishDeath() {
     mood = "dead"
+    persisted.killCount++
     placeGrave()
     persisted.deadUntil = respawnSeconds > 0 ? Date.now() + respawnSeconds * 1000 : -1
     armRespawn()
@@ -750,6 +756,7 @@ Item {
     recent.push(now)
     slapTimes = recent
 
+    persisted.slapCount++
     agentBrain.remember("slapped him")
     playSlapSound()
     walkAnim.stop()
@@ -1057,6 +1064,11 @@ Item {
       if (root.mood === "dead") return "dead"
       if (root.isSnoozed()) return "snoozed"
       return root.mood
+    }
+    // What the menu's footer shows.
+    function stats(): string {
+      return root.slapCount + (root.slapCount === 1 ? " slap, " : " slaps, ")
+        + root.killCount + (root.killCount === 1 ? " kill" : " kills")
     }
     // The settings, same keys as shell.json and the menu: `set clean true`,
     // `set size 40`, `set aiModel unset`. Writes shell.json, so we remount.

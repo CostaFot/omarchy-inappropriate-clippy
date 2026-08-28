@@ -22,10 +22,10 @@ the original had.
 
 ## Kill counter with a grudge
 
-Slaps/drags/kills are already collected for `--recent`; persist lifetime
-totals in `PersistentProperties` and expose `{kills}`/`{slaps}` placeholders
-to both books, same as `{away}`. "That's the ninth time you've murdered me.
-I keep a list." A "Stats" row in the menu for free.
+Done in v1.10.0, the simple half: slap/kill totals persist across remounts
+and the menu shows them. The grudge half remains: expose `{kills}`/`{slaps}`
+placeholders to both books, same as `{away}`. "That's the ninth time you've
+murdered me. I keep a list."
 
 ## Window-class reactions
 

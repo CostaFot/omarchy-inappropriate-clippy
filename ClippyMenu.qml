@@ -261,6 +261,20 @@ PanelWindow {
         }
         onPicked: function (value) { menu.set("size", value) }
       }
+
+      Divider {}
+
+      // The body count.
+      Text {
+        readonly property int slaps: menu.clippy ? menu.clippy.slapCount : 0
+        readonly property int kills: menu.clippy ? menu.clippy.killCount : 0
+        text: slaps + (slaps === 1 ? " slap" : " slaps") + " · " + kills + (kills === 1 ? " kill" : " kills")
+        color: Color.popups.text
+        opacity: 0.55
+        font.family: Style.fontFamily
+        font.pixelSize: card.fontSize
+        topPadding: Style.space(4)
+      }
     }
   }
 }

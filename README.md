@@ -30,7 +30,9 @@ Left-click the bubble to dismiss it.
 
 Ten slaps inside six seconds and he's out cold, same as a kill; `slapsToKill`
 below changes the number (`0` and he takes it forever). However he goes, a
-little tombstone marks the spot until he's back. Snooze moved to the
+little tombstone marks the spot until he's back. The menu keeps score at
+the bottom — every slap, every death (well, since the last reboot; he
+forgives nothing, but the shell forgets). Snooze moved to the
 menu to make room for the slap; `"slap": false` gives middle-click back to it.
 
 He sleeps when you're away: the screen locked or off, or Omarchy's idle
@@ -145,6 +147,7 @@ omarchy-shell costafot.clippy toggle
 omarchy-shell costafot.clippy showMenu  # the menu; hideMenu closes it
 omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden | asleep
 omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"
+omarchy-shell costafot.clippy stats      # the lifetime tally: "34 slaps, 5 kills"
 omarchy-shell costafot.clippy set clean true   # any key from the table; "unset" puts the default back
 omarchy-shell costafot.clippy get clean        # the value in effect, as JSON
 omarchy-shell costafot.clippy settings         # all of them

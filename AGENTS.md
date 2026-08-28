@@ -51,7 +51,15 @@ loader, like omarchy.menu — not to the bar widget.
     `showMenu`/`hideMenu` exist so the menu can be driven without a pointer
     (there is no ydotool on the box; that is how it was screenshotted).
   - `PersistentProperties { reloadableId: "costafotClippy" }` for `deadUntil`
-    (0 alive, -1 dead until `respawn`, >0 epoch ms), `snoozedUntil`, `lastX`.
+    (0 alive, -1 dead until `respawn`, >0 epoch ms), `snoozedUntil`, `lastX`,
+    and the tally `slapCount`/`killCount` — bumped in `slap()` and
+    in `finishDeath()` (the one place every death path lands, so a fling is
+    one kill and a knockout is ten slaps plus one kill), shown dim at the
+    foot of the menu and by IPC `stats`. PersistentProperties survive
+    remounts but not a shell restart, so the score resets on reboot — the
+    pitch chose that trade and the README owns up to it. Just the numbers:
+    the `{kills}`/`{slaps}` placeholders from the IDEAS.md pitch were
+    skipped on purpose (Costa: keep it simple).
   - `asleep` (`pauseWhenAway`, default true): he stops while nobody can see
     him. Three sources, all bindings: `shell.serviceFor("omarchy.lock").locked`
     (the shell's own lock, `$OMARCHY_PATH/shell/plugins/lock/Service.qml`; it
@@ -278,7 +286,7 @@ right-click menu (actions + clean/sounds/restless/size), bar icon → same menu
 (dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
 snooze, sleep while locked/idle/screens-off with a welcome-back line, top and
 bottom bars, IPC, settings inline on the bar-layout entry.
-On GitHub at the README install URL, v1.9.0 (no tag yet). Not on the
+On GitHub at the README install URL, v1.10.0 (no tag yet). Not on the
 marketplace: see `PUBLISHING.md` for the flow, prior submissions and the
 gap list.
 
@@ -363,6 +371,15 @@ after: Costa asked for "Here lies Clippy. You killed him, you fuck" on
 click, and that line is in the book. He clicked the grave by hand and
 confirmed; the IPC path and the grave-anchored bubble were verified with
 screenshots.
+
+Kill/slap counter done (2026-08-28, v1.10.0): `slapCount`/`killCount` in
+`persisted`, a dim footer row in the menu, IPC `stats` (pluralized: "1
+slap, 0 kills"). Costa asked for the simple half of the IDEAS.md pitch
+only — show the numbers, no placeholder lines. Verified over IPC: slaps
+and kills increment, a fling counts exactly one kill (it lands in
+`finishDeath()` like every other death), two `set`-triggered remounts
+keep the totals, and a shell restart resets them — that's the
+PersistentProperties trade, same as `deadUntil`.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, pending updates, hour of
