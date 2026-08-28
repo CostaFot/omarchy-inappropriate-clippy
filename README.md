@@ -185,6 +185,12 @@ custom voice is wired, and IPC `voice` tells your agent the whole story.
 Temper your expectations: the clone gets the accent and the cadence, not
 the soul. It's fun. It is not amazing.
 
+Tuning the clone is editing the `tts` string it wrote: `--exag` and `--cfg`
+shape the delivery (both up = snappier), and `--pitch` shifts the whole
+voice after synthesis — `0.85` is noticeably deeper, `1.1` lighter, tempo
+untouched. Pitch is applied to the line cache, not the GPU, so auditioning
+values is instant.
+
 Or set `tts` to any shell command yourself.
 It runs through `bash -c` and gets each line on stdin, so any engine that
 reads text from stdin plugs in:

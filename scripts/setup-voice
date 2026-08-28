@@ -165,11 +165,13 @@ PY
 #!/usr/bin/env python3
 # Clippy voice-clone client: the line on stdin, played in the cloned voice.
 # Cached by (ref, knobs, text); cache hits never touch the daemon.
+# --pitch shifts after synthesis (ffmpeg, tempo kept): <1 deeper, >1 higher.
 import argparse, hashlib, json, os, socket, subprocess, sys, time
 p = argparse.ArgumentParser()
 p.add_argument("--ref", required=True)
 p.add_argument("--exag", type=float, default=0.5)
 p.add_argument("--cfg", type=float, default=0.5)
+p.add_argument("--pitch", type=float, default=1.0)
 a = p.parse_args()
 text = sys.stdin.read().strip()
 if not text:
@@ -178,8 +180,8 @@ ref = os.path.realpath(os.path.expanduser(a.ref))
 key = hashlib.sha256(f"{ref}|{a.exag}|{a.cfg}|{text}".encode()).hexdigest()[:24]
 cache = os.path.expanduser("~/.cache/clippy-voice")
 os.makedirs(cache, exist_ok=True)
-out = f"{cache}/{key}.wav"
-if not os.path.exists(out):
+raw = f"{cache}/{key}.wav"
+if not os.path.exists(raw):
     sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "clippy-voice.sock")
     here = os.path.dirname(os.path.realpath(__file__))
     def ask():
@@ -187,7 +189,7 @@ if not os.path.exists(out):
         c.settimeout(120)
         c.connect(sockp)
         c.sendall((json.dumps({"text": text, "ref": ref, "exag": a.exag,
-                               "cfg": a.cfg, "out": out}) + "\n").encode())
+                               "cfg": a.cfg, "out": raw}) + "\n").encode())
         r = c.makefile().readline().strip()
         c.close()
         if r != "ok":
@@ -206,6 +208,15 @@ if not os.path.exists(out):
                 continue
         else:
             sys.exit("speak-clone: daemon never came up (see ~/.cache/clippy-voice/daemon.log)")
+out = raw
+if a.pitch != 1.0:
+    out = f"{cache}/{key}-p{a.pitch:g}.wav"
+    if not os.path.exists(out):
+        r = subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", raw, "-af",
+                            f"aresample=48000,asetrate=48000*{a.pitch},aresample=48000,atempo={1/a.pitch}",
+                            out])
+        if r.returncode != 0:
+            out = raw  # no ffmpeg or a bad filter: play it straight
 subprocess.run(["aplay", "-q", out])
 PY
   chmod +x "$base/speak-clone"

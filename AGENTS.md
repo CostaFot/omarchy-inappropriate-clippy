@@ -535,6 +535,22 @@ not fixable without streaming; pre-warming the cache over the book was
 offered and declined ("nah"). Nothing of this lands in the repo —
 reference and setting are home-dir state.
 
+Clone pitch knob done (2026-08-29, v1.13.1): `--pitch` on `speak-clone`
+(<1 deeper, >1 lighter), an ffmpeg `aresample=48000,asetrate=48000*P,
+aresample=48000,atempo=1/P` chain after synthesis — tempo preserved (Costa
+already found him slow), derived from the raw cache into `{key}-p{P}.wav`
+so a pitch change never touches the GPU, plays the raw file if ffmpeg
+fails. Same client in the home dir and in the `setup-voice` heredoc, plus
+a README tuning paragraph. The session started as "clippy has a robotic
+voice, is this normal?": `tts` in shell.json had reverted to bare `true`
+(espeak) with the whole clone stack intact — prime suspect is the menu's
+Voice row, which toggles to `true` and forgets the custom command; still
+an open papercut, offered but not asked for. The pitch audition (0.85 →
+0.9 → 0.94 on C-3PO) ended sideways with "more rubick": **the current
+voice on Costa's box is the Rubick clone** (`--exag 0.5 --cfg 0.5`, no
+pitch flag — Rubick is deep enough on his own), C-3PO's wavs stand ready
+but unused.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin
