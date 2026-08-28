@@ -50,6 +50,18 @@ Item {
   readonly property int intervalMin: Math.max(5, Number(setting("intervalMin", 90)) || 90)
   readonly property int intervalMax: Math.max(intervalMin, Number(setting("intervalMax", 420)) || 420)
   readonly property real speed: clamp(Number(setting("speed", 40)) || 40, 5, 500)
+  // 0..1: how often an idle beat turns into a walk. Idle beats are 10-30 s apart.
+  readonly property real restless: clamp(Number(setting("restless", 0.3)), 0, 1)
+
+  // Writes one inline key on our plugins[] entry. The shell rewrites
+  // shell.json and remounts us; persisted state carries over.
+  function setSetting(key, value) {
+    if (!shell || typeof shell.updateEntryInline !== "function") return
+    var entry = { id: pluginId }
+    for (var k in settings) if (k !== "id") entry[k] = settings[k]
+    entry[key] = value
+    shell.updateEntryInline(pluginId, entry)
+  }
   readonly property bool clean: setting("clean", false) === true
   readonly property int respawnSeconds: Math.max(0, Number(setting("respawn", 300)))
   readonly property string screenName: String(setting("screen", "") || "")
@@ -160,6 +172,8 @@ Item {
   }
 
   function isSnoozed() { return persisted.snoozedUntil > Date.now() }
+  readonly property bool talking: bubble.shown
+  readonly property int actorHeight: actor.height
 
   function maybeBoot() {
     if (booted || stage.width <= 0) return
@@ -199,7 +213,7 @@ Item {
 
   function decide() {
     if (mood !== "idle") return
-    if (Math.random() < 0.55) startWalk()
+    if (Math.random() < restless) startWalk()
     else idleAnim()
   }
 
@@ -207,13 +221,17 @@ Item {
     mood = "idle"
     var name = randomFrom(idleAnims.filter(sprite.has))
     sprite.play(name || "RestPose", false, function () {
-      if (root.mood === "idle") root.schedule(rand(1500, 6000))
+      if (root.mood === "idle") root.schedule(rand(10000, 30000))
     })
   }
 
   function startWalk() {
     var maxX = Math.max(0, stage.width - actor.width)
-    var target = Math.round(rand(0, maxX))
+    // Mostly short hops around where he is; one in five is a trek anywhere.
+    var target
+    if (Math.random() < 0.2) target = rand(0, maxX)
+    else target = actor.x + (Math.random() < 0.5 ? -1 : 1) * rand(80, 400)
+    target = Math.round(clamp(target, 0, maxX))
     if (Math.abs(target - actor.x) < 60) { idleAnim(); return }
     mood = "walking"
     // Gesture names are the character's left/right: GestureLeft points screen-right.
@@ -284,6 +302,12 @@ Item {
     say("Fine. " + m + " minutes. Then I'm back.")
   }
 
+  function unsnooze() {
+    persisted.snoozedUntil = 0
+    scheduleQuote()
+    say("Oh good, you missed me. Obviously.")
+  }
+
   function kill() {
     if (mood === "dead" || mood === "dying") return
     walkAnim.stop()
@@ -338,12 +362,42 @@ Item {
     }
     function snooze(minutes: string): string { root.snooze(minutes); return "ok" }
     function toggle(): string { root.opened = !root.opened; return root.opened ? "shown" : "hidden" }
+    function hideMenu(): string { menu.open = false; return "ok" }
+    function showMenu(): string {
+      if (root.mood === "dead" || root.mood === "dying") return "dead"
+      menu.anchorPos = actor.x + actor.width / 2
+      menu.open = true
+      return "ok"
+    }
     function state(): string {
       if (!root.opened) return "hidden"
       if (root.mood === "dead") return "dead"
       if (root.isSnoozed()) return "snoozed"
       return root.mood
     }
+  }
+
+  ClippyMenu {
+    id: menu
+    clippy: root
+    // Stand still while the menu is up; it is anchored to where he was.
+    onOpenChanged: {
+      if (open) {
+        walkAnim.stop()
+        brain.stop()
+        if (root.mood === "walking") { persisted.lastX = actor.x; sprite.exit(); root.mood = "idle" }
+      } else if (root.mood === "idle") {
+        root.schedule(root.rand(3000, 8000))
+      }
+    }
+    onAct: function (name) {
+      if (name === "say") { var q = root.randomQuote(); if (q) root.say(q.text, q.anim) }
+      else if (name === "shutUp") root.hideBubble()
+      else if (name === "snooze") root.snooze(60)
+      else if (name === "unsnooze") root.unsnooze()
+      else if (name === "kill") root.kill()
+    }
+    onChose: function (key, value) { root.setSetting(key, value) }
   }
 
   // ---- window ------------------------------------------------------------
@@ -401,7 +455,11 @@ Item {
           acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
           cursorShape: Qt.PointingHandCursor
           onClicked: function (mouse) {
-            if (mouse.button === Qt.RightButton) { root.kill(); return }
+            if (mouse.button === Qt.RightButton) {
+              menu.anchorPos = actor.x + actor.width / 2
+              menu.open = true
+              return
+            }
             if (mouse.button === Qt.MiddleButton) { root.snooze(60); return }
             if (bubble.shown) { root.hideBubble(); return }
             var q = root.randomQuote()

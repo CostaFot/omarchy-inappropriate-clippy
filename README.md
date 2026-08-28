@@ -19,7 +19,7 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 | Nothing | paces, fidgets, and drops a line every 1.5–7 minutes |
 | Left-click | says something now (or shuts up, if he's mid-sentence) |
 | Middle-click | snoozes the unprompted lines for an hour. He still walks |
-| Right-click | dies, with last words. Back in five minutes with a comeback |
+| Right-click | opens his menu: say something, snooze, kill him, and the settings below |
 
 Left-click the bubble to dismiss it.
 
@@ -40,6 +40,7 @@ All optional.
 | `clean` | `false` | `true` drops every line tagged `nsfw`. Screen-share mode |
 | `intervalMin` / `intervalMax` | `90` / `420` | Seconds between unprompted lines |
 | `speed` | `40` | Walking speed, px/s |
+| `restless` | `0.3` | 0–1, how often he decides to walk (about once a minute at the default; `1` is constant pacing) |
 | `respawn` | `300` | Seconds he stays dead after a right-click. `0` = dead until told otherwise |
 | `screen` | focused | A monitor name (`hyprctl monitors`) to pin him to one screen |
 | `quotesFile` | — | Path to your own quotes JSON, merged into his |
@@ -57,6 +58,7 @@ omarchy-shell costafot.clippy snooze 30
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
 omarchy-shell costafot.clippy toggle
+omarchy-shell costafot.clippy showMenu  # the right-click menu; hideMenu closes it
 omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden
 ```
 

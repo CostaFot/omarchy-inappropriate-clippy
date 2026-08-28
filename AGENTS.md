@@ -24,6 +24,8 @@ to `plugins[]` in `~/.config/omarchy/shell.json`.
     cue is `GestureLeft` for screen-right (gesture names are the character's
     left/right, verified by cropping the frames).
   - `IpcHandler { target: "costafot.clippy" }` — string args only.
+    `showMenu`/`hideMenu` exist so the menu can be driven without a pointer
+    (there is no ydotool on the box; that is how it was screenshotted).
   - `PersistentProperties { reloadableId: "costafotClippy" }` for `deadUntil`
     (0 alive, -1 dead until `respawn`, >0 epoch ms), `snoozedUntil`, `lastX`.
 - `ClippySprite.qml` — port of clippy.js `src/animator.js`. The full sheet is
@@ -38,6 +40,14 @@ to `plugins[]` in `~/.config/omarchy/shell.json`.
   **Named `ClippySprite`, not `Sprite`** — QtQuick ships a `Sprite` type and it
   wins over a sibling file; the symptom is "Cannot assign to non-existent
   property" on our properties.
+- `ClippyMenu.qml` — right-click menu, navbar-cat's `CatMenu` pattern: its
+  own full-screen transparent `PanelWindow` (input region only while open,
+  click anywhere dismisses, no keyboard focus) with a card under the actor.
+  Takes `clippy` (the root Item), emits `act(name)` for actions and
+  `chose(key, value)` for settings; the root maps the latter onto
+  `shell.updateEntryInline(pluginId, entry)`, which rewrites shell.json and
+  remounts us. Opening it freezes the walk. Meant to be reused by a future
+  bar-widget icon.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the join.
@@ -77,11 +87,20 @@ to `plugins[]` in `~/.config/omarchy/shell.json`.
 
 Working end to end on Costa's machine: walks, talks on a timer, click/middle/right
 click, kill → respawn with a comeback, snooze, top and bottom bars, IPC, settings
-inline on the `plugins[]` entry. Not yet on GitHub (README install URL is the
-intended one); nothing committed yet.
+inline on the `plugins[]` entry. Committed locally; not yet on GitHub (README
+install URL is the intended one).
+
+Movement is a random brain (`decide()`): idle beats 10-30 s apart, each one
+turns into a walk with probability `restless` (default 0.3), walks are mostly
+short hops of 80-400 px with 1 in 5 a trek anywhere. Costa wanted him mostly
+still — tune, don't make him busier.
 
 Unverified: click-through of the strip with a real pointer (mask mirrors
 navbar-cat's), and `clean` / `quotesFile` end to end (trivial code, no test run).
+
+Planned, later: a UI for the settings instead of hand-editing `shell.json`.
+Until then keep every setting a flat scalar key with a default and a README
+table row, so it maps onto a form. Don't build the UI or a schema unprompted.
 
 Ideas, in rough order of payoff:
 - Reactive lines: battery, CPU, pending updates, hour of day, agent usage
