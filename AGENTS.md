@@ -88,8 +88,8 @@ loader, like omarchy.menu — not to the bar widget.
   so the usual respawn machinery applies. Default is 10 (was 0 for a
   day; Costa settled on a limit). `0` = never. IPC `slap
   left|right` — the argument is required, IpcHandler has no optional
-  params. `assets/sounds/*.wav` are mono 44.1 kHz conversions of three
-  mp3s Costa picked (SoundEffect wants WAV).
+  params. `assets/sounds/slap-*.wav` are mono 44.1 kHz conversions of three
+  mp3s Costa picked (SoundEffect wants WAV; `ffmpeg -ac 1 -ar 44100`).
 - Dragging (in `Clippy.qml`): a 300 ms left press (`pressAndHoldInterval`)
   → `grab(x)`; `dragTo(x)` moves `actor.x` by the pointer's offset from
   `grabX` (the MouseArea rides on the actor, so the offset is how far the
@@ -161,10 +161,11 @@ loader, like omarchy.menu — not to the bar widget.
 ## Status (2026-08-28) and what's next
 
 Working end to end on Costa's machine: walks, talks on a timer, left/middle
-click, right-click menu (actions + clean/restless/size), bar icon → same menu
+click, slap (with knockout at 10), long-press drag, fling-to-death,
+right-click menu (actions + clean/sounds/restless/size), bar icon → same menu
 (dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
 snooze, top and bottom bars, IPC, settings inline on the bar-layout entry.
-On GitHub at the README install URL.
+On GitHub at the README install URL, v1.4.0.
 
 Movement is a random brain (`decide()`): idle beats 10-30 s apart, each one
 turns into a walk with probability `restless` (default 0.3), walks are mostly
@@ -183,10 +184,12 @@ shove + wobble, knockout after `slapsToKill` (10) inside six seconds.
 Middle-click used to snooze; `slap: false` restores that. Costa supplied the
 three sounds.
 
-Dragging done (2026-08-28, v1.3.0): long-press and carry him along the bar,
-with lines on the way and on landing. Flinging (v1.4.0): let go while
-moving fast and he's thrown off the bar and dies, with a `flung` line. Not pointer-testable from a terminal
-(no ydotool); Costa verifies by hand.
+Dragging done (2026-08-28, v1.3.0): long-press (300 ms) and carry him along
+the bar, with lines on the way and on landing. Flinging (v1.4.0): let go
+while moving fast and he's thrown off the bar and dies, with a `flung` line
+that lingers at the edge and a falling sound. Neither is pointer-testable
+from a terminal (no ydotool) — `fling left|right` over IPC covers the
+throw itself; Costa verifies the grab and the release speed by hand.
 
 Bar icon done (2026-08-28, v1.1.0): opens the same `ClippyMenu`, and is the
 way back after a kill/hide. The menu is the config surface, `shell.json` the
