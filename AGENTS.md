@@ -364,7 +364,7 @@ click, and that line is in the book. He clicked the grave by hand and
 confirmed; the IPC path and the grave-anchored bubble were verified with
 screenshots.
 
-Ideas, in rough order of payoff:
+Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, pending updates, hour of
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin
   state are reachable from a panel — see ~/Work/omarchy-navbar-cat for how
