@@ -2,9 +2,9 @@
 
 <img src="preview.png" width="700" alt="Clippy on the bar, telling you off">
 
-Clippy, on the [Omarchy](https://omarchy.org) bar. He walks the full width of it,
-over whatever widgets are in the way, and every few minutes stops to tell you
-what he thinks of you. It's not flattering.
+Clippy, on the [Omarchy](https://omarchy.org) bar. He walks the full width of it
+— across your widgets, but parking in the gaps between them — and every few
+minutes stops to tell you what he thinks of you. It's not flattering.
 
 ```bash
 omarchy plugin add https://github.com/CostaFot/omarchy-inappropriate-clippy --enable
@@ -65,6 +65,7 @@ into the bar himself, settings and all.
 | `intervalMin` / `intervalMax` | `90` / `420` | Seconds between unprompted lines |
 | `speed` | `40` | Walking speed, px/s |
 | `restless` | `0.3` | 0–1, how often he decides to walk (about once a minute at the default; `1` is constant pacing) |
+| `avoidWidgets` | `true` | When he picks where to walk he tries not to park on the clock, the tray or your workspaces. Soft — a drag or a slap still leaves him wherever it leaves him |
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
 | `pauseWhenAway` | `true` | He sleeps while the screen is locked or off, or the idle screensaver is up. `false` and he carries on regardless |
 | `screen` | focused | A monitor name (`hyprctl monitors`) to pin him to one screen |

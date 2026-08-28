@@ -249,20 +249,22 @@ loader, like omarchy.menu — not to the bar widget.
 
 ## Status (2026-08-28) and what's next
 
-Working end to end on Costa's machine: walks, talks on a timer, left/middle
-click, slap (with knockout at 10), long-press drag, fling-to-death,
+Working end to end on Costa's machine: walks (parking in the gaps between
+the bar's widgets), talks on a timer, left/middle click, slap (with knockout
+at 10), long-press drag, fling-to-death,
 right-click menu (actions + clean/sounds/restless/size), bar icon → same menu
 (dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
 snooze, sleep while locked/idle/screens-off with a welcome-back line, top and
 bottom bars, IPC, settings inline on the bar-layout entry.
-On GitHub at the README install URL, v1.6.0 (no tag yet). Not on the
+On GitHub at the README install URL, v1.7.0 (no tag yet). Not on the
 marketplace: see `PUBLISHING.md` for the flow, prior submissions and the
 gap list.
 
 Movement is a random brain (`decide()`): idle beats 10-30 s apart, each one
 turns into a walk with probability `restless` (default 0.3), walks are mostly
 short hops of 80-400 px with 1 in 5 a trek anywhere. Costa wanted him mostly
-still — tune, don't make him busier.
+still — tune, don't make him busier. Targets avoid parking on the bar's
+widgets — see the widget-avoidance paragraph below.
 
 Verified by hand (2026-08-28): click-through with a real pointer, `clean`,
 and `quotesFile` (object and bare-array shapes, all three keys, bad JSON and a
@@ -304,6 +306,29 @@ you after a minute or more away. Costa's question was whether he fires while
 the screen is off or locked; he did, ~4 agent calls an hour all night with
 `ai: true`. See the `asleep` bullet above. DPMS path tested by hand; lock
 and idle paths not yet.
+
+Widget avoidance done (2026-08-28, v1.7.0): when he picks where to walk he
+parks in the gaps between bar widgets (`avoidWidgets`, default true).
+`shell.bar.moduleSlots` holds every widget slot across all monitors;
+`occupiedIntervals()` filters by `slotScreenName(slot)` == his screen and the
+shell's own visibility test (a collapsed slot keeps visible=true but drops to
+0x0), maps each with `mapToItem(null, 0, 0)` — bar-window x == screen x ==
+stage x, both windows anchored full-width — pads 6 px and merges; `freeGaps()`
+inverts that into the positions where the whole actor fits. Sampled lazily at
+pick time, never from a binding: widget widths change without signals (tray
+drawer, center peeks) and `moduleSlots` is reassigned per register/unregister,
+so a binding would churn. Treks pick a width-weighted random gap; hops snap to
+the nearest clear position, which only ever shortens them — he pulls up beside
+the clock instead of onto it. (A first cut capped the snap at 120 px so a hop
+would "stay a hop"; deep-in-cluster targets stood dirty and he parked on the
+workspaces within minutes. Uncapped, the snap IS the hop aesthetic.) Standing
+on a widget — drag-drop, a tray drawer growing under him — raises the next
+beat's walk chance to 0.8 so he steps off on his own schedule; that is the
+only busier-making change. Boot and revive placement prefer a gap too
+(`randomSpot()`); drags, shoves and flings still land him anywhere. Null
+`shell.bar`, a shell without `moduleSlots`, or no gap he fits in all fall
+back to raw targets. Verified with `restless 1` and screenshot pairs against
+`omarchy-shell shell debugBarGeometry` (same coordinate space).
 
 Ideas, in rough order of payoff:
 - Reactive lines without the agent: battery, CPU, pending updates, hour of

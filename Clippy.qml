@@ -109,7 +109,7 @@ Item {
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
     drag: true, fling: true, ai: false, aiAgent: "", aiModel: "",
-    pauseWhenAway: true
+    pauseWhenAway: true, avoidWidgets: true
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
   function isSettingKey(key) { return Object.prototype.hasOwnProperty.call(settingDefaults, key) }
@@ -129,6 +129,9 @@ Item {
   readonly property real speed: clamp(Number(setting("speed", 40)) || 40, 5, 500)
   // 0..1: how often an idle beat turns into a walk. Idle beats are 10-30 s apart.
   readonly property real restless: clamp(Number(setting("restless", 0.3)), 0, 1)
+  // He tries not to park on top of bar widgets when picking a walk target.
+  // Soft: drags, shoves and flings still land him anywhere.
+  readonly property bool avoidWidgets: setting("avoidWidgets", true) !== false
 
   // Writes one inline key on our shell.json entry (undefined removes it).
   // The shell rewrites shell.json and remounts us; persisted state carries over.
@@ -416,7 +419,7 @@ Item {
     }
     persisted.deadUntil = 0
     var maxX = Math.max(0, stage.width - actor.width)
-    actor.x = persisted.lastX >= 0 ? clamp(persisted.lastX, 0, maxX) : Math.round(rand(0, maxX))
+    actor.x = persisted.lastX >= 0 ? clamp(persisted.lastX, 0, maxX) : Math.round(randomSpot(maxX))
     mood = "idle"
     if (asleep) return  // wakeUp() starts him
     idleAnim()
@@ -445,7 +448,10 @@ Item {
 
   function decide() {
     if (mood !== "idle" || dragging || asleep) return
-    if (Math.random() < restless) startWalk()
+    // Parked on a widget (drag-drop, or one appeared under him): itchier
+    // feet, but still the normal walk on the normal beat — no new timers.
+    var urge = onWidget() ? Math.max(restless, 0.8) : restless
+    if (Math.random() < urge) startWalk()
     else idleAnim()
   }
 
@@ -457,12 +463,109 @@ Item {
     })
   }
 
+  // ---- widget avoidance --------------------------------------------------
+  // Occupied x-intervals [lo, hi] of visible bar widgets on his screen,
+  // padded and merged. null = unknowable (setting off, no bar yet, a shell
+  // without moduleSlots, vertical bar) — callers fall back to raw targets.
+  // Read lazily at pick time, never from a binding: widget widths change
+  // without signals (tray drawer, center peeks) and moduleSlots is
+  // reassigned on every register/unregister.
+  function occupiedIntervals() {
+    if (!avoidWidgets || barVertical || !shell || !shell.bar) return null
+    var slots = shell.bar.moduleSlots
+    if (!slots || typeof shell.bar.slotScreenName !== "function") return null
+    var mine = targetScreen ? String(targetScreen.name) : ""
+    var pad = 6
+    var boxes = []
+    for (var i = 0; i < slots.length; i++) {
+      var s = slots[i]
+      // Same visibility test as the shell's debugBarGeometry(): collapsed
+      // slots keep visible=true but drop to 0x0.
+      if (!s || s.visible !== true || !(s.width > 0) || !(s.height > 0)) continue
+      if (shell.bar.slotScreenName(s) !== mine) continue
+      try { // slot windows can vanish mid bar-reload
+        var p = s.mapToItem(null, 0, 0) // bar-window x == screen x == stage x
+        boxes.push([p.x - pad, p.x + s.width + pad])
+      } catch (e) {}
+    }
+    boxes.sort(function (a, b) { return a[0] - b[0] })
+    var merged = []
+    for (var j = 0; j < boxes.length; j++) {
+      var last = merged.length ? merged[merged.length - 1] : null
+      if (last && boxes[j][0] <= last[1]) last[1] = Math.max(last[1], boxes[j][1])
+      else merged.push(boxes[j])
+    }
+    return merged
+  }
+
+  // Position intervals [lo, hi] where the whole actor (x .. x+width)
+  // overlaps no widget. An empty bar layout is one gap spanning everything.
+  function freeGaps() {
+    var occ = occupiedIntervals()
+    if (occ === null) return null
+    var w = actor.width
+    var maxX = Math.max(0, stage.width - w)
+    var gaps = [], lo = 0
+    for (var i = 0; i <= occ.length; i++) {
+      var hi = Math.min(i < occ.length ? occ[i][0] - w : maxX, maxX)
+      if (hi >= lo) gaps.push([lo, hi])
+      if (i < occ.length) lo = Math.max(lo, occ[i][1])
+    }
+    return gaps
+  }
+
+  // A random position inside the gaps, weighted by width (+1 so exact-fit
+  // gaps still count).
+  function pickInGaps(gaps) {
+    var total = 0
+    for (var i = 0; i < gaps.length; i++) total += gaps[i][1] - gaps[i][0] + 1
+    var r = Math.random() * total
+    for (var j = 0; j < gaps.length; j++) {
+      var len = gaps[j][1] - gaps[j][0] + 1
+      if (r < len) return gaps[j][0] + r
+      r -= len
+    }
+    return gaps[gaps.length - 1][1]
+  }
+
+  // A clear target stands; a dirty one snaps to the nearest clear position,
+  // so a hop aimed at a widget cluster stops just short of it. The snap only
+  // ever shortens the walk (the near edge is on his way there), so hops stay
+  // hops. No gaps to snap to (crowded bar) and the target stands dirty.
+  function nudge(target, gaps) {
+    if (!gaps || !gaps.length) return target
+    var best = target, dist = Infinity
+    for (var i = 0; i < gaps.length; i++) {
+      var p = clamp(target, gaps[i][0], gaps[i][1])
+      if (Math.abs(p - target) < dist) { dist = Math.abs(p - target); best = p }
+    }
+    return best
+  }
+
+  // Fresh placement (boot without lastX, out-of-bounds revive) prefers a gap.
+  function randomSpot(maxX) {
+    var gaps = freeGaps()
+    return gaps && gaps.length ? pickInGaps(gaps) : rand(0, maxX)
+  }
+
+  // Standing on a widget right now (drag-drop, or a tray drawer grew under
+  // him)?
+  function onWidget() {
+    var occ = occupiedIntervals()
+    if (!occ) return false
+    for (var i = 0; i < occ.length; i++)
+      if (actor.x < occ[i][1] && actor.x + actor.width > occ[i][0]) return true
+    return false
+  }
+
   function startWalk() {
     var maxX = Math.max(0, stage.width - actor.width)
     // Mostly short hops around where he is; one in five is a trek anywhere.
+    // Both prefer the gaps between bar widgets, softly (widget avoidance).
+    var gaps = freeGaps()
     var target
-    if (Math.random() < 0.2) target = rand(0, maxX)
-    else target = actor.x + (Math.random() < 0.5 ? -1 : 1) * rand(80, 400)
+    if (Math.random() < 0.2) target = gaps && gaps.length ? pickInGaps(gaps) : rand(0, maxX)
+    else target = nudge(actor.x + (Math.random() < 0.5 ? -1 : 1) * rand(80, 400), gaps)
     target = Math.round(clamp(target, 0, maxX))
     if (Math.abs(target - actor.x) < 60) { idleAnim(); return }
     mood = "walking"
@@ -578,7 +681,7 @@ Item {
     if (mood !== "dead") return
     persisted.deadUntil = 0
     if (actor.x < 0 || actor.x > stage.width - actor.width)
-      actor.x = Math.round(rand(0, Math.max(0, stage.width - actor.width)))
+      actor.x = Math.round(randomSpot(Math.max(0, stage.width - actor.width)))
     actor.rotation = 0
     mood = "reviving"
     sprite.play("Greeting", false, function () {
