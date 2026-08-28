@@ -97,8 +97,12 @@ turns into a walk with probability `restless` (default 0.3), walks are mostly
 short hops of 80-400 px with 1 in 5 a trek anywhere. Costa wanted him mostly
 still — tune, don't make him busier.
 
-Unverified: click-through of the strip with a real pointer (mask mirrors
-navbar-cat's), and `clean` / `quotesFile` end to end (trivial code, no test run).
+Verified by hand (2026-08-28): click-through with a real pointer, `clean`,
+and `quotesFile` (object and bare-array shapes, all three keys, bad JSON and a
+missing path both fall back to the built-in book). Quotes are two books,
+`book` + `extraBook`, merged per key in `pool(key)` so FileView load order
+doesn't matter — an earlier version leaked the file's `quotes` into
+`lastWords`/`comeback`.
 
 Planned, later: a bar-widget icon that opens the same `ClippyMenu` as the
 settings UI, so the menu is the config surface and `shell.json` is the

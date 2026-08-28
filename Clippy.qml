@@ -99,10 +99,10 @@ Item {
   }
 
   // ---- quotes ------------------------------------------------------------
-  property var quotes: []
-  property var comebacks: []
-  property var lastWords: []
-  property var extraQuotes: []
+  // Two books, merged per key at draw time so load order doesn't matter
+  // (the two FileViews fire in whichever order the disk answers).
+  property var book: ({ quotes: [], comeback: [], lastWords: [] })
+  property var extraBook: ({ quotes: [], comeback: [], lastWords: [] })
 
   function normalizeQuotes(list) {
     if (!Array.isArray(list)) return []
@@ -117,25 +117,19 @@ Item {
   function loadQuoteBook(json, extra) {
     var data
     try { data = JSON.parse(json) } catch (e) { console.warn("clippy: bad quotes JSON: " + e); return }
-    var book = Array.isArray(data) ? { quotes: data } : (data || {})
-    if (extra) {
-      extraQuotes = normalizeQuotes(book.quotes)
-      if (book.comeback) comebacks = comebacks.concat(normalizeQuotes(book.comeback))
-      if (book.lastWords) lastWords = lastWords.concat(normalizeQuotes(book.lastWords))
-    } else {
-      quotes = normalizeQuotes(book.quotes)
-      comebacks = normalizeQuotes(book.comeback)
-      lastWords = normalizeQuotes(book.lastWords)
-    }
+    var raw = Array.isArray(data) ? { quotes: data } : (data || {})
+    var b = { quotes: normalizeQuotes(raw.quotes), comeback: normalizeQuotes(raw.comeback), lastWords: normalizeQuotes(raw.lastWords) }
+    if (extra) extraBook = b
+    else book = b
   }
-  function pool(list) {
-    var all = list.concat(extraQuotes)
+  function pool(key) {
+    var all = book[key].concat(extraBook[key])
     if (!clean) return all
     return all.filter(function (q) { return !q.nsfw })
   }
-  function randomQuote() { return randomFrom(pool(quotes)) }
-  function randomLine(list, fallback) {
-    var q = randomFrom(pool(list))
+  function randomQuote() { return randomFrom(pool("quotes")) }
+  function randomLine(key, fallback) {
+    var q = randomFrom(pool(key))
     return q ? q.text : fallback
   }
 
@@ -315,7 +309,7 @@ Item {
     quoteTimer.stop()
     bubbleTimer.stop()
     mood = "dying"
-    var words = randomLine(lastWords, "Fine. Fuck off then.")
+    var words = randomLine("lastWords", "Fine. Fuck off then.")
     bubble.text = words
     bubble.shown = true
     dieTimer.interval = 2500
@@ -344,7 +338,7 @@ Item {
     mood = "reviving"
     sprite.play("Greeting", false, function () {
       root.mood = "idle"
-      root.say(root.randomLine(root.comebacks, "I'm back. Don't act like you didn't miss me."))
+      root.say(root.randomLine("comeback", "I'm back. Don't act like you didn't miss me."))
     })
   }
 
