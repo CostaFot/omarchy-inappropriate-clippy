@@ -623,6 +623,31 @@ refreshed. Note the dev symlink is back in place (the new-user clone below
 is history) and `ai: true` with claude lines was live on the box during
 the check.
 
+Rubick ships as the default voice (2026-08-29, v1.18.0): bare `setup-voice`
+now picks by hardware — an NVIDIA GPU with ≥6 GB total VRAM (`gpu_ok()`:
+`nvidia-smi --query-gpu=memory.total`, biggest card wins) gets the shipped
+Rubick clone, anything less falls back to robot George with the reason
+printed, and `--robot` is the bypass Costa asked for ("ship it to the
+machines who are powerful enough, but it should be something that is
+bypassed"). The approved reference wav is now IN the repo at
+`assets/voices/rubick.wav` (940 KB, s16le mono 24 kHz, exactly 20 s,
+byte-identical to `~/.local/share/chatterbox-tts/voices/rubick.wav`) — the
+shipped path `cp`s it verbatim instead of the `--clone` ffmpeg re-encode,
+because a re-encode of the approved take sounds subtly different (same rule
+as always: never regenerate it). Knobs stay 0.5/0.5 in the written `tts`
+string. README: bare-mode paragraph rewritten, Valve credit inline ("Dota 2
+audio, © Valve"), the `--clone` example renamed to glados since rubick is
+no longer hypothetical, and a bridge line noting the shipped voice pays the
+same chatterbox costs. Verified live on Costa's box: bare run detected the
+GPU, copied the wav (cmp-identical after), spoke the hello and set the same
+tts string; no-GPU and `--robot` branches exercised with stubbed
+`nvidia-smi`/`omarchy-shell` binaries so the live setting stayed put. The
+plugin's literal default is still `tts: false` — engines download on
+demand, only the 940 KB sample rides in the repo. Session context: the day
+started with "the default voice sucks" — the new-user wipe had left bare
+espeak `tts: true`; the Rubick rig was restored first (set tts + warm-voice,
+all 154 book lines were still cached), `ai` was left off as found.
+
 New-user simulation (2026-08-29): the box left the dev loop — plugin
 disabled, symlink removed, then a real `omarchy plugin add
 https://github.com/CostaFot/omarchy-inappropriate-clippy --enable --yes`

@@ -158,12 +158,17 @@ omarchy-shell costafot.clippy set ttsVoice en+croak
 Epitaphs stay whispered whatever you pick.
 
 If you'd rather he sounded good (why?), `scripts/setup-voice` does the whole
-thing locally: it installs a small neural TTS into a venv, downloads one
-voice, and points `tts` at it. No cloud calls, a model on your disk, and the
-robot is one `set tts true` away. Bare, you get the blessed voice —
+thing locally: it installs a neural TTS into a venv, downloads what it
+needs, and points `tts` at it. No cloud calls, a model on your disk, and
+the espeak robot is one `set tts true` away. Bare, it checks what you're
+running on: an NVIDIA GPU with 6 GB to spare gets the shipped voice — a
+clone of Rubick the Grand Magus, built from the 20-second sample in
+`assets/voices/` (Dota 2 audio, © Valve) — and anything less gets the
+blessed robot,
 [kokoro](https://github.com/thewh1teagle/kokoro-onnx)'s `bm_george` (~340 MB)
-put through a ring-modulated robot chain: a fussy English droid, dialed in by
-ear. Pass a name for any
+put through a ring-modulated robot chain: a fussy English droid, dialed in
+by ear. `--robot` skips the GPU check and gets you the droid anyway. Pass a
+name for any
 [kokoro voice](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md)
 unprocessed (`af_heart`, `am_adam`, `jf_alpha`, ...) or, with a dash in the name, any
 [piper catalog](https://rhasspy.github.io/piper-samples/) voice like
@@ -173,12 +178,14 @@ And the fun one — give him **any voice you have a sample of**, yours
 included:
 
 ```bash
-scripts/setup-voice --clone ~/rubick-voice-lines.mp4 rubick
+scripts/setup-voice --clone ~/glados-lines.mp4 glados
 ```
 
 Ten to twenty seconds of clean speech, any format ffmpeg reads. Cloning uses
 [chatterbox](https://github.com/resemble-ai/chatterbox), so it needs an
-NVIDIA GPU and pulls ~8 GB on first run. A small daemon keeps the model warm
+NVIDIA GPU and pulls ~8 GB on first run — the shipped Rubick is this exact
+machinery pointed at a sample we picked for you, so the same costs apply.
+A small daemon keeps the model warm
 between lines and exits after 15 idle minutes to give your VRAM back; every
 line is cached, so anything he's said before plays instantly and a fresh
 line costs a few seconds of GPU. The menu reads "Voice · custom" while any

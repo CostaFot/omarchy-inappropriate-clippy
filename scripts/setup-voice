@@ -1,8 +1,11 @@
 #!/bin/bash
 
 # Give Clippy a real voice, locally — no cloud calls, the model runs on your
-# machine. Three modes:
-#   scripts/setup-voice                    # the blessed voice: robot George
+# machine. Modes:
+#   scripts/setup-voice                    # bare: the shipped Rubick clone on
+#                                          # an NVIDIA GPU with the VRAM for
+#                                          # it, robot George everywhere else
+#   scripts/setup-voice --robot            # robot George, GPU or not
 #   scripts/setup-voice af_heart           # any kokoro voice (af_*, am_*, bm_*, ...)
 #   scripts/setup-voice en_US-ryan-high    # any voice from the piper catalog
 #   scripts/setup-voice --clone ~/sample.mp4 [name]   # clone ANY voice from a
@@ -16,19 +19,43 @@
 
 set -euo pipefail
 
+HERE="$(cd "$(dirname "$(realpath "$0")")/.." && pwd)"
+
+# "Powerful enough" for the shipped clone: a working NVIDIA GPU with room for
+# chatterbox's ~4 GB resident model.
+gpu_ok() {
+  command -v nvidia-smi >/dev/null || return 1
+  local mib
+  mib="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | sort -nr | head -1)"
+  [ -n "$mib" ] && [ "$mib" -ge 6000 ] 2>/dev/null
+}
+
 MODE=voice
+BLESSED=""
+SHIPPED=""
 if [ "${1:-}" = "--clone" ]; then
   MODE=clone
   SAMPLE="${2:?usage: setup-voice --clone <sample.wav|mp3|mp4> [name]}"
   NAME="${3:-$(basename "${SAMPLE%.*}" | tr -cd 'A-Za-z0-9_-')}"
+elif [ "${1:-}" = "--robot" ]; then
+  BLESSED=1
+elif [ $# -eq 0 ]; then
+  if gpu_ok; then
+    MODE=clone SHIPPED=1
+    SAMPLE="$HERE/assets/voices/rubick.wav"
+    NAME=rubick
+    echo "NVIDIA GPU found — you get the shipped voice, a Rubick clone (--robot skips the GPU)"
+  else
+    BLESSED=1
+    echo "no NVIDIA GPU with 6 GB to spare — the robot it is"
+  fi
 fi
 
-# Bare = the blessed voice: kokoro's bm_george put through a robot — pitch up
-# 15%, ring-mod tremolo, bit-crush, band-limit. Dialed in by ear, one knob at
-# a time. A named voice comes through unprocessed.
-BLESSED=""
-[ $# -eq 0 ] && BLESSED=1
+# The blessed non-clone voice: kokoro's bm_george put through a robot — pitch
+# up 15%, ring-mod tremolo, bit-crush, band-limit. Dialed in by ear, one knob
+# at a time. A named voice comes through unprocessed.
 VOICE="${1:-bm_george}"
+[ -n "$BLESSED" ] && VOICE=bm_george
 ROBOT_FX="asetrate=24000*1.15,aresample=24000,atempo=0.870,tremolo=f=45:d=0.8,acrusher=bits=6:mode=log:aa=1,highpass=f=250,lowpass=f=3400"
 HELLO="Oh my! It looks like you're giving me a voice. You will regret this."
 
@@ -109,8 +136,14 @@ setup_clone() {
     uv pip install --python "$venv/bin/python" --quiet chatterbox-tts "setuptools<81"
   fi
   mkdir -p "$base/voices"
-  # 20 s of clean mono speech is what the cloner wants; ffmpeg reads anything
-  ffmpeg -y -v quiet -i "$SAMPLE" -vn -ac 1 -ar 24000 -t 20 "$base/voices/$NAME.wav"
+  if [ -n "$SHIPPED" ]; then
+    # the shipped sample is already the exact approved 20 s mono take —
+    # copy it verbatim, a re-encode sounds subtly different
+    cp "$SAMPLE" "$base/voices/$NAME.wav"
+  else
+    # 20 s of clean mono speech is what the cloner wants; ffmpeg reads anything
+    ffmpeg -y -v quiet -i "$SAMPLE" -vn -ac 1 -ar 24000 -t 20 "$base/voices/$NAME.wav"
+  fi
 
   cat > "$base/daemon.py" <<'PY'
 #!VENV_PYTHON
