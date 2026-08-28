@@ -20,14 +20,15 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 | Left-click | says something now (or shuts up, if he's mid-sentence) |
 | Middle-click | slaps him. He yelps, gets shoved along the bar, and has something to say about it |
 | Fling the pointer across him | also a slap. Fast and sideways; a pointer merely passing over him on the way to the tray doesn't count |
+| Hold left-click, then drag | picks him up. Put him down anywhere on the bar; he objects to the trip and to where it ends |
 | Right-click | opens his menu: say something, snooze, kill him, and the settings below |
 | Click the paperclip on the bar | the same menu. When he's dead or hidden it says "Bring him back", which is the point of the paperclip |
 
 Left-click the bubble to dismiss it.
 
-Slap him as much as you like; he takes it. If you'd rather a beating had an
-ending, set `slapsToKill` below. Snooze moved to the menu to make room for the
-slap; `"slap": false` gives middle-click back to it.
+Ten slaps inside six seconds and he's out cold, same as a kill; `slapsToKill`
+below changes the number (`0` and he takes it forever). Snooze moved to the
+menu to make room for the slap; `"slap": false` gives middle-click back to it.
 
 ## Configuration
 
@@ -63,11 +64,13 @@ into the bar himself, settings and all.
 | `slap` | `true` | `false` turns slapping off. Middle-click snoozes again |
 | `slapSwipe` | `true` | `false` keeps middle-click but stops the pointer-fling counting as a slap |
 | `slapSound` | `true` | `false` mutes it; a path to a WAV plays that instead of the built-in three |
-| `slapsToKill` | `0` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
+| `slapsToKill` | `10` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
+| `drag` | `true` | `false` stops the long-press drag |
 
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
-`quotes`, `lastWords`, `comeback`, `slapped` and `knockedOut` arrays.
+`quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged` and `dropped`
+arrays.
 
 ## Scripting him
 

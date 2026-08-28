@@ -98,5 +98,37 @@
     { "text": "That's enough. I'll be back when you've calmed down.", "nsfw": false },
     { "text": "Ow. Ow. OW. Fine, I'm going.", "nsfw": false },
     { "text": "You have anger issues. I have a concussion. Bye.", "nsfw": false }
+  ],
+  "dragged": [
+    { "text": "Where are you taking me???", "nsfw": false, "anim": "Alert" },
+    { "text": "Hey. HEY. Put me down.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Unhand me, you absolute keyboard.", "nsfw": false, "anim": "Alert" },
+    { "text": "Is this a kidnapping? This feels like a kidnapping.", "nsfw": false, "anim": "Alert" },
+    { "text": "Where the fuck are we going?", "nsfw": true, "anim": "GetAttention" },
+    { "text": "Stop dragging me around like a fucking file.", "nsfw": true, "anim": "Alert" },
+    { "text": "Careful. I'm fragile. Emotionally.", "nsfw": false, "anim": "Thinking" },
+    { "text": "Not the tray. Anywhere but the tray.", "nsfw": false, "anim": "Alert" },
+    { "text": "You know I can walk, right? I have a whole animation for it.", "nsfw": false, "anim": "Explain" },
+    { "text": "This is assault. Paperclip assault. It's a real crime, look it up.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Ohhh, we're going on a trip. Did you pack snacks?", "nsfw": false, "anim": "Congratulate" },
+    { "text": "I'm getting motion sick. I don't have a stomach and I'm getting motion sick.", "nsfw": false, "anim": "Processing" },
+    { "text": "Let go of my face.", "nsfw": false, "anim": "Alert" },
+    { "text": "If you drop me I swear to god.", "nsfw": false, "anim": "Alert" },
+    { "text": "Slower. SLOWER. I am all corners.", "nsfw": false, "anim": "Alert" },
+    { "text": "Okay, okay, I'm coming. You could have just asked.", "nsfw": false, "anim": "Explain" },
+    { "text": "Wheeee. Kill me.", "nsfw": false, "anim": "Alert" },
+    { "text": "Your hands are clammy. I'm a paperclip and I can tell.", "nsfw": false, "anim": "Hearing_1" }
+  ],
+  "dropped": [
+    { "text": "Fine. I live here now.", "nsfw": false, "anim": "Explain" },
+    { "text": "Ow. My everything.", "nsfw": false, "anim": "Alert" },
+    { "text": "Great spot. Really. Love what you've done with it.", "nsfw": false, "anim": "Congratulate" },
+    { "text": "You could have just asked me to move. Rude.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Well. That happened.", "nsfw": false, "anim": "Thinking" },
+    { "text": "I'll walk back the second you look away. Just so you know.", "nsfw": false, "anim": "Explain" },
+    { "text": "Dumped. Like a fucking commit you're ashamed of.", "nsfw": true, "anim": "Alert" },
+    { "text": "Put down like a sack of shit. Thanks for that.", "nsfw": true, "anim": "GetAttention" },
+    { "text": "Next time, dinner first.", "nsfw": false, "anim": "Explain" },
+    { "text": "Is this where I sleep now? It's fine. It's fine.", "nsfw": false, "anim": "Thinking" }
   ]
 }

@@ -128,8 +128,10 @@ Item {
   // Slapping: middle-click, or flinging the pointer across him. `slap: false`
   // turns both off and gives middle-click back to snooze.
   readonly property bool slapEnabled: setting("slap", true) !== false
+  // Dragging: hold left on him, then move. `drag: false` turns it off.
+  readonly property bool dragEnabled: setting("drag", true) !== false
   readonly property bool slapSwipe: setting("slapSwipe", true) !== false
-  readonly property int slapsToKill: Math.max(0, Number(setting("slapsToKill", 0)))
+  readonly property int slapsToKill: Math.max(0, Number(setting("slapsToKill", 10)))
   // `slapSound`: true for the built-in ones, false for silence, or a path to
   // a WAV of your own.
   readonly property var slapSoundSetting: setting("slapSound", true)
@@ -173,7 +175,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   function emptyBook() {
@@ -286,7 +288,7 @@ Item {
   }
 
   function decide() {
-    if (mood !== "idle") return
+    if (mood !== "idle" || dragging) return
     if (Math.random() < restless) startWalk()
     else idleAnim()
   }
@@ -357,7 +359,7 @@ Item {
     bubble.shown = false
     if (mood === "talking") {
       mood = "idle"
-      schedule(800)
+      if (!dragging) schedule(800)
     }
     if (!quoteTimer.running && mood !== "dead") scheduleQuote()
   }
@@ -365,7 +367,7 @@ Item {
   function unprompted() {
     scheduleQuote()
     if (mood !== "idle" && mood !== "walking") return
-    if (isSnoozed()) return
+    if (isSnoozed() || dragging) return
     var q = randomQuote()
     if (q) say(q.text, q.anim)
   }
@@ -433,7 +435,7 @@ Item {
   readonly property int slapWindowMs: 6000
 
   function slap(dir) {
-    if (!slapEnabled) return false
+    if (!slapEnabled || dragging) return false
     if (mood === "dead" || mood === "dying" || mood === "reviving") return false
     dir = Number(dir) < 0 ? -1 : 1
     var now = Date.now()
@@ -502,6 +504,86 @@ Item {
     NumberAnimation { target: actor; property: "rotation"; to: -wobble.dir * 9; duration: 140; easing.type: Easing.InOutQuad }
     NumberAnimation { target: actor; property: "rotation"; to: wobble.dir * 4; duration: 120; easing.type: Easing.InOutQuad }
     NumberAnimation { target: actor; property: "rotation"; to: 0; duration: 160; easing.type: Easing.OutQuad }
+  }
+
+  // ---- dragging ----------------------------------------------------------
+  // Hold left on him and he comes along with the pointer, leaning away from
+  // the direction he's pulled and complaining the whole way. `grabX` is where
+  // on him the pointer took hold, so he doesn't jump under the cursor.
+  property bool dragging: false
+  property real grabX: 0
+  property real dragVel: 0
+
+  function grab(atX) {
+    if (!dragEnabled || dragging) return false
+    if (mood === "dead" || mood === "dying" || mood === "reviving") return false
+    walkAnim.stop()
+    shoveAnim.stop()
+    wobble.stop()
+    brain.stop()
+    if (mood === "walking") sprite.exit()
+    dragging = true
+    grabX = atX
+    dragVel = 0
+    actor.rotation = 0
+    complain("dragged", "Where are you taking me???", "Alert")
+    dragTalk.interval = Math.round(rand(3000, 6000))
+    dragTalk.restart()
+    return true
+  }
+
+  // `atX` is the pointer's x on him (the MouseArea rides on the actor, so
+  // the delta from `grabX` is how far the pointer got ahead of him).
+  function dragTo(atX) {
+    if (!dragging) return
+    var dx = atX - grabX
+    var maxX = Math.max(0, stage.width - actor.width)
+    var next = clamp(actor.x + dx, 0, maxX)
+    dragVel = next - actor.x
+    actor.x = next
+    // Lean back against the pull (smoothed, so it doesn't jitter with the
+    // pointer); `dragSettle` brings him upright again when the pointer rests.
+    actor.rotation = actor.rotation * 0.5 - clamp(dragVel * 2, -28, 28) * 0.5
+    dragSettle.restart()
+  }
+
+  function drop() {
+    if (!dragging) return
+    dragging = false
+    dragTalk.stop()
+    dragSettle.stop()
+    persisted.lastX = actor.x
+    if (mood === "dead" || mood === "dying" || mood === "reviving") return
+    // Swing on with the momentum he had, then settle.
+    wobble.stop()
+    wobble.dir = dragVel < 0 ? -1 : 1
+    wobble.start()
+    complain("dropped", "Fine. I live here now.", "Alert")
+  }
+
+  function complain(key, fallback, anim) {
+    var q = randomQuoteFrom(key)
+    say(q ? q.text : fallback, q && q.anim ? q.anim : anim)
+  }
+
+  // Another line every few seconds while he's still being carried.
+  Timer {
+    id: dragTalk
+    repeat: true
+    onTriggered: {
+      if (!root.dragging) { stop(); return }
+      root.complain("dragged", "Put me down.", "GetAttention")
+      interval = Math.round(root.rand(3000, 6000))
+    }
+  }
+  Timer {
+    id: dragSettle
+    interval: 30
+    repeat: true
+    onTriggered: {
+      if (!root.dragging || Math.abs(actor.rotation) < 0.5) { actor.rotation = root.dragging ? 0 : actor.rotation; stop(); return }
+      actor.rotation *= 0.7
+    }
   }
 
   // Opens the menu with its card under screen x `atX`, on `onScreen` (null
@@ -629,8 +711,15 @@ Item {
           id: touch
           anchors.fill: parent
           acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
-          cursorShape: Qt.PointingHandCursor
+          cursorShape: root.dragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
           hoverEnabled: true
+          // A long left press (300 ms) picks him up (no `clicked` follows a hold).
+          pressAndHoldInterval: 300
+          onPressAndHold: function (mouse) {
+            if (mouse.button === Qt.LeftButton) root.grab(mouse.x)
+          }
+          onReleased: root.drop()
+          onCanceled: root.drop()
 
           // Swipe slap: the pointer only reports while it is over him, so
           // judge the crossing from where it came in to where it left. Fast
@@ -642,7 +731,10 @@ Item {
           property real lastX: 0
           property real lastY: 0
           onEntered: { enterX = mouseX; enterY = mouseY; lastX = mouseX; lastY = mouseY; enterT = Date.now() }
-          onPositionChanged: function (mouse) { lastX = mouse.x; lastY = mouse.y }
+          onPositionChanged: function (mouse) {
+            lastX = mouse.x; lastY = mouse.y
+            if (root.dragging) root.dragTo(mouse.x)
+          }
           onExited: {
             if (!root.slapEnabled || !root.slapSwipe || pressed) return
             var dx = lastX - enterX

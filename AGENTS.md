@@ -85,15 +85,26 @@ loader, like omarchy.menu — not to the bar widget.
   a `shoveAnim` on `actor.x`, a `wobble` on `actor.rotation` (pivot
   `Item.Bottom`), then `say()` with a `slapped` line. Slap timestamps in
   `slapTimes`; `slapsToKill` inside `slapWindowMs` → `kill("knockedOut")`,
-  so the usual respawn machinery applies. Default is 0 (no knockout):
-  Costa wants unlimited slapping; the knockout is opt-in. IPC `slap
+  so the usual respawn machinery applies. Default is 10 (was 0 for a
+  day; Costa settled on a limit). `0` = never. IPC `slap
   left|right` — the argument is required, IpcHandler has no optional
   params. `assets/sounds/*.wav` are mono 44.1 kHz conversions of three
   mp3s Costa picked (SoundEffect wants WAV).
+- Dragging (in `Clippy.qml`): a 300 ms left press (`pressAndHoldInterval`)
+  → `grab(x)`; `dragTo(x)` moves `actor.x` by the pointer's offset from
+  `grabX` (the MouseArea rides on the actor, so the offset is how far the
+  pointer got ahead), leaning `actor.rotation` against the pull with
+  hand-rolled smoothing (no `Behavior`: the slap `wobble` animates the same
+  property); `drop()` on release runs `wobble` with the last velocity's sign.
+  A `dragged` line on pickup and every 3-6 s (`dragTalk`), a `dropped` line
+  on release. `dragging` gates `decide()`, `unprompted()`, `slap()` and the
+  post-bubble reschedule so he doesn't walk off mid-carry. No `clicked`
+  follows a hold, so a drag never fires the say-something click. `drag:
+  false` turns it off.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the join.
-- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut }`
+- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut, dragged, dropped }`
   (the key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
   merged in (same shape, or a bare array).
@@ -149,9 +160,13 @@ doesn't matter — an earlier version leaked the file's `quotes` into
 `lastWords`/`comeback`.
 
 Slapping done (2026-08-28, v1.2.0): middle-click and pointer-fling, sound,
-shove + wobble, optional knockout (`slapsToKill`, off by default).
+shove + wobble, knockout after `slapsToKill` (10) inside six seconds.
 Middle-click used to snooze; `slap: false` restores that. Costa supplied the
 three sounds.
+
+Dragging done (2026-08-28, v1.3.0): long-press and carry him along the bar,
+with lines on the way and on landing. Not pointer-testable from a terminal
+(no ydotool); Costa verifies by hand.
 
 Bar icon done (2026-08-28, v1.1.0): opens the same `ClippyMenu`, and is the
 way back after a kill/hide. The menu is the config surface, `shell.json` the
