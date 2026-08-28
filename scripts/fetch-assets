@@ -1,0 +1,21 @@
+#!/bin/bash
+
+# Dev-time only: refetch the Clippy sprite sheet and frame data from clippy.js
+# and turn agent.js (a `clippy.ready('Clippy', {...});` JSONP call) into the
+# plain JSON that Sprite.qml reads. The results are committed, so users never
+# run this. Usage: scripts/fetch-assets
+
+set -euo pipefail
+
+PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT="$PROJECT_DIR/assets/clippy"
+BASE="https://cdn.jsdelivr.net/gh/clippyjs/clippy.js@master/agents/Clippy"
+
+mkdir -p "$OUT"
+curl -fsSL "$BASE/map.png" -o "$OUT/map.png"
+curl -fsSL "$BASE/agent.js" \
+  | sed -e "s/^clippy\.ready('Clippy', //" -e 's/);[[:space:]]*$//' \
+  | jq -c . > "$OUT/agent.json"
+
+echo "map.png: $(stat -c %s "$OUT/map.png") bytes"
+echo "agent.json: $(jq '.animations | length' "$OUT/agent.json") animations, framesize $(jq -c .framesize "$OUT/agent.json")"
