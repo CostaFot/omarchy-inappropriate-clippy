@@ -20,20 +20,30 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 | Left-click | says something now (or shuts up, if he's mid-sentence) |
 | Middle-click | snoozes the unprompted lines for an hour. He still walks |
 | Right-click | opens his menu: say something, snooze, kill him, and the settings below |
+| Click the paperclip on the bar | the same menu. When he's dead or hidden it says "Bring him back", which is the point of the paperclip |
 
 Left-click the bubble to dismiss it.
 
 ## Configuration
 
-The right-click menu covers the common ones (clean mode, how much he walks,
-size) and writes them for you. Everything goes on his entry in
-`~/.config/omarchy/shell.json`, under `plugins`. All optional.
+The menu covers the common ones (clean mode, how much he walks, size) and
+writes them for you. Everything goes on his entry in
+`~/.config/omarchy/shell.json`. He has a bar icon, so that entry lives in the
+bar layout with the other widgets. All optional.
 
 ```json
-"plugins": [
-  { "id": "costafot.clippy", "size": 30, "clean": false, "intervalMin": 90, "intervalMax": 420 }
-]
+"bar": {
+  "layout": {
+    "right": [
+      { "id": "costafot.clippy", "size": 30, "clean": false, "intervalMin": 90, "intervalMax": 420 }
+    ]
+  }
+}
 ```
+
+The paperclip moves like any widget: `omarchy bar move costafot.clippy --section left`.
+Installs from before it existed have the entry under `plugins`; he moves it
+into the bar himself, settings and all.
 
 | Key | Default | What |
 |---|---|---|
@@ -59,7 +69,7 @@ omarchy-shell costafot.clippy snooze 30
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
 omarchy-shell costafot.clippy toggle
-omarchy-shell costafot.clippy showMenu  # the right-click menu; hideMenu closes it
+omarchy-shell costafot.clippy showMenu  # the menu; hideMenu closes it
 omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden
 ```
 

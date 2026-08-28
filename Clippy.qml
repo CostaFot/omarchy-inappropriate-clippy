@@ -34,13 +34,67 @@ Item {
     return list && list.length ? list[Math.floor(Math.random() * list.length)] : null
   }
 
-  // ---- settings: inline keys on our plugins[] entry in shell.json ---------
-  readonly property var settings: {
-    var list = shell && shell.shellConfig && Array.isArray(shell.shellConfig.plugins)
-      ? shell.shellConfig.plugins : []
-    for (var i = 0; i < list.length; i++)
-      if (list[i] && list[i].id === pluginId) return list[i]
-    return ({})
+  // ---- settings: inline keys on our entry in shell.json -------------------
+  // Because we are also a bar widget, the shell files our entry in the bar
+  // layout (`bar.layout.<section>[]`), the way it does omarchy.menu.
+  // Installs from before the icon have it under `plugins[]`. Both are read;
+  // shell.updateEntryInline writes back to whichever one it finds.
+  function findEntry(cfg) {
+    if (!cfg) return null
+    var layout = cfg.bar && cfg.bar.layout ? cfg.bar.layout : null
+    var sections = ["left", "center", "right"]
+    for (var s = 0; s < sections.length; s++) {
+      var arr = layout ? layout[sections[s]] : null
+      if (!Array.isArray(arr)) continue
+      for (var i = 0; i < arr.length; i++)
+        if (arr[i] && arr[i].id === pluginId) return { where: "bar", entry: arr[i] }
+    }
+    var list = Array.isArray(cfg.plugins) ? cfg.plugins : []
+    for (var j = 0; j < list.length; j++)
+      if (list[j] && list[j].id === pluginId) return { where: "plugins", entry: list[j] }
+    return null
+  }
+  readonly property var entryLocation: findEntry(shell ? shell.shellConfig : null)
+  readonly property var settings: entryLocation ? entryLocation.entry : ({})
+
+  // An entry under `plugins[]` is one the bar never looks at, so the icon
+  // would not show up. Move it, keys and all, into the bar layout: the
+  // place a fresh `omarchy plugin add --enable` puts it. `omarchy bar put`
+  // can't do this itself; it sees an enabled plugin and leaves it alone.
+  // The shell remounts us after the write; persisted state carries over.
+  // Deferred: the write lands back on shellConfig, which this binding reads.
+  readonly property bool strayEntry: entryLocation !== null && entryLocation.where === "plugins"
+  onStrayEntryChanged: if (strayEntry) Qt.callLater(adoptIntoBar)
+  function adoptIntoBar() {
+    if (!shell || typeof shell.mutateShellConfig !== "function") return
+    // No layout at all means the bar is running its defaults; a layout
+    // holding only us would replace them. Leave that config alone. Checked
+    // before mutating: a no-op write would still remount us, and loop.
+    var cur = shell.shellConfig
+    if (!cur || !cur.bar || typeof cur.bar !== "object" || !cur.bar.layout || typeof cur.bar.layout !== "object") {
+      console.warn("clippy: shell.json has no bar.layout, leaving our entry under plugins[]; the bar icon needs it in the layout")
+      return
+    }
+    console.log("clippy: moving our shell.json entry from plugins[] into the bar layout so the icon shows up")
+    shell.mutateShellConfig(function (cfg) {
+      if (!Array.isArray(cfg.plugins)) return
+      var entry = null
+      for (var i = cfg.plugins.length - 1; i >= 0; i--) {
+        if (cfg.plugins[i] && cfg.plugins[i].id === pluginId) {
+          entry = cfg.plugins.splice(i, 1)[0]
+        }
+      }
+      if (!entry) return
+      if (!cfg.bar || typeof cfg.bar !== "object") cfg.bar = {}
+      if (!cfg.bar.layout || typeof cfg.bar.layout !== "object") cfg.bar.layout = {}
+      if (!Array.isArray(cfg.bar.layout.right)) cfg.bar.layout.right = []
+      // Next to the tray, where the shell itself drops new right-section widgets.
+      var right = cfg.bar.layout.right
+      var at = right.length
+      for (var j = 0; j < right.length; j++)
+        if (right[j] && right[j].id === "omarchy.tray") { at = j + 1; break }
+      right.splice(at, 0, entry)
+    })
   }
   function setting(key, fallback) {
     var v = settings[key]
@@ -342,6 +396,21 @@ Item {
     })
   }
 
+  // Opens the menu with its card under screen x `atX`, on `onScreen` (null
+  // means the monitor Clippy is on). The bar icon calls this from any bar.
+  function showMenuAt(atX, onScreen) {
+    menu.anchorScreen = onScreen || null
+    menu.anchorPos = atX
+    menu.open = true
+  }
+  function showMenu() { showMenuAt(actor.x + actor.width / 2, null) }
+
+  // What the bar icon is for: undoes a kill, or a hide.
+  function bringBack() {
+    opened = true
+    if (mood === "dead") revive()
+  }
+
   // ---- IPC: omarchy-shell costafot.clippy <method> [arg] -------------------
   IpcHandler {
     target: "costafot.clippy"
@@ -357,12 +426,7 @@ Item {
     function snooze(minutes: string): string { root.snooze(minutes); return "ok" }
     function toggle(): string { root.opened = !root.opened; return root.opened ? "shown" : "hidden" }
     function hideMenu(): string { menu.open = false; return "ok" }
-    function showMenu(): string {
-      if (root.mood === "dead" || root.mood === "dying") return "dead"
-      menu.anchorPos = actor.x + actor.width / 2
-      menu.open = true
-      return "ok"
-    }
+    function showMenu(): string { root.showMenu(); return "ok" }
     function state(): string {
       if (!root.opened) return "hidden"
       if (root.mood === "dead") return "dead"
@@ -390,6 +454,7 @@ Item {
       else if (name === "snooze") root.snooze(60)
       else if (name === "unsnooze") root.unsnooze()
       else if (name === "kill") root.kill()
+      else if (name === "revive") root.bringBack()
     }
     onChose: function (key, value) { root.setSetting(key, value) }
   }
@@ -449,11 +514,7 @@ Item {
           acceptedButtons: Qt.LeftButton | Qt.RightButton | Qt.MiddleButton
           cursorShape: Qt.PointingHandCursor
           onClicked: function (mouse) {
-            if (mouse.button === Qt.RightButton) {
-              menu.anchorPos = actor.x + actor.width / 2
-              menu.open = true
-              return
-            }
+            if (mouse.button === Qt.RightButton) { root.showMenu(); return }
             if (mouse.button === Qt.MiddleButton) { root.snooze(60); return }
             if (bubble.shown) { root.hideBubble(); return }
             var q = root.randomQuote()

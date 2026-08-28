@@ -2,15 +2,24 @@
   "schemaVersion": 1,
   "id": "costafot.clippy",
   "name": "Inappropriate Clippy",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "author": "CostaFot",
   "license": "MIT",
   "description": "Clippy walks your bar and tells you what he really thinks of you. Profane by default.",
   "kinds": [
-    "panel"
+    "panel",
+    "bar-widget"
   ],
   "keepLoaded": true,
   "entryPoints": {
-    "panel": "Clippy.qml"
+    "panel": "Clippy.qml",
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "Inappropriate Clippy",
+    "description": "A paperclip that opens Clippy's menu. Mostly so you can bring him back after you kill him.",
+    "category": "Fun",
+    "allowMultiple": false,
+    "defaultSection": "right"
   }
 }

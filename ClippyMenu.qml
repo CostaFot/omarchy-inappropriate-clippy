@@ -1,4 +1,4 @@
-// Clippy's right-click menu. Reusable: a future bar icon opens the same card.
+// Clippy's menu: right-click on him, or the bar icon (BarWidget.qml).
 //
 // A full-screen transparent layer with a small card near the anchor. Full
 // screen is what makes click-anywhere-to-dismiss work — the surface has to
@@ -19,14 +19,18 @@ PanelWindow {
 
   property var clippy: null
   property bool open: false
-  // X along the bar the card should sit under (screen coordinates).
+  // X along the bar the card should sit under (screen coordinates), and the
+  // monitor that is on. Null means Clippy's own; the bar icon sets it, since
+  // there is a bar on every monitor and he is only on one.
   property real anchorPos: 0
+  property var anchorScreen: null
+  onOpenChanged: if (!open) anchorScreen = null
 
   signal act(string name)
   signal chose(string key, var value)
 
   visible: open && clippy !== null
-  screen: clippy ? clippy.targetScreen : null
+  screen: anchorScreen ? anchorScreen : (clippy ? clippy.targetScreen : null)
   color: "transparent"
 
   exclusionMode: ExclusionMode.Ignore
@@ -57,6 +61,9 @@ PanelWindow {
     readonly property int gap: Style.space(6)
     readonly property int edge: Style.space(8)
     readonly property bool underBar: menu.clippy ? menu.clippy.barBottom : false
+    // Killed or hidden: the menu is how you get him back, so say so.
+    readonly property bool gone: menu.open && menu.clippy
+      ? (menu.clippy.mood === "dead" || menu.clippy.opened !== true) : false
     // Clear the bar or Clippy, whichever pokes out further.
     readonly property int clearance: menu.clippy ? Math.max(menu.clippy.barSize, menu.clippy.actorHeight) : 26
     readonly property int rowWidth: Style.space(270)
@@ -183,19 +190,22 @@ PanelWindow {
 
       // ---- actions -------------------------------------------------------
       Entry {
+        visible: !card.gone
         label: menu.open && menu.clippy && menu.clippy.talking ? "Shut up" : "Say something"
         onTapped: menu.pick(menu.clippy && menu.clippy.talking ? "shutUp" : "say")
       }
       Entry {
+        visible: !card.gone
         label: menu.open && menu.clippy && menu.clippy.isSnoozed() ? "Wake him up" : "Snooze for an hour"
         onTapped: menu.pick(menu.clippy && menu.clippy.isSnoozed() ? "unsnooze" : "snooze")
       }
       Entry {
         label: {
+          if (card.gone) return "Bring him back"
           var s = menu.clippy ? menu.clippy.respawnSeconds : 0
           return s > 0 ? "Kill him (back in " + Math.round(s / 60) + " min)" : "Kill him"
         }
-        onTapped: menu.pick("kill")
+        onTapped: menu.pick(card.gone ? "revive" : "kill")
       }
 
       Divider {}

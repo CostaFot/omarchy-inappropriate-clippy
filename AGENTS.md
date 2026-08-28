@@ -10,9 +10,20 @@ to `plugins[]` in `~/.config/omarchy/shell.json`.
 
 - `Clippy.qml` — root `Item` (the shell loads panels into a non-visual Loader,
   so the root must not be a window). Injected by the host: `shell`, `manifest`,
-  `omarchyPath`. Nothing else — no `settings`, no `bar`. Settings are read off
-  `shell.shellConfig.plugins[]` (inline keys on our entry). `opened` +
-  `open()`/`close()` are the `shell summon|hide|toggle` contract. Owns:
+  `omarchyPath`. Nothing else — no `settings`, no `bar`. Settings are inline
+  keys on our shell.json entry. **Where that entry lives changed with the bar
+  icon**: a plugin with a `bar-widget` kind is filed by the shell in
+  `bar.layout.<section>[]` (like omarchy.menu), not `plugins[]`;
+  `findEntry()` reads both, `shell.updateEntryInline` writes to whichever it
+  finds. An entry still under `plugins[]` (pre-icon install) is moved into
+  `bar.layout.right` after `omarchy.tray` by `adoptIntoBar()` once, on mount,
+  via `shell.mutateShellConfig` — `omarchy bar put` can't do it (it sees an
+  enabled plugin and stops), and disable+enable would drop the keys. It is
+  deferred with `Qt.callLater` because the write lands on `shellConfig`,
+  which the `entryLocation` binding reads (binding-loop warning otherwise),
+  and it refuses to run when there is no `bar.layout` at all (a layout with
+  only us would replace the bar's defaults). `opened` + `open()`/`close()`
+  are the `shell summon|hide|toggle` contract. Owns:
   - a single `PanelWindow` on `WlrLayer.Overlay` (the bar is `Top`), anchored
     left+right and top (or bottom), height `barSize + 150`, transparent,
     `ExclusionMode.Ignore`. Input `mask: Region { item: actor; regions: [bubble rect] }`
@@ -40,14 +51,26 @@ to `plugins[]` in `~/.config/omarchy/shell.json`.
   **Named `ClippySprite`, not `Sprite`** — QtQuick ships a `Sprite` type and it
   wins over a sibling file; the symptom is "Cannot assign to non-existent
   property" on our properties.
-- `ClippyMenu.qml` — right-click menu, navbar-cat's `CatMenu` pattern: its
-  own full-screen transparent `PanelWindow` (input region only while open,
-  click anywhere dismisses, no keyboard focus) with a card under the actor.
-  Takes `clippy` (the root Item), emits `act(name)` for actions and
-  `chose(key, value)` for settings; the root maps the latter onto
-  `shell.updateEntryInline(pluginId, entry)`, which rewrites shell.json and
-  remounts us. Opening it freezes the walk. Meant to be reused by a future
-  bar-widget icon.
+- `ClippyMenu.qml` — the menu (right-click on him, or the bar icon),
+  navbar-cat's `CatMenu` pattern: its own full-screen transparent
+  `PanelWindow` (input region only while open, click anywhere dismisses, no
+  keyboard focus) with a card under `anchorPos` on `anchorScreen` (null =
+  Clippy's screen). Takes `clippy` (the root Item), emits `act(name)` for
+  actions and `chose(key, value)` for settings; the root maps the latter
+  onto `shell.updateEntryInline(pluginId, entry)`, which rewrites shell.json
+  and remounts us. Opening it freezes the walk. When he is dead or hidden
+  (`opened` false) the action rows collapse to "Bring him back" →
+  `act("revive")` → `root.bringBack()`.
+- `BarWidget.qml` — the bar icon, `kind: "bar-widget"` on the same manifest
+  (the yeet/agx.screen-time shape: `qs.Ui` `BarWidget` + `WidgetButton`,
+  nerd-font paperclip `󰏢`, dimmed when he is dead or hidden). One per
+  monitor. It has no state of its own: it finds the panel instance through
+  `bar.shell.panelLoaders["costafot.clippy"].item` (the table the shell
+  routes summon/hide/toggle through) and calls `showMenuAt(x, screen)`, so
+  the card opens under the icon on whichever monitor's bar was clicked. If
+  the panel isn't mounted it falls back to `bar.run("omarchy-shell
+  costafot.clippy showMenu")`. No IpcHandler here — the panel owns the
+  target.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the join.
@@ -88,9 +111,10 @@ to `plugins[]` in `~/.config/omarchy/shell.json`.
 ## Status (2026-08-28) and what's next
 
 Working end to end on Costa's machine: walks, talks on a timer, left/middle
-click, right-click menu (actions + clean/restless/size), kill → respawn with a
-comeback, snooze, top and bottom bars, IPC, settings inline on the `plugins[]`
-entry. On GitHub at the README install URL.
+click, right-click menu (actions + clean/restless/size), bar icon → same menu
+(dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
+snooze, top and bottom bars, IPC, settings inline on the bar-layout entry.
+On GitHub at the README install URL.
 
 Movement is a random brain (`decide()`): idle beats 10-30 s apart, each one
 turns into a walk with probability `restless` (default 0.3), walks are mostly
@@ -104,11 +128,11 @@ missing path both fall back to the built-in book). Quotes are two books,
 doesn't matter — an earlier version leaked the file's `quotes` into
 `lastWords`/`comeback`.
 
-Planned, later: a bar-widget icon that opens the same `ClippyMenu` as the
-settings UI, so the menu is the config surface and `shell.json` is the
+Bar icon done (2026-08-28, v1.1.0): opens the same `ClippyMenu`, and is the
+way back after a kill/hide. The menu is the config surface, `shell.json` the
 fallback. Keep every setting a flat scalar key with a default, a README table
 row, and (if it's something a user would reach for) a row in the menu. Don't
-build the bar widget or a settings schema unprompted.
+build a `barWidget.schema` unprompted.
 
 Ideas, in rough order of payoff:
 - Reactive lines: battery, CPU, pending updates, hour of day, agent usage
