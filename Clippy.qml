@@ -254,7 +254,7 @@ Item {
   // is cached, else one from the book.
   function nextQuote() {
     var line = agentBrain.take()
-    if (line) return { text: line }
+    if (line) return { text: line, ai: true }
     return randomQuote()
   }
 
@@ -390,13 +390,15 @@ Item {
     schedule(rand(400, 1500))
   }
 
-  function say(text, anim) {
+  // `ai` marks an agent line; the bubble dresses it up.
+  function say(text, anim, ai) {
     text = String(text || "").trim()
     if (text === "") return false
     if (mood === "dead" || mood === "dying" || mood === "reviving") return false
     walkAnim.stop()
     brain.stop()
     mood = "talking"
+    bubble.ai = !!ai
     bubble.text = text
     bubble.shown = true
     var a = anim && sprite.has(anim) ? anim : randomFrom(talkAnims.filter(sprite.has))
@@ -422,7 +424,7 @@ Item {
     if (mood !== "idle" && mood !== "walking") return
     if (isSnoozed() || dragging) return
     var q = nextQuote()
-    if (q) say(q.text, q.anim)
+    if (q) say(q.text, q.anim, q.ai)
   }
 
   function snooze(minutes) {
@@ -447,6 +449,7 @@ Item {
     mood = "dying"
     agentBrain.remember(lineKey === "knockedOut" ? "knocked him out with slaps" : "killed him")
     var words = randomLine(lineKey || "lastWords", "Fine. Fuck off then.")
+    bubble.ai = false
     bubble.text = words
     bubble.shown = true
     dieTimer.interval = 2500
@@ -660,6 +663,7 @@ Item {
     mood = "dying"
     agentBrain.remember("threw him off the bar")
     playFlingSound()
+    bubble.ai = false
     bubble.text = randomLine("flung", "Noooooooooooooooooooooooooooo")
     bubble.shown = true
     var to = dir > 0 ? stage.width + actor.width : -actor.width * 2
@@ -746,7 +750,7 @@ Item {
     function ping(): string { return "ok" }
     function say(text: string): string { return !root.opened ? "hidden" : (root.say(text) ? "ok" : "not now") }
     // A line of his own choosing: what a left-click does.
-    function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim) ? "ok" : "not now" }
+    function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim, q.ai) ? "ok" : "not now" }
     function shutUp(): string { root.hideBubble(); return "ok" }
     function kill(): string { root.kill(); return "ok" }
     function respawn(): string {
@@ -834,7 +838,7 @@ Item {
       }
     }
     onAct: function (name) {
-      if (name === "say") { var q = root.nextQuote(); if (q) root.say(q.text, q.anim) }
+      if (name === "say") { var q = root.nextQuote(); if (q) root.say(q.text, q.anim, q.ai) }
       else if (name === "shutUp") root.hideBubble()
       else if (name === "snooze") root.snooze(60)
       else if (name === "unsnooze") root.unsnooze()
@@ -944,7 +948,7 @@ Item {
             }
             if (bubble.shown) { root.hideBubble(); return }
             var q = root.nextQuote()
-            if (q) root.say(q.text, q.anim)
+            if (q) root.say(q.text, q.anim, q.ai)
           }
         }
       }

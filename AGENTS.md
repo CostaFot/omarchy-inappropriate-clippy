@@ -175,6 +175,13 @@ loader, like omarchy.menu — not to the bar widget.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the join.
+  `ai: true` (set by `say(text, anim, ai)`; `nextQuote()` tags agent lines
+  with it) is the "this came from the agent" dress: border in
+  `Color.accent` and a nf-md-creation sparkle (U+F0674, literal in the
+  file) in the top-right of the padding. A typewriter reveal was tried and
+  dropped — too slow to read at any speed that still looked like typing.
+  The kill and fling paths write `bubble.text` directly and set
+  `bubble.ai = false` first.
 - `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut, dragged, dropped, flung }`
   (the key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
@@ -256,7 +263,9 @@ lines from the user's default coding agent about what they are doing (see
 `AgentBrain.qml` above). Verified live with claude on Costa's machine, and
 opencode from the terminal. Costa's question was whether Clippy could "be
 powered by the user's AI agent on omarchy"; the answer is yes, via each
-agent's one-shot CLI mode, not via anything Omarchy provides.
+agent's one-shot CLI mode, not via anything Omarchy provides. Agent lines
+are marked in the bubble (accent border + sparkle, see `Bubble.qml`) so
+you can tell which book a line came from without the journal.
 
 Ideas, in rough order of payoff:
 - Reactive lines without the agent: battery, CPU, pending updates, hour of

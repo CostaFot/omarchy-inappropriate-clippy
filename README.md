@@ -100,9 +100,11 @@ unless `aiModel` says otherwise. For claude that is the CLI's default (opus),
 not the `model` in your `settings.json`, because the call runs with your
 settings off so it doesn't load your CLAUDE.md and hooks. A smaller model
 does the job fine (`claude-sonnet-5` answered in 4 s, same as opus; haiku 4.5
-oddly took a minute). `clean` applies to these lines too. Whenever the agent
-is unset, not logged in, offline or slow, the book takes over and you won't
-notice.
+oddly took a minute). `clean` applies to these lines too. You can tell his
+lines apart: an agent line gets the theme's accent colour on the bubble and a
+little sparkle in the corner. Whenever the agent is unset, not logged in,
+offline or slow, the book takes over and you won't notice, except that the
+sparkle is gone.
 
 Verified with `claude` and `opencode`; `codex` and `pi` are wired the same way
 but weren't run here, and the rest are best guesses from their docs. To see

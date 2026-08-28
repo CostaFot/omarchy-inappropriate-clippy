@@ -14,6 +14,10 @@ Item {
   property bool above: false          // bottom bar: tail on the bottom edge
   property real tailX: width / 2      // local x the tail points at
   property int maxWidth: 320
+  // An agent line: accent border and a sparkle in the corner. Book lines
+  // stay plain.
+  property bool ai: false
+  readonly property color borderColor: ai ? Color.accent : Color.tooltip.border
   readonly property int tailSize: 7
   readonly property int pad: 8
 
@@ -35,6 +39,7 @@ Item {
     font.pixelSize: Style.font.body
   }
 
+
   // Two tails: a bordered one behind the body for the outline, and a
   // borderless one on top that hides the body's border where the tail joins.
   readonly property real tailLeft: Math.round(Math.max(pad, Math.min(body.width - pad - tailSize * 2, tailX - tailSize)))
@@ -48,7 +53,7 @@ Item {
     x: root.tailLeft
     y: root.above ? body.height - root.tailSize : 0
     color: Color.tooltip.background
-    border.color: Color.tooltip.border
+    border.color: root.borderColor
     border.width: 1
     antialiasing: true
   }
@@ -68,11 +73,11 @@ Item {
     id: body
     z: 1
     y: root.above ? 0 : root.tailSize
-    width: label.width + root.pad * 2
+    width: label.width + root.pad * 2 + (root.ai ? badge.width + 4 : 0)
     height: label.height + root.pad * 2
     radius: Math.max(2, Style.cornerRadius)
     color: Color.tooltip.background
-    border.color: Color.tooltip.border
+    border.color: root.borderColor
     border.width: 1
 
     Text {
@@ -85,6 +90,18 @@ Item {
       color: Color.tooltip.text
       font.family: Style.font.family
       font.pixelSize: Style.font.body
+    }
+
+    // nf-md-creation, the four-point sparkle everything AI wears these days.
+    Text {
+      id: badge
+      visible: root.ai
+      x: body.width - root.pad - width + 2
+      y: root.pad - 1
+      text: "󰙴"
+      color: Color.accent
+      font.family: Style.font.family
+      font.pixelSize: Style.font.caption
     }
 
     MouseArea {
