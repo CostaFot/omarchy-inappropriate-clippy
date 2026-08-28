@@ -78,9 +78,27 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 4. **Maintainer notes** (the form's free text) — say all of this:
    - Profane by default; `clean: true` (menu row "Clean") drops every line
      tagged `nsfw`. The marketplace has no content policy, but disclose it.
-   - Clippy artwork/name are Microsoft's; sprites from clippy.js
-     (`scripts/fetch-assets`, results committed); code is MIT. The
-     marketplace has a `rights-request.yml` template, so disclose up front.
+   - Rights. The marketplace has a `rights-request.yml` template, so
+     disclose up front rather than waiting to be asked. Paste this:
+
+     > The Clippy character, name and artwork are Microsoft's. The sprite
+     > sheet and frame data come from clippy.js
+     > (https://github.com/clippyjs/clippy.js), fetched by
+     > `scripts/fetch-assets` and committed; clippy.js's own licence covers
+     > its JavaScript only and says as much, so the artwork here is
+     > unlicensed and reproduced as parody. The plugin's code and text are
+     > MIT. It is free, not affiliated with or endorsed by Microsoft, and
+     > the README says so. If Microsoft objects I will swap in original
+     > artwork — the animation engine is atlas-agnostic, so it is a
+     > one-file change — or pull the listing, whichever they prefer.
+
+     If a maintainer pushes back, the prior art is that Microsoft has
+     tolerated this for over a decade: clippy.js has hosted the same
+     `map.png` publicly on GitHub since 2013, and
+     `fleshywaffles.vs-code-clippy` ("Clippy", the real Clippit render as
+     its icon, no LICENSE, no attribution) has been on Microsoft's own VS
+     Code marketplace since 2020-03-09 with ~24k installs. Tolerance is not
+     permission, and the honest answer if pressed is the offer to redraw.
    - Config writes: only its own entry in `~/.config/omarchy/shell.json` —
      settings the user picks in the menu, plus a one-time move of a
      pre-icon entry from `plugins[]` into `bar.layout.right` on mount

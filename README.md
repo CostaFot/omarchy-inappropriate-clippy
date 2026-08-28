@@ -167,4 +167,6 @@ omarchy-shell -q costafot.clippy say "Oh good, another theme. That'll fix it."
   `ai` on he does, roughly.
 - Clippy, the name and the artwork are Microsoft's. The sprites come from
   [clippy.js](https://github.com/clippyjs/clippy.js); the code here is MIT, the
-  paperclip is not.
+  paperclip is not. This is a parody. It is not affiliated with, authorised by
+  or endorsed by Microsoft, and it is free — nobody is making a penny out of
+  their paperclip.
