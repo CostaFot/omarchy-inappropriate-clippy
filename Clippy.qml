@@ -129,7 +129,7 @@ Item {
   // turns both off and gives middle-click back to snooze.
   readonly property bool slapEnabled: setting("slap", true) !== false
   readonly property bool slapSwipe: setting("slapSwipe", true) !== false
-  readonly property int slapsToKill: Math.max(0, Number(setting("slapsToKill", 5)))
+  readonly property int slapsToKill: Math.max(0, Number(setting("slapsToKill", 0)))
   // `slapSound`: true for the built-in ones, false for silence, or a path to
   // a WAV of your own.
   readonly property var slapSoundSetting: setting("slapSound", true)

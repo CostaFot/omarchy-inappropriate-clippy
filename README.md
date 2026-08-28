@@ -25,9 +25,9 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 
 Left-click the bubble to dismiss it.
 
-Five slaps inside six seconds knocks him out: same as killing him, back after
-`respawn` seconds or the paperclip. Snooze moved to the menu to make room for
-the slap; `"slap": false` gives middle-click back to it.
+Slap him as much as you like; he takes it. If you'd rather a beating had an
+ending, set `slapsToKill` below. Snooze moved to the menu to make room for the
+slap; `"slap": false` gives middle-click back to it.
 
 ## Configuration
 
@@ -63,7 +63,7 @@ into the bar himself, settings and all.
 | `slap` | `true` | `false` turns slapping off. Middle-click snoozes again |
 | `slapSwipe` | `true` | `false` keeps middle-click but stops the pointer-fling counting as a slap |
 | `slapSound` | `true` | `false` mutes it; a path to a WAV plays that instead of the built-in three |
-| `slapsToKill` | `5` | Slaps within six seconds before he's knocked out. `0` means he takes it forever |
+| `slapsToKill` | `0` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
 
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with

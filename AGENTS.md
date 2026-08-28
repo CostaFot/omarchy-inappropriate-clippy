@@ -85,8 +85,10 @@ loader, like omarchy.menu — not to the bar widget.
   a `shoveAnim` on `actor.x`, a `wobble` on `actor.rotation` (pivot
   `Item.Bottom`), then `say()` with a `slapped` line. Slap timestamps in
   `slapTimes`; `slapsToKill` inside `slapWindowMs` → `kill("knockedOut")`,
-  so the usual respawn machinery applies. IPC `slap [left|right]`.
-  `assets/sounds/*.wav` are mono 44.1 kHz conversions of three freesound
+  so the usual respawn machinery applies. Default is 0 (no knockout):
+  Costa wants unlimited slapping; the knockout is opt-in. IPC `slap
+  left|right` — the argument is required, IpcHandler has no optional
+  params. `assets/sounds/*.wav` are mono 44.1 kHz conversions of three
   mp3s Costa picked (SoundEffect wants WAV).
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
@@ -147,8 +149,9 @@ doesn't matter — an earlier version leaked the file's `quotes` into
 `lastWords`/`comeback`.
 
 Slapping done (2026-08-28, v1.2.0): middle-click and pointer-fling, sound,
-shove + wobble, escalation to a knockout. Middle-click used to snooze;
-`slap: false` restores that. Costa supplied the three sounds.
+shove + wobble, optional knockout (`slapsToKill`, off by default).
+Middle-click used to snooze; `slap: false` restores that. Costa supplied the
+three sounds.
 
 Bar icon done (2026-08-28, v1.1.0): opens the same `ClippyMenu`, and is the
 way back after a kill/hide. The menu is the config surface, `shell.json` the
