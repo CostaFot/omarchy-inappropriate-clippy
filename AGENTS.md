@@ -73,9 +73,11 @@ to `plugins[]` in `~/.config/omarchy/shell.json`.
   dead/snooze/x live in `PersistentProperties`. Keep mount cheap.
 - `shell.bar` is null while the bar loads and is reassigned on bar reload —
   every geometry read guards it and falls back to `Style.bar.*`.
-- Never name a root-level property after an Item property (`bottom`, `top`,
-  `state`, `scale`…) — "Cannot override FINAL property", and the reported line
-  can be stale when the compile is cached.
+- Never name a property on any Item-derived object after an Item property
+  (`bottom`, `top`, `state`, `scale`…) — "Cannot override FINAL property", and
+  the reported line can be stale when the compile is cached. Bit us twice.
+- IPC from a terminal is `omarchy-shell costafot.clippy <method> [args]` —
+  no `ipc call` subcommand; that form prints "Target not found".
 - Logs: `journalctl --user -o cat | grep -iE 'clippy|WARN.*scene'`.
 - One quickshell SIGSEGV was seen during development, right after
   "Exiting due to IPC request" while plugins were still incubating
@@ -85,10 +87,10 @@ to `plugins[]` in `~/.config/omarchy/shell.json`.
 
 ## Status (2026-08-28) and what's next
 
-Working end to end on Costa's machine: walks, talks on a timer, click/middle/right
-click, kill → respawn with a comeback, snooze, top and bottom bars, IPC, settings
-inline on the `plugins[]` entry. Committed locally; not yet on GitHub (README
-install URL is the intended one).
+Working end to end on Costa's machine: walks, talks on a timer, left/middle
+click, right-click menu (actions + clean/restless/size), kill → respawn with a
+comeback, snooze, top and bottom bars, IPC, settings inline on the `plugins[]`
+entry. On GitHub at the README install URL.
 
 Movement is a random brain (`decide()`): idle beats 10-30 s apart, each one
 turns into a walk with probability `restless` (default 0.3), walks are mostly
@@ -98,9 +100,11 @@ still — tune, don't make him busier.
 Unverified: click-through of the strip with a real pointer (mask mirrors
 navbar-cat's), and `clean` / `quotesFile` end to end (trivial code, no test run).
 
-Planned, later: a UI for the settings instead of hand-editing `shell.json`.
-Until then keep every setting a flat scalar key with a default and a README
-table row, so it maps onto a form. Don't build the UI or a schema unprompted.
+Planned, later: a bar-widget icon that opens the same `ClippyMenu` as the
+settings UI, so the menu is the config surface and `shell.json` is the
+fallback. Keep every setting a flat scalar key with a default, a README table
+row, and (if it's something a user would reach for) a row in the menu. Don't
+build the bar widget or a settings schema unprompted.
 
 Ideas, in rough order of payoff:
 - Reactive lines: battery, CPU, pending updates, hour of day, agent usage

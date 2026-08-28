@@ -25,8 +25,9 @@ Left-click the bubble to dismiss it.
 
 ## Configuration
 
-Settings go on his entry in `~/.config/omarchy/shell.json`, under `plugins`.
-All optional.
+The right-click menu covers the common ones (clean mode, how much he walks,
+size) and writes them for you. Everything goes on his entry in
+`~/.config/omarchy/shell.json`, under `plugins`. All optional.
 
 ```json
 "plugins": [
@@ -41,7 +42,7 @@ All optional.
 | `intervalMin` / `intervalMax` | `90` / `420` | Seconds between unprompted lines |
 | `speed` | `40` | Walking speed, px/s |
 | `restless` | `0.3` | 0–1, how often he decides to walk (about once a minute at the default; `1` is constant pacing) |
-| `respawn` | `300` | Seconds he stays dead after a right-click. `0` = dead until told otherwise |
+| `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
 | `screen` | focused | A monitor name (`hyprctl monitors`) to pin him to one screen |
 | `quotesFile` | — | Path to your own quotes JSON, merged into his |
 
