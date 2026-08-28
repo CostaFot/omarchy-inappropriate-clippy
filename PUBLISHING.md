@@ -50,7 +50,8 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 ## What Clippy already has
 
-- Manifest: all required fields, id `costafot.clippy`, version 1.4.0,
+- Manifest: all required fields, id `costafot.clippy`, version 1.16.0 at
+  the time of writing (check `manifest.json` — this file goes stale),
   kinds `panel` + `bar-widget`. Validate passes (exit 0, silent).
 - LICENSE (MIT), README, `preview.png` (2400×260), `main` pushed and
   clean at the time of writing.

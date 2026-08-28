@@ -6,12 +6,18 @@
 # (the cache is keyed by all three; --pitch derives instantly and needs no
 # warming). Templated lines ({away}, {back}) are substituted at say-time and
 # are skipped. ~2 s of GPU per line, ~5 min for the built-in book.
+# `--lines <line>...` warms exactly those strings instead of the book — the
+# plugin uses it to pre-render each fresh batch of agent lines on arrival.
 import hashlib, json, os, re, socket, subprocess, sys, time
 
 def setting(key):
     r = subprocess.run(["omarchy-shell", "costafot.clippy", "get", key],
                        capture_output=True, text=True)
-    return r.stdout.strip() if r.returncode == 0 else ""
+    v = r.stdout.strip() if r.returncode == 0 else ""
+    # `get` prints string values JSON-quoted (booleans and numbers bare).
+    if len(v) >= 2 and v[0] == '"' and v[-1] == '"':
+        v = v[1:-1]
+    return v
 
 tts = setting("tts")
 m = re.search(r"(\S*speak-clone)\s+.*--ref\s+(\S+)", tts)
@@ -24,22 +30,25 @@ def flag(name, default):
 exag, cfg = flag("exag", 0.5), flag("cfg", 0.5)
 daemon = os.path.join(os.path.dirname(os.path.realpath(m.group(1))), "daemon.py")
 
-here = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
-book = json.load(open(os.path.join(here, "quotes.json")))
-extra_path = setting("quotesFile")
-if extra_path and os.path.exists(os.path.expanduser(extra_path)):
-    try:
-        extra = json.load(open(os.path.expanduser(extra_path)))
-        if isinstance(extra, list):
-            extra = {"quotes": extra}
-        for k, v in extra.items():
-            book.setdefault(k, []).extend(
-                {"text": e} if isinstance(e, str) else e for e in v)
-    except (ValueError, OSError):
-        pass  # the plugin ignores a broken quotesFile too
-clean = setting("clean") == "true"
-lines = [e["text"] for v in book.values() for e in v
-         if "{" not in e["text"] and not (clean and e.get("nsfw"))]
+if sys.argv[1:2] == ["--lines"]:
+    lines = [t for t in sys.argv[2:] if "{" not in t]
+else:
+    here = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+    book = json.load(open(os.path.join(here, "quotes.json")))
+    extra_path = setting("quotesFile")
+    if extra_path and os.path.exists(os.path.expanduser(extra_path)):
+        try:
+            extra = json.load(open(os.path.expanduser(extra_path)))
+            if isinstance(extra, list):
+                extra = {"quotes": extra}
+            for k, v in extra.items():
+                book.setdefault(k, []).extend(
+                    {"text": e} if isinstance(e, str) else e for e in v)
+        except (ValueError, OSError):
+            pass  # the plugin ignores a broken quotesFile too
+    clean = setting("clean") == "true"
+    lines = [e["text"] for v in book.values() for e in v
+             if "{" not in e["text"] and not (clean and e.get("nsfw"))]
 
 cache = os.path.expanduser("~/.cache/clippy-voice")
 os.makedirs(cache, exist_ok=True)

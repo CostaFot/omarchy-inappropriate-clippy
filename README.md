@@ -86,6 +86,7 @@ into the bar himself, settings and all.
 | `ttsVoice` | `en+m3` | The built-in voice — any name from `espeak-ng --voices`. Death still whispers |
 | `ttsSpeed` | `155` | Words per minute for the built-in voice (espeak-ng `-s`, 80–450) |
 | `ttsPitch` | `45` | Pitch for the built-in voice (espeak-ng `-p`, 0–99) |
+| `ttsSaved` | — | Where a custom `tts` command parks while the voice is toggled off, so toggling doesn't lose it. Managed for you; `set ttsSaved unset` forgets it |
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
@@ -196,8 +197,11 @@ seconds — including the reaction to a slap, which lands well after the
 slap. `scripts/warm-voice` fixes that up front: it renders the whole book
 into the cache silently (~5 minutes of GPU for the built-in book) and
 everything he says from it is instant afterwards. Rerun it after changing
-the reference or the delivery knobs; agent lines are freshly written every
-time, so those always pay the synthesis toll.
+the reference or the delivery knobs. Agent lines are freshly written every
+time, so the cache can never have them in advance — instead the plugin
+pre-renders each batch the moment it arrives (they sit unspoken for a
+while first), so with `ai` on and a clone set, those don't trail the
+bubble either.
 
 Or set `tts` to any shell command yourself.
 It runs through `bash -c` and gets each line on stdin, so any engine that
@@ -208,7 +212,11 @@ omarchy-shell costafot.clippy set tts "piper --model ~/voices/en_US-lessac-mediu
 ```
 
 A custom command ignores the three tuning keys — it's one string, it gets
-stdin, you own everything. Whatever hides the bubble — a slap, a lock, his
+stdin, you own everything. And it survives the on/off switch: toggling the
+voice off (menu row or `set tts false`) parks the command in `ttsSaved`,
+and toggling back on restores it — you only get the espeak robot from
+`tts true` when there's nothing parked (`set ttsSaved unset` to force
+that). Whatever hides the bubble — a slap, a lock, his
 death — kills the voice mid-word. A pipeline like the piper one may finish its sentence anyway;
 that's between bash and its children.
 

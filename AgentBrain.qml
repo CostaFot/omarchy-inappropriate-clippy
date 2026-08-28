@@ -37,6 +37,10 @@ Item {
   // Things the user did to him lately, for the prompt. Newest last.
   property var recent: []
 
+  // A batch of new lines just landed in the cache. The root pre-renders
+  // them into the voice-clone cache so speaking one later is instant.
+  signal linesArrived(var lines)
+
   readonly property bool busy: proc.running
   readonly property string agent: agentOverride !== "" ? agentOverride : detected.agent
   readonly property int cached: store.lines.length
@@ -147,6 +151,7 @@ Item {
       store.madeAt = Date.now()
       brain.recent = []
       console.log("clippy: " + lines.length + " lines from " + brain.agent + ", " + store.lines.length + " cached")
+      brain.linesArrived(lines)
     }
   }
 }

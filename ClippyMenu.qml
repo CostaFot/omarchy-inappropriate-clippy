@@ -238,7 +238,10 @@ PanelWindow {
       Entry {
         readonly property bool on: menu.clippy ? menu.clippy.ttsOn : false
         readonly property bool needs: menu.clippy ? menu.clippy.ttsNeedsEngine : false
-        readonly property bool custom: menu.clippy ? typeof menu.clippy.ttsSetting === "string" : false
+        // A stashed command counts: the label keeps reading "custom" while
+        // the voice is toggled off, so it's visible the command survives.
+        readonly property bool custom: menu.clippy ? (typeof menu.clippy.ttsSetting === "string"
+          || String(menu.clippy.setting("ttsSaved", "") || "") !== "") : false
         label: needs ? "Voice · install espeak-ng" : (custom ? "Voice · custom" : "Voice")
         mark: on ? "●" : "○"
         active: on

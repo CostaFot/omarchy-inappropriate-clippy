@@ -565,6 +565,48 @@ tho" — expected, self-heals when the warm finishes). Pitch variants are
 not pre-derived on purpose: the ffmpeg step is milliseconds. Costa's box
 was warmed for Rubick 0.5/0.5 the same evening.
 
+Agent-line warming done (2026-08-29, v1.15.0): with `ai` on and a
+speak-clone `tts`, each fresh batch of agent lines is pre-rendered into
+the clone cache the moment it lands, so agent lines stop trailing the
+bubble by the ~2 s a first take costs — they sit in `AgentBrain` up to
+20 min before `take()` uses one, and that idle window is free GPU time.
+Born from "the AI tts is lagging": the book warm (v1.14.0) had made every
+book line instant, and the agent lines were exactly what was left.
+Mechanics: `warm-voice --lines <line>...` warms explicit strings instead
+of the book (same tts parse, cache key, `{`-skip, daemon self-start);
+`AgentBrain` emits `linesArrived(lines)` on a successful batch; the root's
+`warmAgentLines()` gates on `ttsOn` + `"speak-clone" in ttsSetting` and
+runs `warmProc` fire-and-forget, parking overlap in `warmQueued` (the
+ttsQueued shape). No new setting keys. A side fix in `warm-voice`:
+`get` prints string values JSON-quoted, and the trailing `"` broke the
+`--cfg` float parse — `setting()` now strips the quotes. Verified live:
+`--lines` renders/skips/caches from the terminal, and a real claude batch
+of 5 produced 5 cache wavs within ~15 s of `set ai true`, journal clean.
+Session note: mid-work Costa toggled both `tts` and `ai` to false from
+the menu (the Voice row still eats the custom command — open papercut);
+both were left false as he set them, and re-enabling is
+`set ai true` + `set tts 'exec …/speak-clone --ref …/rubick.wav
+--exag 0.5 --cfg 0.5'`.
+
+Voice toggle keeps the command (2026-08-29, v1.16.0): the menu's Voice row
+(and IPC `set tts true|false`) used to write bare booleans, eating a custom
+`tts` command — it took Costa's clone string three times in one day. Now
+`setVoiceEnabled(on)` stashes a command string into a new `ttsSaved` key on
+turn-off and restores it on turn-on; `tts true` only means espeak when
+nothing is parked (`set ttsSaved unset` is the escape hatch), `set tts
+unset` resets tts but keeps the stash, and an explicit command string
+clears it. Both keys land in one `setSettings(map)` write (new; setSetting
+delegates to it) — two sequential writes would race the remount. The menu
+row reads "Voice · custom" while off-with-stash. Agent-first replies grew
+with it: `set tts <speak-clone cmd>` answers with the rerun-warm-voice
+reminder when the string changed, `voice` while a clone is live names the
+voices dir / setup-voice / warm-voice, and while off it names the parked
+command. Born from the "is it fully configurable" pre-publish audit.
+Verified over IPC end to end (set clone → off → stash → true → restore,
+unset keeps the stash); the menu path shares setVoiceEnabled so only the
+label was eyeballed. PUBLISHING.md's version reference was refreshed at
+the same time.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin

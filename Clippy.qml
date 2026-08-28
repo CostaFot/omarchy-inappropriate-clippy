@@ -109,6 +109,7 @@ Item {
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
+    ttsSaved: "",
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true
   })
@@ -137,15 +138,25 @@ Item {
   // the window's input mask, so it cannot block a click on the bar.
   readonly property bool tombstoneEnabled: setting("tombstone", true) !== false
 
-  // Writes one inline key on our shell.json entry (undefined removes it).
-  // The shell rewrites shell.json and remounts us; persisted state carries over.
-  function setSetting(key, value) {
+  // Writes inline keys on our shell.json entry (undefined removes a key).
+  // The shell rewrites shell.json and remounts us; persisted state carries
+  // over. `changes` is a map so related keys (tts + ttsSaved) land in one
+  // write — two sequential writes would race the remount.
+  function setSettings(changes) {
     if (!shell || typeof shell.updateEntryInline !== "function") return false
     var entry = { id: pluginId }
-    for (var k in settings) if (k !== "id" && k !== key) entry[k] = settings[k]
-    if (value !== undefined && value !== null) entry[key] = value
+    for (var k in settings) if (k !== "id") entry[k] = settings[k]
+    for (var c in changes) {
+      if (changes[c] === undefined || changes[c] === null) delete entry[c]
+      else entry[c] = changes[c]
+    }
     shell.updateEntryInline(pluginId, entry)
     return true
+  }
+  function setSetting(key, value) {
+    var changes = {}
+    changes[key] = value
+    return setSettings(changes)
   }
   readonly property bool clean: setting("clean", false) === true
   readonly property int respawnSeconds: Math.max(0, Number(setting("respawn", 300)))
@@ -416,6 +427,7 @@ Item {
     agentOverride: root.aiAgent
     model: root.aiModel
     quotesFile: root.quotesFile
+    onLinesArrived: lines => root.warmAgentLines(lines)
   }
 
   FileView {
@@ -866,6 +878,23 @@ Item {
   }
   // IPC replies that would say "ok" while the voice can't be heard say so.
   function ipcOkVoice() { return ttsOn && ttsNeedsEngine ? "ok — but silent: espeak-ng not installed" : "ok" }
+  // Voice on/off without losing a custom `tts` command (a clone, a
+  // pipeline): turning off a string stashes it in `ttsSaved`, turning on
+  // restores the stash. Menu toggle and IPC `set tts true|false` both land
+  // here — the menu's old bare set ate Costa's clone command twice. Forcing
+  // the espeak robot while a stash exists is `set ttsSaved unset` first.
+  function setVoiceEnabled(on) {
+    if (on) {
+      var saved = String(setting("ttsSaved", "") || "")
+      if (saved !== "") { setSettings({ tts: saved, ttsSaved: undefined }); return saved }
+      setSetting("tts", true)
+      return true
+    }
+    if (typeof ttsSetting === "string" && ttsSetting !== "")
+      setSettings({ tts: false, ttsSaved: ttsSetting })
+    else setSetting("tts", false)
+    return false
+  }
   function stopSpeaking() {
     ttsLine = ""      // cleared first so onExited knows the kill was ours
     ttsQueued = ""
@@ -901,6 +930,36 @@ Item {
         root.ttsWarned = true
         console.warn("clippy: tts failed (exit " + code + ") — "
           + (typeof root.ttsSetting === "string" ? root.ttsSetting : "is espeak-ng installed?"))
+      }
+    }
+  }
+
+  // Agent lines are novel text, so the clone cache never has them ready at
+  // speak time — each would trail the bubble by the ~2 s a fresh render
+  // costs. They do sit in AgentBrain for up to 20 minutes first, so render
+  // them the moment a batch lands (warm-voice --lines, silent, over the
+  // daemon socket). speak-clone only: espeak and other custom commands have
+  // no cache to warm. While the warm runs a live novel line queues behind
+  // it on the daemon, but the only still-novel lines are the ones being
+  // warmed, so that resolves itself in seconds.
+  property var warmQueued: []
+  function warmAgentLines(lines) {
+    if (!ttsOn || typeof ttsSetting !== "string" || ttsSetting.indexOf("speak-clone") === -1) return
+    if (warmProc.running) { warmQueued = warmQueued.concat(lines); return }
+    warmProc.command = [pluginDir + "/scripts/warm-voice", "--lines"].concat(lines)
+    warmProc.running = true
+  }
+  Process {
+    id: warmProc
+    stderr: StdioCollector { id: warmErr }
+    onExited: function (code) {
+      // Not-a-speak-clone is gated before the spawn, so nonzero is real.
+      if (code !== 0)
+        console.warn("clippy: warm-voice failed (exit " + code + "): " + String(warmErr.text).trim())
+      if (root.warmQueued.length) {
+        var queued = root.warmQueued
+        root.warmQueued = []
+        root.warmAgentLines(queued)
       }
     }
   }
@@ -1163,9 +1222,16 @@ Item {
     // Agent-first status for the voice: what `tts` resolves to and whether
     // it can actually be heard right now.
     function voice(): string {
-      if (!root.ttsOn) return "off — set tts true for the robot voice, or run scripts/setup-voice in the plugin dir for a real one (--clone <sample.wav> clones any voice, GPU required)"
+      if (!root.ttsOn) {
+        var saved = String(root.setting("ttsSaved", "") || "")
+        if (saved !== "") return "off — set tts true restores the saved custom voice: " + saved
+        return "off — set tts true for the robot voice, or run scripts/setup-voice in the plugin dir for a real one (--clone <sample.wav> clones any voice, GPU required)"
+      }
       var s = typeof root.ttsSetting === "string"
             ? "custom command: " + root.ttsSetting
+              + (root.ttsSetting.indexOf("speak-clone") !== -1
+                 ? " (clone wavs live in ~/.local/share/chatterbox-tts/voices — switch with set tts using another --ref, then rerun scripts/warm-voice; new voices: scripts/setup-voice)"
+                 : "")
             : (root.ttsEngineMissing
                ? "espeak-ng: not installed — silent (sudo pacman -S espeak-ng, or set tts to a shell command)"
                : "espeak-ng: ready — " + root.ttsVoice + ", " + root.ttsSpeed + " wpm, pitch " + root.ttsPitch
@@ -1192,9 +1258,28 @@ Item {
       key = String(key || "")
       if (!root.isSettingKey(key)) return "unknown key " + key + "; one of " + Object.keys(root.settingDefaults).join(", ")
       var parsed = root.parseSettingValue(value)
+      if (key === "tts") {
+        // true/false take the stash/restore path (see setVoiceEnabled);
+        // an explicit command string supersedes any stash.
+        if (parsed === true || parsed === false) {
+          var wasCustom = typeof root.ttsSetting === "string" && root.ttsSetting !== ""
+          var landed = root.setVoiceEnabled(parsed)
+          if (parsed === false && wasCustom)
+            return "ok — voice off; the custom command is kept in ttsSaved, set tts true restores it"
+          if (parsed === true && typeof landed === "string")
+            return "ok — restored the custom voice: " + landed + " (for the espeak robot instead: set ttsSaved unset, then set tts true)"
+          if (parsed === true && root.ttsEngineMissing)
+            return "ok — but espeak-ng isn't installed, so he stays silent until it is (or set tts to a shell command)"
+          return "ok"
+        }
+        var wasTts = root.ttsSetting
+        var changes = typeof parsed === "string" ? { tts: parsed, ttsSaved: undefined } : { tts: parsed }
+        if (!root.setSettings(changes)) return "can't write shell.json"
+        if (typeof parsed === "string" && parsed.indexOf("speak-clone") !== -1 && parsed !== wasTts)
+          return "ok — new clone voice: rerun scripts/warm-voice (plugin dir) to pre-render the book for it, or every line pays ~2 s of GPU once"
+        return "ok"
+      }
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
-      if (key === "tts" && parsed === true && root.ttsEngineMissing)
-        return "ok — but espeak-ng isn't installed, so he stays silent until it is (or set tts to a shell command)"
       if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
         if (typeof root.ttsSetting === "string") return "ok — but tts is a custom command, which ignores the built-in tuning"
         if (root.ttsEngineMissing) return "ok — but espeak-ng isn't installed, so he stays silent until it is"
@@ -1239,7 +1324,12 @@ Item {
       else if (name === "kill") root.kill()
       else if (name === "revive") root.bringBack()
     }
-    onChose: function (key, value) { root.setSetting(key, value) }
+    onChose: function (key, value) {
+      // The Voice row goes through the stash/restore path so toggling the
+      // voice off never throws away a custom command.
+      if (key === "tts" && (value === true || value === false)) root.setVoiceEnabled(value)
+      else root.setSetting(key, value)
+    }
   }
 
   // ---- window ------------------------------------------------------------
