@@ -46,7 +46,7 @@ Item {
     var v = settings[key]
     return v === undefined || v === null ? fallback : v
   }
-  readonly property real spriteSize: clamp(Number(setting("size", 44)) || 44, 20, 200)
+  readonly property real spriteSize: clamp(Number(setting("size", 30)) || 30, 20, 200)
   readonly property int intervalMin: Math.max(5, Number(setting("intervalMin", 90)) || 90)
   readonly property int intervalMax: Math.max(intervalMin, Number(setting("intervalMax", 420)) || 420)
   readonly property real speed: clamp(Number(setting("speed", 40)) || 40, 5, 500)

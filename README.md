@@ -30,13 +30,13 @@ All optional.
 
 ```json
 "plugins": [
-  { "id": "costafot.clippy", "size": 44, "clean": false, "intervalMin": 90, "intervalMax": 420 }
+  { "id": "costafot.clippy", "size": 30, "clean": false, "intervalMin": 90, "intervalMax": 420 }
 ]
 ```
 
 | Key | Default | What |
 |---|---|---|
-| `size` | `44` | His height in px. The bar is 26, so he hangs over the edge a bit |
+| `size` | `30` | His height in px. The bar is 26, so he hangs over the edge a bit |
 | `clean` | `false` | `true` drops every line tagged `nsfw`. Screen-share mode |
 | `intervalMin` / `intervalMax` | `90` / `420` | Seconds between unprompted lines |
 | `speed` | `40` | Walking speed, px/s |
