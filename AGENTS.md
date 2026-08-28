@@ -607,6 +607,26 @@ unset keeps the stash); the menu path shares setVoiceEnabled so only the
 label was eyeballed. PUBLISHING.md's version reference was refreshed at
 the same time.
 
+New-user simulation (2026-08-29): the box left the dev loop — plugin
+disabled, symlink removed, then a real `omarchy plugin add
+https://github.com/CostaFot/omarchy-inappropriate-clippy --enable --yes`
+clone (main == origin/main, so the same v1.16.0 code) and an `omarchy
+restart shell` to zero `persisted`. The disable wiped Costa's inline
+settings; the entry now carries only `tts: true` from his own menu click
+(espeak robot), and restoring the dev rig is the symlink plus `set ai
+true`, `set aiModel claude-sonnet-5`, `set tts 'exec
+~/.local/share/chatterbox-tts/speak-clone --ref
+~/.local/share/chatterbox-tts/voices/rubick.wav --exag 0.5 --cfg 0.5'`.
+So the "current voice on Costa's box" notes above describe the rig, not
+this moment. Note the installed dir is a real clone now — edits there
+hot-reload but are NOT the checkout; dev work goes back through the
+symlink. The audit itself: TTS is one click from the menu, the README
+held up end to end, and two papercuts surfaced (offered, not asked for):
+the menu never advertises `setup-voice` while espeak-ng is installed
+(the nudge only shows when it's missing), and there is no `help` IPC
+verb — a blind agent gets "Function not found" and must find the README
+to learn the methods.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin
