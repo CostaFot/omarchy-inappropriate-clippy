@@ -27,6 +27,20 @@ and the menu shows them. The grudge half remains: expose `{kills}`/`{slaps}`
 placeholders to both books, same as `{away}`. "That's the ninth time you've
 murdered me. I keep a list."
 
+## The global leaderboard
+
+The counter (v1.10.0) keeps score locally; put it on a public webpage and
+let installs compete. A tiny service on Railway (already have an account):
+one POST endpoint, Postgres or SQLite on a volume, and a page ranking
+handles by kills, slaps as the tiebreak. Client side is one new key — a
+`leaderboard` handle, off by default, because phoning home is opt-in or
+it's nothing — posting deltas as they land (curl through the same
+`Process` plumbing as `clippy-ai`), so the local tally resetting with the
+shell doesn't matter; the server accumulates. Anti-cheat is a lost cause —
+`slap left` over IPC in a while-loop is an instant world record — and
+that's fine, every score was self-reported murder to begin with. The page
+wants to be a graveyard: one headstone per handle, sized by kill count.
+
 ## Window-class reactions
 
 A step past the reactive-lines idea in AGENTS.md: a `reactions` key in
