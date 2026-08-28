@@ -551,6 +551,20 @@ voice on Costa's box is the Rubick clone** (`--exag 0.5 --cfg 0.5`, no
 pitch flag — Rubick is deep enough on his own), C-3PO's wavs stand ready
 but unused.
 
+Cache warming done (2026-08-29, v1.14.0): `scripts/warm-voice` renders the
+whole book into the clone cache, silently, over the daemon socket — no
+aplay, so nothing plays while it runs. It reads the live `tts` string for
+speak-clone/--ref/--exag/--cfg (bails on anything else), merges
+`quotesFile`, respects `clean`, skips `{templated}` lines, skips existing
+cache files, and self-starts the daemon like speak-clone does. Born from
+"rubick talking is 2 seconds slow": switching --ref invalidated all 55
+C-3PO-keyed lines, so every line — slap reactions worst of all, they
+trail the hit by 2 s — was a first take. While a warm runs, live lines
+queue behind the batch and the bubble's SIGTERM can skip them ("no sound
+tho" — expected, self-heals when the warm finishes). Pitch variants are
+not pre-derived on purpose: the ffmpeg step is milliseconds. Costa's box
+was warmed for Rubick 0.5/0.5 the same evening.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin

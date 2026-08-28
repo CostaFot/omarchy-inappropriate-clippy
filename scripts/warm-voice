@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+# Pre-render the whole quote book into the voice-clone cache, silently, so
+# nothing Clippy says out of the book ever waits on the GPU. Only makes
+# sense for a speak-clone `tts` command — it reads the live setting, so run
+# it after setup-voice --clone, and rerun it after changing --ref/--exag/--cfg
+# (the cache is keyed by all three; --pitch derives instantly and needs no
+# warming). Templated lines ({away}, {back}) are substituted at say-time and
+# are skipped. ~2 s of GPU per line, ~5 min for the built-in book.
+import hashlib, json, os, re, socket, subprocess, sys, time
+
+def setting(key):
+    r = subprocess.run(["omarchy-shell", "costafot.clippy", "get", key],
+                       capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+tts = setting("tts")
+m = re.search(r"(\S*speak-clone)\s+.*--ref\s+(\S+)", tts)
+if not m:
+    sys.exit(f"warm-voice: tts is not a speak-clone command, nothing to warm ({tts!r})")
+ref = os.path.realpath(os.path.expanduser(m.group(2)))
+def flag(name, default):
+    f = re.search(rf"--{name}\s+(\S+)", tts)
+    return float(f.group(1)) if f else default
+exag, cfg = flag("exag", 0.5), flag("cfg", 0.5)
+daemon = os.path.join(os.path.dirname(os.path.realpath(m.group(1))), "daemon.py")
+
+here = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+book = json.load(open(os.path.join(here, "quotes.json")))
+extra_path = setting("quotesFile")
+if extra_path and os.path.exists(os.path.expanduser(extra_path)):
+    try:
+        extra = json.load(open(os.path.expanduser(extra_path)))
+        if isinstance(extra, list):
+            extra = {"quotes": extra}
+        for k, v in extra.items():
+            book.setdefault(k, []).extend(
+                {"text": e} if isinstance(e, str) else e for e in v)
+    except (ValueError, OSError):
+        pass  # the plugin ignores a broken quotesFile too
+clean = setting("clean") == "true"
+lines = [e["text"] for v in book.values() for e in v
+         if "{" not in e["text"] and not (clean and e.get("nsfw"))]
+
+cache = os.path.expanduser("~/.cache/clippy-voice")
+os.makedirs(cache, exist_ok=True)
+sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "clippy-voice.sock")
+
+def ask(text, out):
+    c = socket.socket(socket.AF_UNIX)
+    c.settimeout(120)
+    c.connect(sockp)
+    c.sendall((json.dumps({"text": text, "ref": ref, "exag": exag,
+                           "cfg": cfg, "out": out}) + "\n").encode())
+    r = c.makefile().readline().strip()
+    c.close()
+    if r != "ok":
+        raise RuntimeError(r)
+
+done = skipped = failed = 0
+for text in lines:
+    key = hashlib.sha256(f"{ref}|{exag}|{cfg}|{text}".encode()).hexdigest()[:24]
+    out = f"{cache}/{key}.wav"
+    if os.path.exists(out):
+        skipped += 1
+        continue
+    for attempt in range(2):
+        try:
+            ask(text, out)
+            done += 1
+            break
+        except (FileNotFoundError, ConnectionRefusedError):
+            log = open(f"{cache}/daemon.log", "ab")
+            subprocess.Popen([daemon], start_new_session=True, stdout=log, stderr=log)
+            deadline = time.time() + 120
+            while time.time() < deadline:
+                time.sleep(0.5)
+                try:
+                    ask(text, out)
+                    done += 1
+                    break
+                except (FileNotFoundError, ConnectionRefusedError):
+                    continue
+            else:
+                sys.exit(f"warm-voice: daemon never came up "
+                         f"({done} rendered, {skipped} cached, {failed} failed)")
+            break
+        except RuntimeError as e:
+            if attempt:
+                failed += 1
+                print(f"FAIL: {e}: {text!r}", flush=True)
+    n = done + skipped + failed
+    if n % 20 == 0:
+        print(f"{n}/{len(lines)}", flush=True)
+print(f"done: {done} rendered, {skipped} already cached, {failed} failed of {len(lines)}")

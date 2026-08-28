@@ -191,6 +191,14 @@ voice after synthesis — `0.85` is noticeably deeper, `1.1` lighter, tempo
 untouched. Pitch is applied to the line cache, not the GPU, so auditioning
 values is instant.
 
+A fresh clone starts with an empty cache, so *every* line costs those few
+seconds — including the reaction to a slap, which lands well after the
+slap. `scripts/warm-voice` fixes that up front: it renders the whole book
+into the cache silently (~5 minutes of GPU for the built-in book) and
+everything he says from it is instant afterwards. Rerun it after changing
+the reference or the delivery knobs; agent lines are freshly written every
+time, so those always pay the synthesis toll.
+
 Or set `tts` to any shell command yourself.
 It runs through `bash -c` and gets each line on stdin, so any engine that
 reads text from stdin plugs in:
