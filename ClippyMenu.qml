@@ -221,7 +221,9 @@ PanelWindow {
       Entry {
         readonly property bool on: menu.clippy ? menu.clippy.aiEnabled : false
         readonly property string agent: menu.clippy ? menu.clippy.aiAgentName : ""
-        label: "Lines from " + (agent !== "" ? agent : "your AI agent")
+        // The model shows when one is set; unset is the agent's own default.
+        readonly property string model_name: menu.clippy ? menu.clippy.aiModel : ""
+        label: "Lines from " + (agent !== "" ? agent : "your AI agent") + (model_name !== "" ? " · " + model_name : "")
         mark: on ? "●" : "○"
         active: on
         onTapped: menu.set("ai", !on)

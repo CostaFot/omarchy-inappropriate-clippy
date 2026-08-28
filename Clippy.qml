@@ -135,7 +135,7 @@ Item {
     if (!shell || typeof shell.updateEntryInline !== "function") return false
     var entry = { id: pluginId }
     for (var k in settings) if (k !== "id" && k !== key) entry[k] = settings[k]
-    if (value !== undefined) entry[key] = value
+    if (value !== undefined && value !== null) entry[key] = value
     shell.updateEntryInline(pluginId, entry)
     return true
   }

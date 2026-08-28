@@ -165,7 +165,9 @@ loader, like omarchy.menu — not to the bar widget.
   default (opus-5 today), *not* settings.json's `model`, because
   `--setting-sources ""` is on (verified: with it `modelUsage` shows
   opus-5, without it Costa's fable-5). Costa asked; kept the isolation and
-  made the model a setting. Timed on the real prompt: opus-5 and sonnet-5
+  made the model a setting; the menu shows it in the "Lines from <agent>"
+  row label when set (no picker: the names differ per agent). Timed on the
+  real prompt: opus-5 and sonnet-5
   ~4 s, haiku-4-5 44-63 s (twice; bare "say hi" is 3 s on all three), so
   don't suggest haiku. The shell's env has the mise shims on PATH, so the
   agent binaries resolve. codex and pi are installed here but not logged
