@@ -1,15 +1,19 @@
 import QtQuick
 import qs.Commons
 
-// A little headstone where he died, up until the respawn. Purely visual:
-// it is never part of the window's input mask, so whatever it stands over
-// on the bar keeps taking clicks — worst case it shades the clock a while.
+// A little headstone where he died, up until the respawn. It joins the
+// window's input mask only while shown, and it parks in a widget gap, so
+// the sliver of bar it takes clicks from is normally empty anyway; a click
+// gets you the epitaph, a right-click the menu.
 Item {
   id: root
 
   // Sized off the sprite so it stays in proportion with him.
   property real size: 30
   property bool shown: false
+
+  signal poked()
+  signal menuWanted()
 
   readonly property int stoneH: Math.max(16, Math.round(size * 0.8))
   readonly property int stoneW: Math.round(stoneH * 0.78)
@@ -83,5 +87,15 @@ Item {
     height: root.moundH
     radius: root.moundH / 2
     color: Color.tooltip.border
+  }
+
+  MouseArea {
+    anchors.fill: parent
+    acceptedButtons: Qt.LeftButton | Qt.RightButton
+    cursorShape: Qt.PointingHandCursor
+    onClicked: function (mouse) {
+      if (mouse.button === Qt.RightButton) root.menuWanted()
+      else root.poked()
+    }
   }
 }

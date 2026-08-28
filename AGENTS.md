@@ -167,9 +167,19 @@ loader, like omarchy.menu — not to the bar widget.
   placed by clamping his (off-stage) centre to the stage, so it stands at
   the edge he left by, nudged off whatever occupies it (the workspaces, on
   the left). `persisted.graveX` (-1 = none) survives remounts; verified two
-  `set`-triggered remounts keep it pixel-identical. **Never in the window's
-  input mask**: a widget that grows under it (tray drawer) is shaded, never
-  blocked — that was the covering worry, and the mask answers it.
+  `set`-triggered remounts keep it pixel-identical. In the input mask
+  **only while shown** (a Region that collapses to 0 wide, like the
+  bubble's): a click says an `epitaph` line and a right-click opens the
+  menu anchored to the grave (not to actor.x — a fling leaves that
+  off-stage). `epitaph()` writes the bubble directly the way the kill
+  paths do, since `say()` refuses while dead; `{back}` in a line becomes
+  time-to-respawn via `backText()` ("45 seconds"/"4 minutes"/"never").
+  While the grave stands the bubble anchors to it (`stage.mouthX`, plus
+  the grave-vs-actor y ternaries; same feet line, different heights). So
+  while he's dead the stone's ~20 px does take clicks — it parks in a
+  gap, so that's normally empty bar, which is the whole covering story.
+  IPC `epitaph` (alive/off/asleep/ok) exists because pokes aren't
+  pointer-testable.
 - `AgentBrain.qml` + `scripts/clippy-ai` — lines from the user's default
   coding agent (`ai: true`, off by default). Omarchy's "default agent" is
   only a name in `~/.config/omarchy/defaults/agent` (`omarchy-default-agent`
@@ -224,7 +234,7 @@ loader, like omarchy.menu — not to the bar widget.
   dropped — too slow to read at any speed that still looked like typing.
   The kill and fling paths write `bubble.text` directly and set
   `bubble.ai = false` first.
-- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut, dragged, dropped, flung, welcomeBack }`
+- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut, dragged, dropped, flung, welcomeBack, epitaph }`
   (the key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
   merged in (same shape, or a bare array).
@@ -268,7 +278,7 @@ right-click menu (actions + clean/sounds/restless/size), bar icon → same menu
 (dimmed + "Bring him back" when dead/hidden), kill → respawn with a comeback,
 snooze, sleep while locked/idle/screens-off with a welcome-back line, top and
 bottom bars, IPC, settings inline on the bar-layout entry.
-On GitHub at the README install URL, v1.8.0 (no tag yet). Not on the
+On GitHub at the README install URL, v1.9.0 (no tag yet). Not on the
 marketplace: see `PUBLISHING.md` for the flow, prior submissions and the
 gap list.
 
@@ -344,11 +354,15 @@ back to raw targets. Verified with `restless 1` and screenshot pairs against
 
 Tombstone done (2026-08-28, v1.8.0): every death leaves a grave until the
 respawn (see `Tombstone.qml` above). Costa's worry was covering the bar; the
-answer is the input mask (it never takes clicks) plus gap-snapping (it
-rarely even overlaps). Verified over IPC: kill mid-bar, fling off the left
-edge (grave nudged right of the workspaces/media cluster), two remounts
-while dead, respawn fade. The thud/bounce on appear is not
-pointer-verifiable from a terminal; it's a 450 ms OutBounce on the stone.
+answer is the input mask plus gap-snapping (it rarely even overlaps).
+Verified over IPC: kill mid-bar, fling off the left edge (grave nudged
+right of the workspaces/media cluster), two remounts while dead, respawn
+fade. The thud/bounce on appear is not pointer-verifiable from a terminal;
+it's a 450 ms OutBounce on the stone. The epitaph (v1.9.0) came right
+after: Costa asked for "Here lies Clippy. You killed him, you fuck" on
+click, and that line is in the book. He clicked the grave by hand and
+confirmed; the IPC path and the grave-anchored bubble were verified with
+screenshots.
 
 Ideas, in rough order of payoff:
 - Reactive lines without the agent: battery, CPU, pending updates, hour of

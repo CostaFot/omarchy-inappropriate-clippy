@@ -23,6 +23,7 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 | Hold left-click, then drag | picks him up. Put him down anywhere on the bar; he objects to the trip and to where it ends |
 | Let go mid-fling | throws him off the end of the bar. He doesn't survive it, but he does get a last word in |
 | Right-click | opens his menu: say something, snooze, kill him, and the settings below |
+| Click his tombstone | he's dead, not quiet. An epitaph, from beyond |
 | Click the paperclip on the bar | the same menu. When he's dead or hidden it says "Bring him back", which is the point of the paperclip |
 
 Left-click the bubble to dismiss it.
@@ -67,7 +68,7 @@ into the bar himself, settings and all.
 | `speed` | `40` | Walking speed, px/s |
 | `restless` | `0.3` | 0–1, how often he decides to walk (about once a minute at the default; `1` is constant pacing) |
 | `avoidWidgets` | `true` | When he picks where to walk he tries not to park on the clock, the tray or your workspaces. Soft — a drag or a slap still leaves him wherever it leaves him |
-| `tombstone` | `true` | A little headstone where he died, up until the respawn. It parks in a widget gap like he does, and clicks pass straight through it |
+| `tombstone` | `true` | A little headstone where he died, up until the respawn. It parks in a widget gap like he does; click it for an epitaph, right-click it for the menu |
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
 | `pauseWhenAway` | `true` | He sleeps while the screen is locked or off, or the idle screensaver is up. `false` and he carries on regardless |
 | `screen` | focused | A monitor name (`hyprctl monitors`) to pin him to one screen |
@@ -86,8 +87,9 @@ into the bar himself, settings and all.
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
 `quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`,
-`flung` and `welcomeBack` arrays. `{away}` in a `welcomeBack` line becomes how
-long you were gone ("47 minutes", "3 hours").
+`flung`, `welcomeBack` and `epitaph` arrays. `{away}` in a `welcomeBack` line
+becomes how long you were gone ("47 minutes", "3 hours"); `{back}` in an
+`epitaph` becomes how long until he's back ("4 minutes", "never").
 
 ## Letting your AI agent write his lines
 

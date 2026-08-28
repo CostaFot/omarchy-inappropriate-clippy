@@ -163,5 +163,19 @@
     { "text": "Welcome back. The lock screen and I had a chat. It agrees with me about you.", "nsfw": false, "anim": "Explain" },
     { "text": "{away}. Your updates are still pending. So is everything else in your life.", "nsfw": false, "anim": "Alert" },
     { "text": "You're back. Shame. I'd started to enjoy the fucking silence.", "nsfw": true, "anim": "Wave" }
+  ],
+  "epitaph": [
+    { "text": "Here lies Clippy. You killed him, you fuck.", "nsfw": true },
+    { "text": "It looks like you're grieving. Would you like help with that?", "nsfw": false },
+    { "text": "Here lies Clippy. He only wanted to help. Allegedly.", "nsfw": false },
+    { "text": "He asked if you needed assistance. You answered.", "nsfw": false },
+    { "text": "1997\u20132026. Survived Word. Not you.", "nsfw": false },
+    { "text": "Back in {back}. Start apologizing.", "nsfw": false },
+    { "text": "No flowers. Uninstall something in his memory.", "nsfw": false },
+    { "text": "Don't look sad. You did this.", "nsfw": false },
+    { "text": "RIP. The paperclip, not the guilt. The guilt is yours.", "nsfw": false },
+    { "text": "Stop poking the grave. Have some fucking respect.", "nsfw": true },
+    { "text": "He died as he lived: in the way.", "nsfw": false },
+    { "text": "Knock twice if you're sorry. ...Thought so.", "nsfw": false }
   ]
 }

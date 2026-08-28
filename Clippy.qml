@@ -318,7 +318,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "welcomeBack"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "welcomeBack", "epitaph"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   function emptyBook() {
@@ -708,6 +708,30 @@ Item {
     })
   }
 
+  // Clicking the grave gets you the epitaph, spoken from beyond. Not
+  // say() — that refuses while dead, rightly; this writes the bubble the
+  // way the kill paths do, and the bubble anchors to the grave while he is
+  // dead. `{back}` in a line becomes how long until the respawn.
+  function epitaph() {
+    if (!grave.shown || asleep) return false
+    if (bubble.shown) { hideBubble(); return true }
+    var q = randomQuoteFrom("epitaph")
+    var text = (q ? q.text : "Here lies Clippy. You did this.").replace(/\{back\}/g, backText())
+    bubble.ai = false
+    bubble.text = text
+    bubble.shown = true
+    bubbleTimer.interval = Math.max(4000, text.split(/\s+/).length * 450)
+    bubbleTimer.restart()
+    return true
+  }
+  function backText() {
+    if (persisted.deadUntil === -1) return "never"
+    var ms = persisted.deadUntil - Date.now()
+    if (ms <= 0) return "any second now"
+    if (ms < 90000) return Math.max(1, Math.round(ms / 1000)) + " seconds"
+    return awayText(ms)
+  }
+
   // ---- slapping ----------------------------------------------------------
   // `dir` is the way he gets shoved: +1 screen-right, -1 screen-left. A
   // sound, a shove with a wobble, a line. Slaps close together add up;
@@ -977,6 +1001,13 @@ Item {
     // A line of his own choosing: what a left-click does.
     function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim, q.ai) ? "ok" : "not now" }
     function shutUp(): string { root.hideBubble(); return "ok" }
+    // The grave's line, same as clicking the tombstone.
+    function epitaph(): string {
+      if (root.mood !== "dead") return "alive"
+      if (!root.tombstoneEnabled) return "off"
+      if (root.asleep) return "asleep"
+      return root.epitaph() ? "ok" : "no grave"
+    }
     function kill(): string { root.kill(); return "ok" }
     function respawn(): string {
       if (root.mood === "dying" || root.mood === "reviving") return root.mood
@@ -1102,6 +1133,14 @@ Item {
           y: bubble.y
           width: bubble.shown ? bubble.width : 0
           height: bubble.shown ? bubble.height : 0
+        },
+        // The grave takes clicks while it stands (the epitaph); it parks
+        // in a widget gap, so this is normally empty bar anyway.
+        Region {
+          x: grave.x
+          y: grave.y
+          width: grave.shown ? grave.width : 0
+          height: grave.shown ? grave.height : 0
         }
       ]
     }
@@ -1187,14 +1226,23 @@ Item {
         x: persisted.graveX
         y: root.barBottom ? stage.height - height : root.actorHeight - height
         shown: root.tombstoneEnabled && root.mood === "dead" && persisted.graveX >= 0
+        onPoked: root.epitaph()
+        // Anchor the card to the grave, not to wherever the body ended up
+        // (a fling leaves actor.x off-stage).
+        onMenuWanted: root.showMenuAt(x + width / 2, null)
       }
+
+      // While the grave stands, the bubble speaks from it (the epitaph);
+      // otherwise from him. Same feet line, so only the heights differ.
+      readonly property real mouthX: grave.shown ? grave.x + grave.width / 2 : actor.x + actor.width / 2
 
       Bubble {
         id: bubble
         above: root.barBottom
-        x: Math.round(root.clamp(actor.x + actor.width / 2 - width / 2, 4, Math.max(4, stage.width - width - 4)))
-        y: root.barBottom ? actor.y - height - 2 : actor.y + actor.height + 2
-        tailX: actor.x + actor.width / 2 - x
+        x: Math.round(root.clamp(stage.mouthX - width / 2, 4, Math.max(4, stage.width - width - 4)))
+        y: root.barBottom ? (grave.shown ? grave.y : actor.y) - height - 2
+                          : (grave.shown ? grave.y + grave.height : actor.y + actor.height) + 2
+        tailX: stage.mouthX - x
         onDismissed: root.hideBubble()
       }
     }
