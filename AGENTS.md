@@ -1,10 +1,15 @@
 # omarchy-inappropriate-clippy — agent notes
 
 Clippy walks the Omarchy bar and insults you. The repo root IS the plugin
-(`manifest.json`, id `costafot.clippy`, `kind: "panel"`, `keepLoaded: true`,
-entry `Clippy.qml`). `omarchy plugin add <repo> --enable` clones it to
-`~/.config/omarchy/plugins/costafot.clippy/` and appends `{"id":"costafot.clippy"}`
-to `plugins[]` in `~/.config/omarchy/shell.json`.
+(`manifest.json`, id `costafot.clippy`, kinds `panel` + `bar-widget`,
+`keepLoaded: true`, entries `Clippy.qml` and `BarWidget.qml`). `omarchy plugin
+add <repo> --enable` clones it to `~/.config/omarchy/plugins/costafot.clippy/`
+and inserts `{"id":"costafot.clippy"}` into `bar.layout.right[]` in
+`~/.config/omarchy/shell.json` (the `defaultSection`; that one entry is both
+the icon's slot and the plugin's enabled flag, so `omarchy plugin disable`
+removes both). Because we also have the `panel` kind, the shell's
+`isBarWidgetPanelPlugin` says no and `summon|hide|toggle` route to the panel
+loader, like omarchy.menu — not to the bar widget.
 
 ## Architecture
 
