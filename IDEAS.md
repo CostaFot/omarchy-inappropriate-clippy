@@ -1,7 +1,7 @@
 # Ideas
 
-Pitched 2026-08-28, in rough order of payoff-to-effort. AGENTS.md has a
-shorter, older list too.
+Pitched 2026-08-28, in rough order of payoff-to-effort. (The short list
+that used to live in AGENTS.md was merged in here 2026-08-29.)
 
 ## Talk back to him
 
@@ -18,9 +18,16 @@ The tally exists (v1.10.0); the grudge half remains: expose
 `{kills}`/`{slaps}` placeholders to both books, same as `{away}`. "That's
 the ninth time you've murdered me. I keep a list."
 
+## Reactive lines without the agent
+
+Battery, CPU, hour of the day: `shell.serviceFor("omarchy.notifications")`
+and the agents plugin state are reachable from a panel — see
+~/Work/omarchy-navbar-cat for how it listens to Hyprland/MPRIS/UPower. Or
+feed more of that into `clippy-ai`'s facts: notifications, the workspace.
+
 ## Window-class reactions
 
-A step past the reactive-lines idea in AGENTS.md: a `reactions` key in
+A step past the reactive-lines idea above: a `reactions` key in
 quotes.json mapping window-class regex → lines, fired on Hyprland
 `activewindow` (navbar-cat shows the event wiring). Steam opens → instant
 mockery, no agent call, no latency. The agent path stays for the clever
@@ -41,6 +48,17 @@ matching edge. Flings could carry across too: thrown off the left edge of
 the right monitor, he lands on the left one instead of dying. More work
 (the PanelWindow is per-screen), but multi-monitor is a common Omarchy
 setup and it doubles his territory.
+
+## Smaller
+
+- Let the agent pick the animation too (`anim` per line).
+- The 15 original Clippy sounds live base64-encoded in clippy.js
+  `agents/Clippy/sounds-mp3.js`; frames carry `sound` ids already. The
+  `SoundEffect` plumbing from the slap is the way to play them.
+- Trim the sprite atlas to the animations we use if the 42 MB texture
+  matters.
+- Quote curation — `quotes.json` is the seed, Costa hasn't gone through
+  it yet.
 
 ## Decided against
 
