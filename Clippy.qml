@@ -1495,6 +1495,8 @@ Item {
       }
       if (key === "duck" && parsed !== false && parsed !== undefined && !root.ttsOn)
         return "ok — but the voice is off, so there's no speech to duck around; set tts true (or useVoice <name>) first"
+      if ((key === "aiAgent" || key === "aiModel") && parsed !== undefined && !root.aiEnabled)
+        return "ok — but ai is off, so there are no agent lines to apply it to; set ai true first"
       return "ok"
     }
     // The value in effect, as JSON (so "" and 0 and false are tellable apart).

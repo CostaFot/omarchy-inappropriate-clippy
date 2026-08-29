@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "costafot.clippy",
   "name": "Inappropriate Clippy",
-  "version": "1.20.0",
+  "version": "1.20.1",
   "author": "CostaFot",
   "license": "MIT",
   "description": "Clippy walks your bar and tells you what he really thinks of you. Profane by default.",

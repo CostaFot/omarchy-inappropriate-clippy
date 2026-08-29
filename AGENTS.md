@@ -752,6 +752,20 @@ dev symlink was back is stale) — the duck files were copied in by hand
 for the live test, so dev edits in ~/Work still need that copy or a
 restored symlink to reach the shell.
 
+Agent-first ai keys (2026-08-29, v1.20.1): `set aiAgent`/`set aiModel` while
+`ai` is off used to answer a bare "ok" — the one config surface that broke
+the "ok — but" pattern the tts keys follow. Now both reply "ok — but ai is
+off, so there are no agent lines to apply it to; set ai true first" (an
+`unset` stays a plain ok). Found by an agent-exposure audit over IPC on a
+fresh default install; the audit also confirmed the rest holds: `help`
+lists every verb, `settings`/`get`/`set`/unknown-key replies, the duck and
+tts warnings (both apparent misses were Costa switching the voice on from
+the menu mid-audit), and out-of-range numbers like `restless 5` clamp at
+the property binding. Same session context: the box is a real GitHub
+clone of v1.20.0 again (the new-user tryout Costa asked for), so this fix
+was hand-copied into the installed dir; Costa re-rigged rubick from the
+picker himself and `duck true` was restored.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin
