@@ -56,8 +56,10 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   `docs/` folder in the tree.
 - LICENSE (MIT), README, `preview.png` (2400×260), `main` pushed and
   clean at the time of writing.
-- Docs (v1.40.0): the README is the pitch — install, the mouse table, one
-  bullet per feature with its disclosure line — and the manual is `docs/`,
+- Docs (v1.40.0): the README is the pitch — install + remove, the mouse
+  table, a short section per feature with its **Leaves your machine** line
+  and a screenshot placeholder (v1.40.2; the shots themselves are still to
+  take, see the `<!-- shot -->` comments) — and the manual is `docs/`,
   served by GitHub Pages at
   https://costafot.github.io/omarchy-inappropriate-clippy/ (source `/docs`
   on `main`, `jekyll-theme-primer`). The same folder ships in the plugin
@@ -77,9 +79,8 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 ## Gaps — do these first
 
-1. **README removal line.** Checklist item 1 is "installation and removal
-   instructions". Add `omarchy plugin remove costafot.clippy` under the
-   install command (autoduck's README has the same line).
+1. ~~**README removal line.**~~ Done in v1.40.2: `omarchy plugin remove
+   costafot.clippy` sits under the install command.
 2. **Tag/release.** Repo has zero tags although the manifest says 1.4.0.
    Not required by the marketplace, but both others had `v1.0.0` at
    submission. Tag the submitted commit (`git tag v1.4.0` or whatever the

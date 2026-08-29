@@ -9,8 +9,11 @@ rules for changing it safely. The session-by-session development journal —
 who asked for what, what was tried and dropped, how each change was
 verified — is `HISTORY.md`; grep it when you need the why behind a rule
 here. Future work goes in `IDEAS.md`, never here. User docs are split
-(v1.40.0): `README.md` is the pitch — install, the mouse table, one
-paragraph per big feature with its disclosure sentence, and links — and
+(v1.40.0): `README.md` is the pitch — install + remove, the mouse table,
+a short section per big feature (1-3 sentence paragraphs, a screenshot
+placeholder under `assets/screenshots/` with a `<!-- shot: … -->` comment
+saying what to capture, and a bold **Leaves your machine:** line for
+anything that touches the network) and links — and
 `docs/` is the manual, one page per feature (`configuration.md` holds the
 settings table, `ai.md`, `voice.md`, `graveyard.md`, `scripting.md`,
 `index.md` the contents). The same files are the GitHub Pages site

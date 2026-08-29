@@ -1508,3 +1508,40 @@ JSON contract. AGENTS.md's sync rule now covers the reply vocabulary and
 names the verifier; its status also stopped claiming Pages was still to be
 switched on (it was, in v1.40.0's session). Manifest 1.40.1; docs/,
 manifest, AGENTS.md and HISTORY.md hand-copied to the installed clone.
+
+## The README for humans (v1.40.2, 2026-08-29)
+
+"can we format the README for human readers? we already got the docs
+folder for the agents" → "cut the wordiness, long paragraphs" → "there
+should be placeholders for icons showing off the app's features". Same
+content, reshaped: `omarchy plugin remove` under the install line
+(PUBLISHING.md's gap 1, closed); the mouse table's cells trimmed to a
+clause each; the three dense paragraphs after it became `###` sections
+(Slaps, deaths, dodges / He watches your crashes / He sleeps when you're
+away) of one-to-two-sentence paragraphs, the crash example line moved
+into its screenshot's alt; the in-prose key names (`slapsToKill`,
+`dodge`, `crashLines`) dropped — the configuration table owns them,
+`slap: false` kept because it explains where snooze went. "The rest of
+him" bullets became `###` sections headed by the doc link, each with a
+bold **Leaves your machine:** line carrying the disclosure the design
+rule requires (ai: facts to your own agent, no files, screenshot on
+request only, mic transcribed locally; voice: nothing; graveyard: alias
+or handle + deltas) — one scannable shape instead of a disclosure buried
+in a six-line bullet. Six screenshot placeholders as `<img>` tags under
+`assets/screenshots/` (slap.gif, tombstone.png, crash.png, menu.png at
+420 px, ai-line.png, graveyard.png), each with a `<!-- shot: … -->`
+comment naming the capture — a missing file renders as its alt text on
+GitHub, so the page reads until Costa takes the shots (the menu one is
+`showMenu`, the crash one `say "…"` or `sleep 30 & kill -SEGV $!`).
+Then "in the readme we had a guidance for where AI agents should look. is it
+still there?" — it was, one thin sentence at the bottom, and it had never
+named the installed path or `help`. Two additions: the Scripting section
+ends with a copy-pasteable brief for an agent (read
+`~/.config/omarchy/plugins/costafot.clippy/docs/`, run `omarchy-shell
+costafot.clippy help`), and, on "add it under install", a one-line pointer
+under the remove command so an agent skimming the top finds `docs/` and
+`help` before line 130. 112 → 155 lines, most of the growth the
+placeholders. AGENTS.md's docs
+sentence and PUBLISHING.md's docs bullet describe the new shape. Manifest
+1.40.2; README, manifest, AGENTS.md, PUBLISHING.md, HISTORY.md
+hand-copied to the installed clone.
