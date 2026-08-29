@@ -275,14 +275,6 @@ PanelWindow {
         leftPadding: Style.space(8)
         bottomPadding: Style.space(3)
       }
-      Entry {
-        // Lower everything else while he talks, put it back after.
-        readonly property bool on: menu.open && menu.clippy ? menu.clippy.duckEnabled : false
-        label: "Duck other audio while he talks"
-        mark: on ? "●" : "○"
-        active: on
-        onTapped: menu.set("duck", !on)
-      }
       Choice {
         label: "Walks"
         options: [

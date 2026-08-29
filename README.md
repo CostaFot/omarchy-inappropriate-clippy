@@ -87,7 +87,6 @@ into the bar himself, settings and all.
 | `ttsSpeed` | `155` | Words per minute for the built-in voice (espeak-ng `-s`, 80–450) |
 | `ttsPitch` | `45` | Pitch for the built-in voice (espeak-ng `-p`, 0–99) |
 | `ttsSaved` | — | Where a custom `tts` command parks while the voice is toggled off, so toggling doesn't lose it. Managed for you; `set ttsSaved unset` forgets it |
-| `duck` | `false` | `true` lowers everything else playing to 30% while he talks and restores it after; a number 0–1 is your own factor (`0` mutes it outright). See the voice section |
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
@@ -228,15 +227,15 @@ that). Whatever hides the bubble — a slap, a lock, his
 death — kills the voice mid-word. A pipeline like the piper one may finish its sentence anyway;
 that's between bash and its children.
 
-If music or a video is playing over him, `"duck": true` gets everyone out
-of his way: the moment he starts a line, every other audio stream drops to
-30% — Spotify, a browser tab, a game, whatever's playing — and comes back
-the instant he shuts up. Voice assistants call this ducking, and it works
-with any engine, the espeak robot and the clones alike. `duck` also takes
-a number: `0.15` for a harder duck, `0` to mute the world while he speaks.
-It only touches streams that were already playing when the line started,
-so his own voice is never ducked, and volumes are snapshotted and restored
-exactly — if the shell dies mid-sentence, the next mount puts them back.
+When he talks, everything else shuts up. The moment a line starts, every
+other audio stream drops to 30% — Spotify, a browser tab, a game,
+whatever's playing — and comes back the instant he's done. Voice
+assistants call this ducking; here it's not optional, because he considers
+what he has to say more important than whatever you were listening to. It
+works with any engine, the espeak robot and the clones alike, only touches
+streams that were already playing when the line started (so his own voice
+is never ducked), and volumes are snapshotted and restored exactly — if
+the shell dies mid-sentence, the next mount puts them back.
 
 Once voices are on disk, switching between them takes no terminal: the
 menu's Voice row is a picker showing everything installed — off, the espeak

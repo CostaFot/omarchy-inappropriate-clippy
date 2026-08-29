@@ -217,9 +217,10 @@ loader, like omarchy.menu — not to the bar widget.
   "— <voice>, <speed> wpm, pitch <pitch>" when the engine is ready, and
   `set` on the three keys answers "ok — but …" when a custom command,
   a missing engine or `tts` off means the change can't be heard.
-- Ducking (in `Clippy.qml` + `scripts/duck`, v1.20.0): `duck` —
-  false (default) off, true lowers every *other* audio stream to 30 % while
-  he speaks and restores it after, a number 0..1 is the factor (0 mutes).
+- Ducking (in `Clippy.qml` + `scripts/duck`, v1.20.0; always-on since
+  v1.21.0): every *other* audio stream drops to 30 % while he speaks and
+  is restored after. No setting — Costa: "do not give option to duck other
+  audio. ALWAYS duck other audio"; `duckFactor` is a hardwired 0.3.
   The script snapshots `pactl list sink-inputs` volumes (raw values, not
   the rounded percent — a 100 %+0.12 dB stream must restore exactly) into
   `$XDG_RUNTIME_DIR/clippy-duck` and scales each; the snapshot is taken
@@ -236,9 +237,14 @@ loader, like omarchy.menu — not to the bar widget.
   flight restores instead of speaking (`ttsLine === ""` in the duck's
   onExited); overlapping flips park in `duckNext` (one Process); a mount
   runs `duck stop` as crash healing, so a shell death mid-sentence gives
-  the volumes back next start. Menu row "Duck other audio while he talks"
-  under the Voice picker; `set duck` answers "ok — but the voice is off…"
-  when tts is off, and `voice` appends the ducking factor while enabled.
+  the volumes back next start. No menu row, no `duck` key (v1.21.0
+  removed both; a stale inline `duck` in shell.json is simply unread);
+  `voice` states the always-on ducking. Known trade-off: PipeWire's
+  stream-restore memorizes a stream's volume, so an app whose stream
+  *ends while ducked* is remembered at 30 % and starts there next time —
+  that exact poisoning (from the v1.20 terminal tests) once made aplay,
+  and with it every clone line, inaudible; the fix is
+  `pactl set-sink-input-volume <id> 100%` on a live stream of that app.
   Orthogonal to Costa's `costafot.autoduck` plugin: that one *mutes*
   browser streams against other *browser* streams and never touches
   volumes, so they compose.
@@ -771,6 +777,41 @@ reads "no NVIDIA GPU with 6 GB to spare — you're poor. Get more RAM. Until
 then, the robot it is" — Costa's ask verbatim ("tell them they are poor and
 they need to get more RAM"; yes it's VRAM, the wrongness is part of the
 joke). One echo, no behavior change.
+
+Always-duck (2026-08-29, v1.21.0): the `duck` setting is gone — ducking is
+always on at 30 % ("do not give option to duck other audio. ALWAYS duck
+other audio", "we need to make it stupid simple"). Removed: the settings
+key, the menu row, the set-reply, `duckSetting`/`duckEnabled`; `duckFactor`
+is a constant 0.3, `startTts` always ducks, `voice` states it. README's
+duck paragraph rewritten as a statement of character ("he considers what he
+has to say more important than whatever you were listening to"). The same
+session found why Costa heard nothing after enabling rubick on the fresh
+install: PipeWire stream-restore had memorized 30 % for aplay — an aplay
+stream had ended mid-duck during the v1.20 terminal round-trip tests, the
+restore never reached it, and every later clone line started at 30 % of a
+50 % sink (~−49 dB, silent for all practical purposes) with zero errors
+anywhere. Diagnosed by catching the live sink-input at "Volume: mono: 30%";
+fixed by pinning a live aplay stream to 100 % (which rewrites the memory).
+That poisoning mode is now documented in the Ducking bullet — it can hit
+any app that closes mid-duck, and there is no snapshot-side fix since a
+dead stream can't be volume-set.
+
+The poisoning turned out self-inflicted and compounding once ducking was
+always-on: with back-to-back lines, each new line's snapshot caught the
+PREVIOUS line's dying aplay sink-input (PipeWire teardown is async),
+ducked it, lost it, and stream-restore memorized the product — 30 % → 9 %
+→ ~1 %, which is exactly the "it's like 1% sound" Costa reported minutes
+after the first heal (his autoduck plugin was suspected and cleared: it
+only mutes browser streams, and the fingerprint was our 0.3 factor).
+The fix is `duckRelease`, a 1 s Timer between speech end and `duckStop()`:
+`startTts` stops it, so a line inside the window keeps the duck and
+consecutive lines share one duck cycle — no re-snapshot, and by the time
+a future snapshot runs the last stream is long gone. Both speech-end
+paths (`ttsProc.onExited` queue-empty, and the duck's line-cancelled
+branch) go through the timer. Healing a poisoned app is pinning one of
+its live streams: play anything via aplay, `pactl set-sink-input-volume
+<id> 100%`. Verified: three rapid `talk`s then a fresh aplay stream
+starts at 100 %, duck state file clean, journal clean.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

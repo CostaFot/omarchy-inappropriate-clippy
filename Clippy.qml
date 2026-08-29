@@ -109,7 +109,7 @@ Item {
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
-    ttsSaved: "", duck: false,
+    ttsSaved: "",
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true
   })
@@ -209,14 +209,11 @@ Item {
   readonly property string ttsVoice: String(setting("ttsVoice", "en+m3")).replace(/'/g, "") || "en+m3"
   readonly property real ttsSpeed: clamp(Number(setting("ttsSpeed", 155)) || 155, 80, 450)
   readonly property real ttsPitch: clamp(Number(setting("ttsPitch", 45)), 0, 99)
-  // `duck`: lower everyone else's audio while he speaks, restore it after —
-  // false (default) off, true ducks the other streams to 30 %, a number in
-  // 0..1 is your own factor (0 mutes them outright). Works with any engine:
-  // the snapshot is taken before the engine spawns (see scripts/duck).
-  readonly property var duckSetting: setting("duck", false)
-  readonly property real duckFactor: duckSetting === true ? 0.3
-    : (typeof duckSetting === "number" ? clamp(duckSetting, 0, 1) : 1)
-  readonly property bool duckEnabled: duckFactor < 1
+  // Ducking is always on: everyone else's audio drops to 30 % while he
+  // speaks and comes back after. No setting — Costa: "ALWAYS duck other
+  // audio", stupid simple. Works with any engine: the snapshot is taken
+  // before the engine spawns (see scripts/duck).
+  readonly property real duckFactor: 0.3
   // An inline `set` doesn't remount us (keepLoaded — the binding just
   // updates), so a changed engine gets its failure warning back here, and
   // turning the voice off shuts him up instead of finishing the line. Two
@@ -1024,7 +1021,8 @@ Item {
     // stream exists — the launch continues from duckProc's onExited. A
     // replacement line finds `ducked` already true and skips straight to
     // the engine.
-    if (duckEnabled && !ducked) { ducked = true; duckRun("start"); return }
+    duckRelease.stop() // a line inside the release window keeps the duck
+    if (!ducked) { ducked = true; duckRun("start"); return }
     launchTts()
   }
   function launchTts() {
@@ -1053,7 +1051,7 @@ Item {
         root.startTts() // the duck is held across a replacement line
         return
       }
-      root.duckStop() // done talking — everyone gets their volume back
+      duckRelease.restart() // done talking — volumes come back after a beat
       if (code !== 0 && root.ttsLine !== "" && !root.ttsWarned) {
         root.ttsWarned = true
         console.warn("clippy: tts failed (exit " + code + ") — "
@@ -1065,10 +1063,24 @@ Item {
   // ---- ducking ------------------------------------------------------------
   // One process, serialized: a flip that arrives while a duck run is still
   // in flight parks in duckNext instead of clobbering the command. `ducked`
-  // is gated on itself, not on duckEnabled — `set duck false` mid-sentence
-  // must still restore when the sentence ends.
+  // is gated on itself so a duck that was issued always gets its restore
+  // when the sentence ends.
   property bool ducked: false   // a start has been issued and not yet undone
   property string duckNext: ""
+  // The restore waits a beat instead of firing the instant speech ends:
+  // PipeWire tears sink-inputs down asynchronously, so a back-to-back
+  // line's fresh snapshot could catch the PREVIOUS line's dying stream,
+  // duck it, and lose it before the restore — at which point PipeWire's
+  // stream-restore memorizes the ducked volume as that app's default,
+  // compounding 30 % → 9 % → ~1 % per hit (this silenced the clone's own
+  // aplay on Costa's box). A held duck never re-snapshots, so consecutive
+  // lines share one duck cycle and the last stream is long gone before
+  // any future snapshot.
+  Timer {
+    id: duckRelease
+    interval: 1000
+    onTriggered: root.duckStop()
+  }
   function duckStop() {
     if (!ducked) return
     ducked = false
@@ -1097,7 +1109,7 @@ Item {
       if (action !== "start") return
       // The line this duck was for may already be gone (bubble hidden while
       // the snapshot ran) — restore instead of speaking into it.
-      if (root.ttsLine === "") root.duckStop()
+      if (root.ttsLine === "") duckRelease.restart()
       else if (!ttsProc.running) root.launchTts()
     }
   }
@@ -1427,7 +1439,7 @@ Item {
                  + " (a better voice: scripts/setup-voice in the plugin dir)")
       if (root.ttsWarned) s += "; failing, see journal"
       if (ttsProc.running) s += "; speaking"
-      if (root.duckEnabled) s += "; ducking other audio to " + Math.round(root.duckFactor * 100) + "% while he talks"
+      s += "; other audio ducks to 30% while he talks"
       return s
     }
     // The whole voice inventory, for agents: what's active, what's on disk
@@ -1493,8 +1505,6 @@ Item {
         if (root.ttsEngineMissing) return "ok — but espeak-ng isn't installed, so he stays silent until it is"
         if (!root.ttsOn) return "ok — heard once tts is on"
       }
-      if (key === "duck" && parsed !== false && parsed !== undefined && !root.ttsOn)
-        return "ok — but the voice is off, so there's no speech to duck around; set tts true (or useVoice <name>) first"
       if ((key === "aiAgent" || key === "aiModel") && parsed !== undefined && !root.aiEnabled)
         return "ok — but ai is off, so there are no agent lines to apply it to; set ai true first"
       return "ok"
