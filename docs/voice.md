@@ -72,7 +72,9 @@ sample; lines rendered from the old one are never reused (the line cache
 is keyed by the sample's contents), and the book is re-rendered for the
 new one like a fresh clone. Cloning uses
 [chatterbox](https://github.com/resemble-ai/chatterbox), so it needs an
-NVIDIA GPU and pulls ~8 GB on first run — the shipped Rubick is this exact
+NVIDIA GPU, [uv](https://github.com/astral-sh/uv) (`sudo pacman -S uv` —
+the script tells you and stops if it's missing, it never installs it for
+you) and pulls ~8 GB on first run — the shipped Rubick is this exact
 machinery pointed at a sample we picked for you, so the same costs apply.
 A small daemon keeps the model warm
 between lines and exits after 15 idle minutes to give your VRAM back; every

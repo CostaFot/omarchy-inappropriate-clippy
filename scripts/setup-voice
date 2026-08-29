@@ -163,8 +163,9 @@ setup_clone() {
   }
   export PATH="$HOME/.local/bin:$PATH"
   command -v uv >/dev/null || {
-    echo "installing uv (chatterbox needs a pinned python; uv brings its own) ..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh >/dev/null 2>&1
+    echo "uv is not installed (chatterbox needs a pinned python; uv brings its own)." >&2
+    echo "install it first: sudo pacman -S uv" >&2
+    exit 1
   }
   if [ ! -x "$venv/bin/python" ]; then
     echo "installing chatterbox into $venv (~6 GB of torch — be patient) ..."

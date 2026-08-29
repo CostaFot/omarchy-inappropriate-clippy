@@ -669,7 +669,10 @@ is one opaque string and ignores all three (clones bend via
   3.14 has no torch wheels; `setuptools<81` pinned or perth's
   watermarker dies on missing pkg_resources — the symptom is
   `from_pretrained` throwing "'NoneType' object is not callable"; plain
-  pip on system 3.14 backtracks forever, hence uv). Per-line spawn would
+  pip on system 3.14 backtracks forever, hence uv; uv itself must come
+  from pacman — setup-voice refuses without it, the `curl … | sh`
+  bootstrap it used to run was the marketplace baseline's one
+  `curl-pipe-shell` finding, v1.40.9). Per-line spawn would
   reload 2 GB onto the GPU, so `speak-clone` (stdlib client) talks to
   `daemon.py` (venv python) over `$XDG_RUNTIME_DIR/clippy-voice.sock`;
   the daemon self-starts on demand and exits after 15 idle minutes
@@ -934,7 +937,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.40.8 (2026-08-30): everything above is live and
+Feature-complete at v1.40.9 (2026-08-30): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and

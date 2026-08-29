@@ -1,6 +1,6 @@
 # Publishing to the Omarchy plugin marketplace
 
-Written 2026-08-28. Status: **not submitted yet.** Everything below is what an
+Written 2026-08-28. Status: **submitted 2026-08-30 as HANCORE-linux/omarchy-plugin-marketplace#3395** (see "Submission log" at the end). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
 
@@ -58,7 +58,7 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 ## What Clippy already has
 
-- Manifest: all required fields, id `costafot.clippy`, version 1.40.8 at
+- Manifest: all required fields, id `costafot.clippy`, version 1.40.9 at
   the time of writing (check `manifest.json` — this file goes stale),
   kinds `panel` + `bar-widget`. Validate passes (exit 0, silent) with the
   `docs/` folder in the tree.
@@ -91,12 +91,8 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 1. ~~**README removal line.**~~ Done in v1.40.2: `omarchy plugin remove
    costafot.clippy` sits under the install command.
-2. **Tag/release.** `main` is pushed (2026-08-30 sweep) but the repo has
-   zero tags. Not required by the marketplace, but both others had
-   `v1.0.0` at submission. Tag the submitted commit with whatever
-   `manifest.json` says (`git tag v1.40.8 && git push --tags`;
-   `gh release create v1.40.8 --generate-notes`). Tagging is Costa's
-   call — prepare, don't push, unless asked.
+2. ~~**Tag/release.**~~ Done 2026-08-30: `v1.40.8` tagged and released
+   at `8abcf7f7a108d0a9c13be90b8c8150cf6b188727`, the submitted SHA.
 3. ~~**Preview aspect.**~~ Done (2026-08-29): `preview.png` is 4267×2400
    like the other two; the 2400×260 strip is gone.
 3b. **Orphan screenshots.** Five tracked files under `assets/screenshots/`
@@ -149,3 +145,17 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   README does not, but it's the obvious place) and to `docs/index.md`.
 - On each release: bump `manifest.json` version, tag, push, then the
   Verify issue with the full 40-char SHA. Record the issue numbers here.
+
+## Submission log
+
+- 2026-08-30: #3395 filed at `8abcf7f` (v1.40.8), Desktop, bar +
+  quickshell, suggested "fun", maintainer notes as drafted above plus the
+  "not #1900" line. Validation ✅. Security baseline 🟡 review-required:
+  one finding, `curl-pipe-shell` at `scripts/setup-voice:167` (the uv
+  bootstrap `curl … | sh`) — fixed in v1.40.9 (uv must come from pacman;
+  the script says so and exits) — plus four informational capabilities
+  (a `sudo pacman -S espeak-ng` hint string in Clippy.qml, pip/uv into
+  setup-voice's own venv, read-only `systemctl --failed` in clippy-ai,
+  setup-voice being an installer file) answered in the thread. Next:
+  maintainer applies `approved-and-verified`, then add the marketplace
+  URL to README + docs/index.md.
