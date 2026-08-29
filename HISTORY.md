@@ -714,3 +714,68 @@ alone reloaded the plugin but reused the cached compile — the known
 symlink gotcha applies to the real clone too when only the copy changes);
 journal clean. Hand-copied to the installed clone.
 
+Clone samples cut and levelled in the script (2026-08-29, v1.28.0): a
+real run of the agent flow — "give clippy Les Grossman" from a YouTube
+rip — showed what `setup-voice --clone` left to the agent: the sample
+had to be cut out of the scene with ffmpeg by hand (the script only took
+the first 20 s of whatever it was given), the rip was -33 LUFS and went
+in quiet, and the second attempt under the same name kept replaying
+lines rendered from the first (the cache was keyed by ref *path*, and
+the 11 stale files had to be found by mtime and deleted). Costa's "so
+the whole flow of adding a voice is possible for a user … using an AI
+agent?" — yes, the README and the `voices` reply get an agent there,
+but those three were traps; "yes add them". Now `--clone` takes
+`--from`/`--to` (input-side `-ss`/`-to`, cap after the cut), runs the
+sample through `loudnorm I=-18`, prints the cut's length with a short-
+sample warning and a cap notice, and says so on a re-clone; the line
+cache key in `speak-clone` gained the sample's contents hash, with
+`warm-voice` sniffing the installed client for the scheme so a plugin
+update can't warm into keys an old client ignores. The cost of the
+re-key is one re-warm per existing clone (rubick's 430 lines are now
+orphans in the cache, harmless). Not done: stripping score from under
+the voice — that's demucs, another multi-GB model, and the README now
+says to pick a dry stretch instead. Verified end to end by re-cloning
+grossman straight from the mp4 with `--from 5:59 --to 6:12`. Hand-copied
+to the installed clone.
+
+Pre-warm on clone (2026-08-29, v1.28.0, same session): the first answer
+kept warm-voice a manual follow-up — ~5 min of GPU you might not want
+for a voice you may reject after two lines. Costa: "why are we not
+prewarming. i dont get it" — and with the cache now keyed by the
+sample's contents and never pruned, a voice warmed once stays warm
+forever, so the only cost of warming a rejected voice is five idle GPU
+minutes, and the cost of NOT warming is every user remembering a second
+command and a slap reaction that lands late. First cut had setup-voice
+nohup the warm after its `set tts`; Costa's next "so when we load a
+voice? we also tell user to manually warm it?" pointed at the useVoice
+reply still saying so, and at the real shape: the plugin owns it. One
+trigger — the live tts becoming a speak-clone command — in
+`onTtsSettingChanged` and on mount (`warmBookProc`, separate from the
+agent-lines `warmProc`; a warm in flight is killed first; the command
+goes over as `--tts <cmd>` so it can't race the write), which covers a
+fresh clone, a picker switch, a hand-set command and a clone from
+before this existed (rubick's orphaned cache) with no user knowledge —
+a full cache makes it a ~0.3 s no-op per mount. setup-voice just says
+it's happening; `voice` appends "pre-rendering the book" while it runs;
+the useVoice/set-tts replies no longer name warm-voice; README rewritten
+around it, warm-voice by hand kept for the knob change. Verified after a
+shell restart: mount kicked the warm for the active voice (rubick —
+Costa had switched back in the picker), `voice` showed it running,
+useVoice grossman killed it and started grossman's; the first pass
+logged that kill as "book warm failed (exit 15)", so a
+`warmBookSuperseded` flag now turns our own SIGTERM into a plain
+"superseded" log line. Left the box with grossman active and warming.
+
+Agent guidance pass (2026-08-29, v1.28.0, same session): "yeah I did not
+know it so noone will. is the agent guidance help for it clear now when
+a user asks?" — read every agent-facing surface cold (help, voices,
+voice, the script header) and closed three gaps: `help`'s voices line
+now says it's also where you learn to add a voice ("clone anyone from a
+10-20 s clip"), `voice` spells out what the running warm means (10-20
+min of GPU, once per voice, automatic, usable meanwhile), and
+`setup-voice` grew `-h/--help` (prints its own header) plus a guard for
+unknown `--flags` — before, `setup-voice --help` fell through to kokoro
+and tried to install a voice named "--help". The "~5 min" warm estimate
+became "10-20 min" everywhere after measuring ~2.5 s/line with the box
+otherwise busy. Verified over IPC after a shell restart; the restart
+killed and re-started grossman's warm as designed.

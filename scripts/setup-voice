@@ -11,6 +11,14 @@
 #   scripts/setup-voice --clone ~/sample.mp4 [name]   # clone ANY voice from a
 #                                          # 10-20 s sample — yours included.
 #                                          # Needs an NVIDIA GPU.
+#   scripts/setup-voice --clone ~/scene.mp4 name --from 5:59 --to 6:12
+#                                          # the same, cut out of a longer
+#                                          # recording (ffmpeg times; --from
+#                                          # alone runs to the 20 s cap).
+#                                          # The sample is loudness-normalised,
+#                                          # so a quiet rip needs no prep.
+#                                          # Once set, the plugin pre-renders
+#                                          # the whole book in the background.
 # kokoro (~340 MB) sounds better; piper (~60-120 MB) is lighter. Catalogs:
 #   https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
 #   https://rhasspy.github.io/piper-samples/
@@ -30,13 +38,34 @@ gpu_ok() {
   [ -n "$mib" ] && [ "$mib" -ge 6000 ] 2>/dev/null
 }
 
+usage() { sed -n '3,/^$/p' "$0" | sed 's/^# \{0,1\}//'; }
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  --clone|--robot|"") ;;
+  --*) echo "setup-voice: unknown option $1" >&2; echo >&2; usage >&2; exit 2 ;;
+esac
+
 MODE=voice
 BLESSED=""
 SHIPPED=""
+FROM="" TO=""
 if [ "${1:-}" = "--clone" ]; then
   MODE=clone
-  SAMPLE="${2:?usage: setup-voice --clone <sample.wav|mp3|mp4> [name]}"
-  NAME="${3:-$(basename "${SAMPLE%.*}" | tr -cd 'A-Za-z0-9_-')}"
+  shift
+  SAMPLE="" NAME=""
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --from) FROM="${2:?--from needs a time (ffmpeg form: 95, 1:35, 0:01:35.5)}"; shift 2 ;;
+      --to)   TO="${2:?--to needs a time (ffmpeg form: 118, 1:58, 0:01:58.5)}"; shift 2 ;;
+      --*) echo "setup-voice --clone: unknown option $1" >&2; exit 2 ;;
+      *) if [ -z "$SAMPLE" ]; then SAMPLE="$1"; elif [ -z "$NAME" ]; then NAME="$1"
+         else echo "setup-voice --clone: one sample, one name — what is '$1'?" >&2; exit 2; fi; shift ;;
+    esac
+  done
+  [ -n "$SAMPLE" ] || { echo "usage: setup-voice --clone <sample.wav|mp3|mp4> [name] [--from T] [--to T]" >&2; exit 2; }
+  [ -f "$SAMPLE" ] || { echo "setup-voice --clone: no such file: $SAMPLE" >&2; exit 2; }
+  [ -n "$NAME" ] || NAME="$(basename "${SAMPLE%.*}" | tr -cd 'A-Za-z0-9_-')"
+  [ -n "$NAME" ] || { echo "setup-voice --clone: give the voice a name ([A-Za-z0-9_-])" >&2; exit 2; }
 elif [ "${1:-}" = "--robot" ]; then
   BLESSED=1
 elif [ $# -eq 0 ]; then
@@ -149,8 +178,33 @@ setup_clone() {
     # copy it verbatim, a re-encode sounds subtly different
     cp "$SAMPLE" "$base/voices/$NAME.wav"
   else
-    # 20 s of clean mono speech is what the cloner wants; ffmpeg reads anything
-    ffmpeg -y -v quiet -i "$SAMPLE" -vn -ac 1 -ar 24000 -t 20 "$base/voices/$NAME.wav"
+    # 20 s of clean mono speech is what the cloner wants; ffmpeg reads
+    # anything. --from/--to cut it out of a longer recording (input-side
+    # seek, so --to is a position in the source, not a duration), the 20 s
+    # cap still applies after the cut. loudnorm lifts a quiet rip to speech
+    # level — the clone copies the sample's level as "character", and a
+    # -30 LUFS YouTube rip came out muffled (Grossman, 2026-08-29).
+    local cut=()
+    [ -n "$FROM" ] && cut+=(-ss "$FROM")
+    [ -n "$TO" ] && cut+=(-to "$TO")
+    if [ -f "$base/voices/$NAME.wav" ]; then
+      echo "re-cloning $NAME: the old sample is replaced; lines rendered from it are"
+      echo "  not reused (the line cache is keyed by the sample's contents) — the plugin"
+      echo "  re-renders the book in the background once he's set, like a fresh clone"
+    fi
+    ffmpeg -y -v error "${cut[@]}" -i "$SAMPLE" -vn -ac 1 -ar 24000 -t 20 \
+      -af loudnorm=I=-18:TP=-1.5:LRA=11 "$base/voices/$NAME.wav" || {
+      echo "setup-voice --clone: ffmpeg couldn't read $SAMPLE${FROM:+ from $FROM}${TO:+ to $TO}" >&2
+      rm -f "$base/voices/$NAME.wav"; exit 1
+    }
+    local secs
+    secs="$(ffprobe -v error -show_entries format=duration -of csv=p=0 "$base/voices/$NAME.wav" 2>/dev/null | cut -d. -f1)"
+    echo "sample: ${secs:-?} s of $(basename "$SAMPLE")${FROM:+ from $FROM}${TO:+ to $TO}, normalised to -18 LUFS"
+    if [ "${secs:-0}" -lt 8 ] 2>/dev/null; then
+      echo "  that's short — the clone wants 10-20 s of clean speech; expect a rougher voice"
+    elif [ -z "$TO" ] && [ "${secs:-0}" -ge 20 ] 2>/dev/null; then
+      echo "  capped at the first 20 s${FROM:+ after $FROM}; --to picks the end if that's the wrong stretch"
+    fi
   fi
 
   cat > "$base/daemon.py" <<'PY'
@@ -205,7 +259,9 @@ PY
   cat > "$base/speak-clone" <<'PY'
 #!/usr/bin/env python3
 # Clippy voice-clone client: the line on stdin, played in the cloned voice.
-# Cached by (ref, knobs, text); cache hits never touch the daemon.
+# Cached by (ref path, ref contents, knobs, text); cache hits never touch the
+# daemon. The contents hash is what makes a re-clone under the same name
+# safe: without it, lines rendered from the old sample kept playing.
 # --pitch shifts after synthesis (ffmpeg, tempo kept): <1 deeper, >1 higher.
 # --tempo speeds up (>1) or slows (<1) playback, pitch kept. Both are
 # derived from the cached raw take, so neither ever touches the GPU.
@@ -221,7 +277,9 @@ text = sys.stdin.read().strip()
 if not text:
     sys.exit(0)
 ref = os.path.realpath(os.path.expanduser(a.ref))
-key = hashlib.sha256(f"{ref}|{a.exag}|{a.cfg}|{text}".encode()).hexdigest()[:24]
+with open(ref, "rb") as f:
+    refhash = hashlib.sha256(f.read()).hexdigest()[:12]
+key = hashlib.sha256(f"{ref}|{refhash}|{a.exag}|{a.cfg}|{text}".encode()).hexdigest()[:24]
 cache = os.path.expanduser("~/.cache/clippy-voice")
 os.makedirs(cache, exist_ok=True)
 raw = f"{cache}/{key}.wav"
@@ -304,6 +362,13 @@ echo "$HELLO" | bash -c "$CMD"
 if command -v omarchy-shell >/dev/null && [ "$(omarchy-shell costafot.clippy state 2>/dev/null)" ]; then
   omarchy-shell costafot.clippy set tts "$CMD"
   echo "done — tts set. \`set tts true\` brings the robot back."
+  if [ "$MODE" = clone ]; then
+    # The plugin saw that set: it pre-renders the whole book for a clone
+    # in the background (scripts/warm-voice), so the slap reaction and
+    # the rest don't pay ~2 s of GPU the first time they're said.
+    echo "he's pre-rendering the book for $NAME in the background (10-20 min of GPU, once); usable"
+    echo "  meanwhile — a line not cached yet just takes ~2 s. \`voice\` says when it's done."
+  fi
 else
   echo "clippy isn't running; set it yourself:"
   echo "  omarchy-shell costafot.clippy set tts \"$CMD\""

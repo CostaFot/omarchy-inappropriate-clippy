@@ -3,11 +3,14 @@
 # nothing Clippy says out of the book ever waits on the GPU. Only makes
 # sense for a speak-clone `tts` command — it reads the live setting, so run
 # it after setup-voice --clone, and rerun it after changing --ref/--exag/--cfg
-# (the cache is keyed by all three; --pitch derives instantly and needs no
-# warming). Templated lines ({away}, {back}) are substituted at say-time and
-# are skipped. ~2 s of GPU per line, ~5 min for the built-in book.
+# or re-cloning under the same name (the cache is keyed by all three plus the
+# sample's contents; --pitch derives instantly and needs no warming). Templated lines ({away}, {back}) are substituted at say-time and
+# are skipped. ~2-3 s of GPU per line, 10-20 min for the built-in book.
 # `--lines <line>...` warms exactly those strings instead of the book — the
 # plugin uses it to pre-render each fresh batch of agent lines on arrival.
+# The plugin also runs the bare form itself whenever the live voice becomes
+# a clone (mount, useVoice, set tts), so a user never has to; by hand it's
+# for a knob change. A full cache is a ~0.3 s no-op.
 import hashlib, json, os, re, socket, subprocess, sys, time
 
 def setting(key):
@@ -19,19 +22,42 @@ def setting(key):
         v = v[1:-1]
     return v
 
-tts = setting("tts")
+# `--tts <cmd>` hands in the command instead of reading the live setting —
+# the plugin passes what it just applied, so a warm never races the write.
+argv = sys.argv[1:]
+if argv[:1] == ["--tts"] and len(argv) >= 2:
+    tts, argv = argv[1], argv[2:]
+else:
+    tts = setting("tts")
 m = re.search(r"(\S*speak-clone)\s+.*--ref\s+(\S+)", tts)
 if not m:
     sys.exit(f"warm-voice: tts is not a speak-clone command, nothing to warm ({tts!r})")
 ref = os.path.realpath(os.path.expanduser(m.group(2)))
+if not os.path.isfile(ref):
+    sys.exit(f"warm-voice: the reference sample is missing ({ref})")
+# Must match speak-clone's key exactly. Since v1.28.0 it includes the ref's
+# contents hash; a speak-clone written by an older setup-voice keys by path
+# alone, and warming into keys it won't look up would be wasted GPU — so
+# read the installed client and follow whichever scheme it uses.
+with open(ref, "rb") as f:
+    refhash = hashlib.sha256(f.read()).hexdigest()[:12]
+try:
+    legacy = "refhash" not in open(m.group(1)).read()
+except OSError:
+    legacy = False
+if legacy:
+    print("warm-voice: the installed speak-clone predates content-keyed caching — rerun scripts/setup-voice --clone to refresh it", file=sys.stderr)
+def key_of(text):
+    stem = f"{ref}|{exag}|{cfg}|{text}" if legacy else f"{ref}|{refhash}|{exag}|{cfg}|{text}"
+    return hashlib.sha256(stem.encode()).hexdigest()[:24]
 def flag(name, default):
     f = re.search(rf"--{name}\s+(\S+)", tts)
     return float(f.group(1)) if f else default
 exag, cfg = flag("exag", 0.5), flag("cfg", 0.5)
 daemon = os.path.join(os.path.dirname(os.path.realpath(m.group(1))), "daemon.py")
 
-if sys.argv[1:2] == ["--lines"]:
-    lines = [t for t in sys.argv[2:] if "{" not in t]
+if argv[:1] == ["--lines"]:
+    lines = [t for t in argv[1:] if "{" not in t]
 else:
     here = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     book = json.load(open(os.path.join(here, "quotes.json")))
@@ -67,7 +93,7 @@ def ask(text, out):
 
 done = skipped = failed = 0
 for text in lines:
-    key = hashlib.sha256(f"{ref}|{exag}|{cfg}|{text}".encode()).hexdigest()[:24]
+    key = key_of(text)
     out = f"{cache}/{key}.wav"
     if os.path.exists(out):
         skipped += 1

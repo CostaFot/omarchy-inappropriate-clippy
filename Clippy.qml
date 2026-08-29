@@ -229,7 +229,7 @@ Item {
   // turning the voice off shuts him up instead of finishing the line. Two
   // handlers: inside onTtsSettingChanged the dependent ttsOn binding hasn't
   // re-evaluated yet, so a `!ttsOn` check there reads stale (bit us).
-  onTtsSettingChanged: { ttsWarned = false; ttsProbe.running = true; voiceScan.running = true }
+  onTtsSettingChanged: { ttsWarned = false; ttsProbe.running = true; voiceScan.running = true; warmBook() }
   // Whether the built-in engine exists — the menu row and the IPC `set`
   // reply point at it, so nobody wonders why the voice is silent. Probed at
   // mount, on `tts` changes and on menu open (fresh right after an
@@ -370,7 +370,7 @@ Item {
       if (!voiceInv.gpu) return id + " is a clone, and clones synthesize on an NVIDIA GPU — none found here"
       changes.tts = cloneCmd(id)
       if (!setSettings(changes)) return "can't write shell.json"
-      return "ok — the " + id + " clone; if the book was never rendered for it, scripts/warm-voice (plugin dir) saves ~2 s of GPU per line"
+      return "ok — the " + id + " clone (the book is pre-rendered for him in the background if it wasn't already)"
     }
     var ps = voiceInv.piper || []
     for (var i = 0; i < ps.length; i++) {
@@ -1233,6 +1233,40 @@ Item {
     warmProc.command = [pluginDir + "/scripts/warm-voice", "--lines"].concat(lines)
     warmProc.running = true
   }
+  // The book itself is warmed by the plugin, not by the user: whenever the
+  // live voice becomes a speak-clone command (mount, useVoice, set tts,
+  // setup-voice's set) the whole book is rendered into the cache in the
+  // background, so a fresh clone's slap reaction doesn't land 2 s late.
+  // The cache is keyed by the sample's contents and never pruned, so a
+  // voice warmed once stays warm; with a full cache this is a ~0.3 s
+  // no-op, which is why it can run on every mount without a flag. The
+  // command is handed over explicitly (--tts) so the warm can't race the
+  // settings write, and a warm in flight for the previous voice is killed
+  // first — it would be rendering the wrong reference. Separate from
+  // warmProc so a 5-minute book never blocks an agent batch's --lines.
+  readonly property bool warmingBook: warmBookProc.running
+  property bool warmBookSuperseded: false
+  function warmBook() {
+    var cmd = ttsSetting
+    if (warmBookProc.running) { warmBookSuperseded = true; warmBookProc.running = false }
+    if (typeof cmd !== "string" || cmd.indexOf("speak-clone") === -1) return
+    warmBookProc.command = [pluginDir + "/scripts/warm-voice", "--tts", cmd]
+    warmBookProc.running = true
+  }
+  Process {
+    id: warmBookProc
+    stderr: StdioCollector { id: warmBookErr }
+    stdout: StdioCollector { id: warmBookOut }
+    onExited: function (code) {
+      // Our own kill on a voice change exits 15 (SIGTERM) — not a failure.
+      if (root.warmBookSuperseded) { root.warmBookSuperseded = false; console.log("clippy: book warm superseded by a voice change"); return }
+      if (code !== 0)
+        console.warn("clippy: book warm failed (exit " + code + "): " + String(warmBookErr.text).trim())
+      else
+        console.log("clippy: book warm — " + String(warmBookOut.text).trim().split("\n").pop())
+    }
+    Component.onCompleted: root.warmBook()
+  }
   Process {
     id: warmProc
     stderr: StdioCollector { id: warmErr }
@@ -1561,7 +1595,7 @@ Item {
         "showMenu / hideMenu — the right-click menu, no pointer needed",
         "state / stats — what he's doing, the lifetime tally",
         "ai / voice — the agent lines and the voice; each answers with what's wrong and the fix",
-        "voices / useVoice <name> — every voice installed on this machine, and switching to one",
+        "voices / useVoice <name> — every voice installed on this machine, switching to one, and how to add a new one (clone anyone from a 10-20 s clip)",
         "leaderboard — the public graveyard: your handle, rank and the page (set leaderboard <handle> to join)",
         "set <key> <value> / get <key> / settings — the config; settings lists every key, unset restores a default",
         "any verb drops into a Hyprland bind: bindd = SUPER SHIFT C, T, Clippy talks, exec, omarchy-shell costafot.clippy talk",
@@ -1636,7 +1670,8 @@ Item {
                  ? " — bent by cloneTempo " + root.cloneTempo + " / clonePitch " + root.clonePitch
                  : "")
               + (root.ttsSetting.indexOf("speak-clone") !== -1
-                 ? " (clone wavs live in ~/.local/share/chatterbox-tts/voices — switch with set tts using another --ref, then rerun scripts/warm-voice; new voices: scripts/setup-voice; cloneTempo/clonePitch bend speed and pitch, factors around 1)"
+                 ? (root.warmingBook ? " — pre-rendering the book for this voice in the background right now (10-20 min of GPU, once per voice, automatic; he's usable meanwhile, an uncached line just takes ~2 s)" : "")
+                   + " (clone wavs live in ~/.local/share/chatterbox-tts/voices — useVoice <name> switches; new voices: scripts/setup-voice; cloneTempo/clonePitch bend speed and pitch, factors around 1)"
                  : "")
             : (root.ttsEngineMissing
                ? "espeak-ng: not installed — silent (sudo pacman -S espeak-ng, or set tts to a shell command)"
@@ -1659,7 +1694,7 @@ Item {
       if (!inv.espeak) lines.push("note: robot needs espeak-ng, which isn't installed")
       if ((inv.clones || []).length > 0 && !inv.gpu) lines.push("note: clone wavs exist but there's no NVIDIA GPU to synthesize on — not offered")
       lines.push("more voices: scripts/setup-voice in " + root.pluginDir
-        + " — bare ships a Rubick clone on an NVIDIA GPU (else robot george), a kokoro/piper name installs that voice, --clone <sample.wav> <name> clones anything (GPU)")
+        + " — bare ships a Rubick clone on an NVIDIA GPU (else robot george), a kokoro/piper name installs that voice, --clone <sample> <name> [--from M:SS --to M:SS] clones anything from 10-20 s of clean speech, cut out of any audio/video ffmpeg reads and loudness-normalised for you (GPU); the book is pre-rendered in the background for every clone")
       lines.push("drop-ins: a file at ~/.local/share/clippy-voices/<name> whose first non-comment line is a shell command (line on stdin) shows up here by name")
       lines.push("raw: set tts <shell command handed each line on stdin> | true (espeak) | false")
       return lines.join("\n")
@@ -1721,7 +1756,7 @@ Item {
         var changes = typeof parsed === "string" ? { tts: parsed, ttsSaved: undefined } : { tts: parsed }
         if (!root.setSettings(changes)) return "can't write shell.json"
         if (typeof parsed === "string" && parsed.indexOf("speak-clone") !== -1 && parsed !== wasTts)
-          return "ok — new clone voice: rerun scripts/warm-voice (plugin dir) to pre-render the book for it, or every line pays ~2 s of GPU once"
+          return "ok — new clone voice: pre-rendering the book for it in the background (10-20 min of GPU, once; `voice` says when it's done)"
         return "ok"
       }
       if (key === "leaderboard" && parsed !== undefined) {

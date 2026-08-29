@@ -183,9 +183,21 @@ included:
 
 ```bash
 scripts/setup-voice --clone ~/glados-lines.mp4 glados
+scripts/setup-voice --clone ~/whole-scene.mp4 glados --from 1:33 --to 1:56
 ```
 
-Ten to twenty seconds of clean speech, any format ffmpeg reads. Cloning uses
+Ten to twenty seconds of clean speech, any format ffmpeg reads. `--from`
+and `--to` (ffmpeg times: `95`, `1:35`, `0:01:35.5`) cut the sample out
+of a longer recording, so a downloaded scene works as-is; it's capped at
+20 s either way. The sample is loudness-normalised on the way in — a
+quiet rip needs no volume prep. What does matter is what's *under* the
+voice: a film mix with score and room tone under the dialogue clones
+muddy, and a shouted reference gives a strained voice on every line, so
+pick the driest, calmest stretch you can find. The script prints the
+cut's length and warns when it's short. Re-cloning a name replaces its
+sample; lines rendered from the old one are never reused (the line cache
+is keyed by the sample's contents), and the book is re-rendered for the
+new one like a fresh clone. Cloning uses
 [chatterbox](https://github.com/resemble-ai/chatterbox), so it needs an
 NVIDIA GPU and pulls ~8 GB on first run — the shipped Rubick is this exact
 machinery pointed at a sample we picked for you, so the same costs apply.
@@ -208,12 +220,17 @@ stays warm. The synthesis itself is still tuned by editing the `tts`
 string's `--exag` and `--cfg` knobs (both up = snappier delivery) — those
 re-render every line, so rerun `scripts/warm-voice` after.
 
-A fresh clone starts with an empty cache, so *every* line costs those few
-seconds — including the reaction to a slap, which lands well after the
-slap. `scripts/warm-voice` fixes that up front: it renders the whole book
-into the cache silently (~5 minutes of GPU for the built-in book) and
-everything he says from it is instant afterwards. Rerun it after changing
-the reference or the delivery knobs. Agent lines are freshly written every
+A fresh clone starts with an empty cache, so *every* line would cost
+those few seconds — including the reaction to a slap, which would land
+well after the slap. So he doesn't leave it empty: the moment a clone
+becomes his voice (a new clone, a switch in the picker, a shell start)
+he renders the whole book into the cache in the background, silently —
+10-20 minutes of GPU for the built-in book, once per voice; `voice` says
+while it's running. He's usable meanwhile, and a voice warmed once stays
+warm — the cache is keyed by the sample's contents and never thrown away,
+so on every later start this is a half-second check. The same job by
+hand is `scripts/warm-voice`, for after changing the delivery knobs.
+Agent lines are freshly written every
 time, so the cache can never have them in advance — instead the plugin
 pre-renders each batch the moment it arrives (they sit unspoken for a
 while first), so with `ai` on and a clone set, those don't trail the

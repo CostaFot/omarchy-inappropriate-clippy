@@ -400,16 +400,29 @@ is one opaque string and ignores all three (clones bend via
   George is kokoro `bm_george` through an ffmpeg ring-mod chain
   (`asetrate` +15 %, `tremolo f=45`, `acrusher bits=6`, 250-3400 band);
   a named piper voice (name-with-dash) comes through unprocessed;
-  `say.py` phonemizes `b*` voices as en-gb. `--clone <sample> [name]` =
-  chatterbox voice clone from a 10-20 s sample.
+  `say.py` phonemizes `b*` voices as en-gb. `--clone <sample> [name]
+  [--from T] [--to T]` = chatterbox voice clone from a 10-20 s sample:
+  ffmpeg converts anything to mono 24 kHz, `--from`/`--to` are input-side
+  `-ss`/`-to` (positions in the source), the 20 s cap applies after the
+  cut, and `loudnorm I=-18` lifts quiet rips (the clone copies the
+  sample's level as character; a -30 LUFS rip cloned muffled). Prints the
+  cut's length, warns under 8 s or when the cap truncated an uncut
+  sample, and says so on a re-clone of an existing name. The shipped
+  Rubick wav is still `cp`'d verbatim, never through that pipeline.
+  It does not warm the book itself — the plugin owns that (below),
+  triggered by the `set tts` it ends with; the script only says so.
 - Clones: chatterbox on CUDA in a uv venv (`--python 3.12` — system
   3.14 has no torch wheels; `setuptools<81` pinned or perth's
   watermarker dies on missing pkg_resources). Per-line spawn would
   reload 2 GB onto the GPU, so `speak-clone` (stdlib client) talks to
   `daemon.py` (venv python) over `$XDG_RUNTIME_DIR/clippy-voice.sock`;
   the daemon self-starts on demand and exits after 15 idle minutes
-  (~4 GB VRAM). Lines are cached in `~/.cache/clippy-voice` by (ref,
-  knobs, text) — repeats instant, fresh line ~2-5 s warm, ~25 s cold.
+  (~4 GB VRAM). Lines are cached in `~/.cache/clippy-voice` by (ref
+  path, ref contents hash, knobs, text) — repeats instant, fresh line
+  ~2-5 s warm, ~25 s cold. The contents hash (v1.28.0) is what makes a
+  re-clone under the same name safe: before it, a re-cut sample kept
+  replaying every line rendered from the old one. Orphaned files are
+  never pruned; the whole dir is disposable.
   `--pitch`/`--tempo` derive from the cached raw take via ffmpeg
   (asetrate*P shifts pitch and tempo together, one atempo of T/P lands
   the final tempo on T; atempo's 0.5 floor handled by chaining) into
@@ -429,7 +442,22 @@ is one opaque string and ignores all three (clones bend via
   string for speak-clone/--ref/--exag/--cfg (bails on anything else),
   merges `quotesFile`, respects `clean`, skips `{templated}` lines and
   existing cache files, self-starts the daemon. Rerun it after a `--ref`
-  or exag/cfg change — those re-key the cache. `--lines <line>...`
+  or exag/cfg change — those re-key the cache. The plugin runs the bare
+  form itself: `warmBook()` (`warmBookProc`, separate from `warmProc` so
+  a 5-minute book never blocks an agent batch) fires on mount and in
+  `onTtsSettingChanged`, kills a warm in flight (it would be rendering
+  the previous reference), and only spawns when the live tts contains
+  "speak-clone", handing it over as `--tts <cmd>` so the warm can't
+  race the settings write. A full cache makes that a ~0.3 s no-op, so
+  it runs on every mount without a flag; `warmingBook` shows in `voice`.
+  Costa's call: "why are we not prewarming. i dont get it" — under the
+  contents-keyed, never-pruned cache a voice warmed once stays warm, so
+  nothing justified a second command. Its key
+  must match `speak-clone`'s byte for byte: it reads the installed
+  client and falls back to the pre-v1.28.0 path-only key (with a stderr
+  nudge to rerun setup-voice) if that client predates the contents
+  hash, so an updated plugin never warms into keys an old client won't
+  look up. `--lines <line>...`
   warms explicit strings: `AgentBrain.linesArrived` → root's
   `warmAgentLines()` (gated on `ttsOn` + `"speak-clone" in ttsSetting`)
   pre-renders each fresh agent batch fire-and-forget (`warmProc`,
@@ -562,15 +590,18 @@ no settings row (free text — IPC and agent only).
   `~/.config/omarchy/plugins/costafot.clippy/` (then restart the shell)
   or the symlink restored. Check which before assuming an edit is live.
 - Live settings drift with use — read them (`omarchy-shell
-  costafot.clippy settings`) rather than trusting notes. Last known: the
-  Rubick clone active (`--exag 0.5 --cfg 0.5`), `cloneTempo 1.1`.
+  costafot.clippy settings`) rather than trusting notes. Last known
+  (2026-08-29 evening): a `grossman` clone active (Les Grossman, Tropic
+  Thunder, 5:59-6:12 of a "best moments" rip, `--exag 0.5 --cfg 0.5`),
+  the picker offering off · robot · grossman · rubick.
 - Approved clone references — NEVER regenerate, a re-cut sounds subtly
   different: `~/.local/share/chatterbox-tts/voices/rubick.wav` (also in
   the repo at `assets/voices/rubick.wav`, byte-identical). Parked, not
   deleted (move back to re-offer in the picker): `voices-parked/` holds
   the approved c3po + c3po-fast takes; `piper-voices-parked` and
   `kokoro-tts-parked` sit next to their original dirs (Costa: "less
-  options. less to debug" — the box offers off · robot · rubick).
+  options. less to debug"). `voices/grossman.wav` is a second, unapproved
+  clone reference (v1.28.0's test subject; source clip in `~/Downloads`).
 - The clone line cache is `~/.cache/clippy-voice`; the daemon socket is
   `$XDG_RUNTIME_DIR/clippy-voice.sock`.
 - codex and pi are installed but not logged in (401 / no key); only
@@ -581,7 +612,7 @@ no settings row (free text — IPC and agent only).
 
 ## Status
 
-Feature-complete at v1.27.0 (2026-08-29): everything above is live and
+Feature-complete at v1.28.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.
