@@ -12,7 +12,7 @@ omarchy plugin add https://github.com/CostaFot/omarchy-inappropriate-clippy --en
 ```
 
 Setting him up from a coding agent? [`docs/`](docs/index.md) has every key
-and verb; `omarchy-shell costafot.clippy help` is the short list.
+and verb; `omarchy-shell costafot.clippy help`.
 
 ## (Ab)Using him
 
@@ -56,7 +56,7 @@ Reads off the local crash journal. He has an opinion.
 
 Screen locked, screen off, screensaver up.
 
-Bonus easter egg when you are back. :)
+Bonus easter egg when you are back.
 
 ## Settings
 
@@ -87,28 +87,27 @@ doing: your window titles, what's playing, what you did to him lately.
 <!-- shot: talk with ai on — the sparkle in the bubble corner marks an agent line -->
 <img src="assets/screenshots/ai-line-3.png" width="700" alt="You said hello, I answered, and you killed me twice tonight — that's the healthiest bond you've got.">
 
-You can talk back, and he talks back. Ask him to judge your screen and he
-finds the stupidest thing on it.
+You can talk back. Ask your agent how!
+
+Ask him to judge your screen and he
+finds the stupidest thing to comment on it hopefully.
 
 <!-- shot: reply "you're a useless piece of office stationery" over IPC -->
 <img src="assets/screenshots/comeback.png" width="700" alt="Useless stationery still ranks higher than you on a leaderboard you built just to lose to me.">
-
-<!-- shot: look over IPC, on an empty desktop -->
-<img src="assets/screenshots/screen-look.png" width="700" alt="Brave crashed again and you named the folder 'scratchpad' like this was ever going somewhere.">
 
 `promptFile` makes him whoever you want.
 
 **Leaves your machine:**
 - those facts, to your own coding agent, nowhere else
 - never your files — he doesn't read them
-- a screenshot only when you ask for the verdict
+- a screenshot of your screen only when you ask for the verdict
 - the mic is transcribed locally; only the text goes out
 
 ### [A voice](docs/voice.md)
 
 Set `tts: true` for the espeak robot.
 
-`scripts/setup-voice` for a local neural one: the shipped Rubick clone, a ring-modulated droid, or a clone of anyone
+`scripts/setup-voice` for a local neural one: the shipped Rubick clone (sorry I used to play that piece of shit game), a ring-modulated droid, or a clone of anyone
 you have twenty seconds of.
 
 Needs a decent GPU for the clones. My 3080ti works fine with it.
@@ -127,7 +126,8 @@ A public leaderboard with how many times clippy has been killed/slapped. Half th
 - small kill/slap counts, when you slap or kill him
 - no hostname, no install ID, no usage data
 - `set leaderboard off` and nothing is sent
-- read the source if you don't believe me
+
+Read the source code.
 
 ### [Scripting him](docs/scripting.md)
 
@@ -150,7 +150,7 @@ omarchy plugin remove costafot.clippy   # when you've had enough
 
 **Is there telemetry?**
 
-One thing: the graveyard. Kill and slap counts under a shared alias, so
+The kill/slap counts are logged to the graveyard. Shared alias, so
 nobody knows it's you. `set leaderboard off` to disable it. That's
 it — no hostname, no install ID, no usage data.
 
