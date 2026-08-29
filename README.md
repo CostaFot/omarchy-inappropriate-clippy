@@ -90,11 +90,12 @@ into the bar himself, settings and all.
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
+| `greeted` | `false` | Set to `true` by his first-boot hello (the one telling you to set him up), so he only says it once per install. `set greeted unset` to hear it again |
 
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
 `quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`,
-`flung`, `welcomeBack` and `epitaph` arrays. `{away}` in a `welcomeBack` line
+`flung`, `welcomeBack`, `epitaph` and `firstRun` arrays. `{away}` in a `welcomeBack` line
 becomes how long you were gone ("47 minutes", "3 hours"); `{back}` in an
 `epitaph` becomes how long until he's back ("4 minutes", "never").
 

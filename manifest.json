@@ -2,10 +2,10 @@
   "schemaVersion": 1,
   "id": "costafot.clippy",
   "name": "Inappropriate Clippy",
-  "version": "1.22.1",
+  "version": "1.23.0",
   "author": "CostaFot",
   "license": "MIT",
-  "description": "Clippy walks your bar and tells you what he really thinks of you. Profane by default.",
+  "description": "Clippy walks into a bar. He is stupid.",
   "kinds": [
     "panel",
     "bar-widget"

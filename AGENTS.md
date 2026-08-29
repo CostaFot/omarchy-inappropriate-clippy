@@ -906,6 +906,31 @@ of aplay exiting; short cached lines hide on the old schedule (the
 predicate is false at trigger time); journal clean. Hand-copied to the
 installed clone with the manifest bump.
 
+First hello (2026-08-29, v1.23.0): Costa's ask — 'the very first message
+should be something like "Welcome you fuck. Make sure you set me up in
+options. Ask your agent eh?"'. On the very first boot after an install he
+says a `firstRun` line (new quote key, in `quoteKeys` and quotes.json)
+pointing at the right-click menu and the agent, then writes `greeted: true`
+inline on the shell.json entry (new settings key, default false, README
+row) — inline, not `persisted`, so a shell restart doesn't repeat it but
+a reinstall (which strips the entry) does; `set greeted unset` re-arms it.
+Mechanics: `greetTimer` (2 s, so the window is mapped) → `firstHello()`,
+armed from `maybeBoot()`'s tail and from `wakeUp()`'s idle branch (where
+it takes precedence over the welcomeBack line — fresh install while
+locked). The pick is deterministic, not random: `pool("firstRun")[0]`,
+so the nsfw line IS the greeting and under `clean` the clean variant
+steps up as the first survivor. This session was the new-user simulation:
+`omarchy plugin remove --yes` (also strips the inline settings — the
+rubick/ai rig, noted in the session for restore), a real `omarchy plugin
+add <github url> --enable --yes` clone of v1.22.1, `omarchy restart
+shell` to zero `persisted`. Verified live on that clean install:
+greeting on screen by screenshot (both variants — the first cut was
+`randomQuoteFrom` and the camera caught the clean line, which is what
+prompted the deterministic pick), `greeted: true` landing inline, a
+restart with it set stays idle, journal clean. Hand-copied to the
+installed clone (a real clone again — dev edits need the copy or the
+symlink); repo left uncommitted.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin

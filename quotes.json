@@ -177,5 +177,9 @@
     { "text": "Stop poking the grave. Have some fucking respect.", "nsfw": true },
     { "text": "He died as he lived: in the way.", "nsfw": false },
     { "text": "Knock twice if you're sorry. ...Thought so.", "nsfw": false }
+  ],
+  "firstRun": [
+    { "text": "Welcome, you fuck. Set me up in the options — right-click me. Or ask your agent, eh?", "nsfw": true, "anim": "Wave" },
+    { "text": "Welcome. Set me up in the options — right-click me, or ask your agent.", "nsfw": false, "anim": "Wave" }
   ]
 }

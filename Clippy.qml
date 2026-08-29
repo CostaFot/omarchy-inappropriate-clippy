@@ -111,7 +111,8 @@ Item {
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
     ttsSaved: "",
     ai: false, aiAgent: "", aiModel: "",
-    pauseWhenAway: true, avoidWidgets: true, tombstone: true
+    pauseWhenAway: true, avoidWidgets: true, tombstone: true,
+    greeted: false
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
   function isSettingKey(key) { return Object.prototype.hasOwnProperty.call(settingDefaults, key) }
@@ -414,6 +415,23 @@ Item {
   property real awayMs: 0
   readonly property int welcomeAfterMs: 60 * 1000
   Timer { id: welcomeTimer; interval: 1500; repeat: false; onTriggered: root.welcome() }
+  // The first hello: one `firstRun` line on the very first boot after an
+  // install, pointing at the menu and the agent. `greeted` lands inline on
+  // our shell.json entry once it's been said, so a shell restart doesn't
+  // repeat it — only a reinstall (or `set greeted unset`) does.
+  Timer { id: greetTimer; interval: 2000; repeat: false; onTriggered: root.firstHello() }
+  function maybeGreet() { if (!setting("greeted", false)) greetTimer.restart() }
+  function firstHello() {
+    if (asleep || mood !== "idle" || dragging || isSnoozed()) return
+    if (setting("greeted", false)) return
+    // Deterministic, not random: the first line of the pool IS the greeting
+    // (under `clean` the nsfw one is filtered and the clean line steps up).
+    var p = pool("firstRun")
+    var q = p.length ? p[0] : null
+    say(q ? q.text : "Welcome, you fuck. Set me up in the options — right-click me. Or ask your agent, eh?",
+        q && q.anim ? q.anim : "Wave")
+    setSetting("greeted", true)
+  }
   function awayText(ms) {
     var m = Math.max(1, Math.round(ms / 60000))
     if (m < 60) return m + (m === 1 ? " minute" : " minutes")
@@ -461,7 +479,8 @@ Item {
     }
     if (mood === "idle" && !dragging) {
       idleAnim()
-      if (longEnough) { awayMs = away; welcomeTimer.restart() }
+      if (!setting("greeted", false)) maybeGreet()
+      else if (longEnough) { awayMs = away; welcomeTimer.restart() }
     }
     scheduleQuote()
   }
@@ -487,7 +506,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "welcomeBack", "epitaph"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "welcomeBack", "epitaph", "firstRun"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   function emptyBook() {
@@ -603,6 +622,7 @@ Item {
     if (asleep) return  // wakeUp() starts him
     idleAnim()
     scheduleQuote()
+    maybeGreet()
   }
 
   // Brain: idle animation -> maybe walk -> idle ... ; quotes on their own timer.
