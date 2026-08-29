@@ -224,11 +224,12 @@ Item {
   readonly property real cloneTempo: clamp(Number(setting("cloneTempo", 1)) || 1, 0.5, 2)
   readonly property real clonePitch: clamp(Number(setting("clonePitch", 1)) || 1, 0.5, 2)
   readonly property bool cloneKnobsApply: typeof ttsSetting === "string" && ttsSetting.indexOf("speak-clone") !== -1
-  // Ducking is always on: everyone else's audio drops to 30 % while he
+  // Ducking is always on: everyone else's audio drops to 80 % while he
   // speaks and comes back after. No setting — Costa: "ALWAYS duck other
-  // audio", stupid simple. Works with any engine: the snapshot is taken
-  // before the engine spawns (see scripts/duck).
-  readonly property real duckFactor: 0.3
+  // audio", stupid simple (30 % was "kinda annoying"). Works with any
+  // engine: the snapshot is taken before the engine spawns (see
+  // scripts/duck).
+  readonly property real duckFactor: 0.8
   // An inline `set` doesn't remount us (keepLoaded — the binding just
   // updates), so a changed engine gets its failure warning back here, and
   // turning the voice off shuts him up instead of finishing the line. Two

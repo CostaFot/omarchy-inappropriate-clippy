@@ -490,8 +490,9 @@ is one opaque string and ignores all three (clones bend via
 
 ## Ducking
 
-Always on, no setting — every *other* audio stream drops to 30 %
-(`duckFactor`, hardwired 0.3) while he speaks and is restored after
+Always on, no setting — every *other* audio stream drops to 80 %
+(`duckFactor`, hardwired 0.8; was 0.3 until Costa found the dip "kinda
+annoying") while he speaks and is restored after
 ("do not give option to duck other audio. ALWAYS duck other audio" —
 a stale inline `duck` key in shell.json is simply unread).
 `scripts/duck` snapshots `pactl list sink-inputs` volumes (raw values,
@@ -508,12 +509,12 @@ the engine-spawn body); the duck is held across a replacement line;
 speech end with an empty queue arms `duckRelease` (1 s) before
 `duckStop()` — a line inside the window keeps the duck, so consecutive
 lines share one duck cycle and never snapshot each other's dying aplay
-(that compounding re-snapshot once drove remembered volumes 30 % → 9 %
-→ 1 %). `duckStop()` is gated on `ducked`; a line cancelled while the
+(that compounding re-snapshot once drove remembered volumes toward
+zero in the 0.3 days — 30 % → 9 % → 1 %). `duckStop()` is gated on `ducked`; a line cancelled while the
 snapshot is in flight restores instead of speaking; overlapping flips
 park in `duckNext`; a mount runs `duck stop` as crash healing. Known
 trade-off: PipeWire stream-restore memorizes a stream's volume, so an
-app whose stream ends mid-duck is remembered at 30 % and starts there
+app whose stream ends mid-duck is remembered at 80 % and starts there
 next time, silently — the heal is playing a live stream of that app and
 `pactl set-sink-input-volume <id> 100%`, which rewrites the memory.
 Orthogonal to Costa's `costafot.autoduck` plugin (mutes browser streams

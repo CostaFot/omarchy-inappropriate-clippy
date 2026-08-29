@@ -289,18 +289,19 @@ are taken. Drop-ins are for plugging in an engine you already run — the
 clone knobs and `warm-voice` don't apply to them (those are shaped
 around `speak-clone`'s cache).
 
-When he talks, everything else shuts up. The moment a line starts, every
-other audio stream drops to 30% — Spotify, a browser tab, a game,
-whatever's playing — and comes back the instant he's done. Voice
-assistants call this ducking; here it's not optional, because he considers
-what he has to say more important than whatever you were listening to. It
-works with any engine, the espeak robot and the clones alike, only touches
-streams that were already playing when the line started (so his own voice
-is never ducked, and neither are his own sound effects), and volumes are
-snapshotted and restored exactly — if the shell dies mid-sentence, the
-next mount puts them back. A slap reaction gets both, in order: the crack
-plays first at full volume, and the moment it ends he speaks the line —
-the voice never talks over its own sound effect.
+When he talks, everything else steps back. The moment a line starts,
+every other audio stream dips to 80% of its volume — Spotify, a browser
+tab, a game, whatever's playing — and comes back the instant he's done.
+Voice assistants call this ducking; here it's not optional, because he
+considers what he has to say more important than whatever you were
+listening to. It works with any engine, the espeak robot and the clones
+alike, only touches streams that were already playing when the line
+started (so his own voice is never ducked, and neither are his own
+sound effects), and volumes are snapshotted and restored exactly — if
+the shell dies mid-sentence, the next mount puts them back. A slap
+reaction gets both, in order: the crack plays first at full volume, and
+the moment it ends he speaks the line — the voice never talks over its
+own sound effect.
 
 Once voices are on disk, switching between them takes no terminal: the
 menu's Voice row is a picker showing everything installed — off, the espeak

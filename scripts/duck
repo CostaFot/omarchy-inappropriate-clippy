@@ -20,8 +20,8 @@ set -uo pipefail
 
 state="${XDG_RUNTIME_DIR:-/tmp}/clippy-duck"
 cmd="${1:-}"
-factor="${2:-0.3}"
-[[ $factor =~ ^[0-9]*\.?[0-9]+$ ]] || factor=0.3
+factor="${2:-0.8}"
+[[ $factor =~ ^[0-9]*\.?[0-9]+$ ]] || factor=0.8
 
 exec 9>"$state.lock"
 flock 9

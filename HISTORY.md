@@ -881,3 +881,15 @@ stash, and the menu row screenshots with the footer rank. The AGENTS.md
 design rule rewritten from "nothing leaves without opt-in" to "nothing
 leaves undisclosed"; README says exactly what leaves (alias-or-handle +
 two small deltas, IP seen in transit and not kept). Server untouched.
+
+Gentler duck (v1.30.1, 2026-08-29): Costa — "ok the lowering music bit is
+kinda annoying. can we lower to 80% of the volume?" `duckFactor` 0.3 →
+0.8 (Clippy.qml plus the script's own fallback default), no mechanism
+change. Verified live with a background tone plus real streams (Brave,
+Viber, voxtype): all dipped to exactly 80% mid-line and restored to
+100% with the snapshot file gone after. Mid-verification Costa felt the
+duck still sounded bigger than 20% — pactl's percent is cubic, so 80%
+is a −5.8 dB cut — then withdrew it ("ah no, it's ok"). README ducking
+paragraph re-toned ("steps back" instead of "shuts up"), AGENTS.md
+numbers updated; the old 30%→9%→1% compounding anecdote kept but dated
+to the 0.3 days. Hand-copied to the installed clone.
