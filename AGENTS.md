@@ -20,8 +20,9 @@ big feature (1-3 sentence paragraphs, a screenshot under
 was captured — 1400×260 bar-strip crops of a `grim` at monitor scale
 1.6, every state driven over IPC, `omarchy-toggle-idle stay-awake` first
 or he falls asleep mid-shoot, `set leaderboard off` first or the kills
-post; the alt text is the line in the bubble; `slap.gif` is still to
-take — and a bold **Leaves your machine:** label with bullets under it
+post; the alt text is the line in the bubble; `slap.gif` is a trimmed
+Omarchy region screen recording of three real slaps, 20 fps through
+palettegen/paletteuse — and a bold **Leaves your machine:** label with bullets under it
 for anything that touches the network: ai and the graveyard), an
 Uninstall section, a FAQ in the shape of Costa's other extension READMEs
 (bold question, one blunt answer, telemetry first) and links; key names
@@ -933,7 +934,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.40.5 (2026-08-30): everything above is live and
+Feature-complete at v1.40.6 (2026-08-30): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and

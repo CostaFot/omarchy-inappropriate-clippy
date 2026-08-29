@@ -32,8 +32,8 @@ Left-click the bubble to dismiss it.
 
 ### Slaps, deaths, dodges
 
-<!-- shot: slap left over IPC, grabbed mid-wobble; a ~2 s gif of the shove + bubble (slap.gif) would replace this still -->
-<img src="assets/screenshots/slap-line.png" width="700" alt="Keep going, I'm sure it fixes the build.">
+<!-- shot: screen recording of three real middle-click slaps on an empty workspace, trimmed before the stop-recording tooltip, 20 fps gif -->
+<img src="assets/screenshots/slap.gif" width="700" alt="You know I'm made of wire, right? That hurt you more than me. Emotionally, I mean.">
 
 Ten slaps in six seconds knocks him out. Sometimes the fucker dodges.
 
@@ -111,7 +111,7 @@ Set `tts: true` for the espeak robot.
 `scripts/setup-voice` for a local neural one: the shipped Rubick clone, a ring-modulated droid, or a clone of anyone
 you have twenty seconds of.
 
-Needs a decent GPU. My 3080ti works fine with it.
+Needs a decent GPU for the clones. My 3080ti works fine with it.
 
 ### [The graveyard](docs/graveyard.md)
 
@@ -127,8 +127,7 @@ A public leaderboard with how many times clippy has been killed/slapped. Half th
 - small kill/slap counts, when you slap or kill him
 - no hostname, no install ID, no usage data
 - `set leaderboard off` and nothing is sent
-
-Read the source code
+- read the source if you don't believe me
 
 ### [Scripting him](docs/scripting.md)
 
@@ -157,13 +156,13 @@ it — no hostname, no install ID, no usage data.
 
 **Does he read my files?**
 
-No. With `ai` off nothing leaves the machine. With it on, your window
+No. With `ai` off nothing about what you're doing leaves the machine. With it on, your window
 titles and stuff like that go to your own coding agent. Read the source.
 
 **Can I make him nicer?**
 
 `set clean true` makes him SFW. `promptFile` makes him whoever
-you want. 
+you want.
 
 ## Notes and limitations
 
