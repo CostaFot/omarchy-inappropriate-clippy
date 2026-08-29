@@ -1539,6 +1539,7 @@ Item {
         "voices / useVoice <name> — every voice installed on this machine, and switching to one",
         "leaderboard — the public graveyard: your handle, rank and the page (set leaderboard <handle> to join)",
         "set <key> <value> / get <key> / settings — the config; settings lists every key, unset restores a default",
+        "any verb drops into a Hyprland bind: bindd = SUPER SHIFT C, T, Clippy talks, exec, omarchy-shell costafot.clippy talk",
         "README: " + root.pluginDir + "/README.md"
       ].join("\n")
     }

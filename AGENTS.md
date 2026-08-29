@@ -1083,6 +1083,17 @@ brisk/normal selected (cloneTempo was 1.1), `useVoice off` hides them
 cleanly, rubick restored byte-identical, journal clean. Hand-copied to
 the installed clone.
 
+Keybinds in agent help (2026-08-29, v1.26.1): "do we expose a way to bind
+a clippy action to a keybind easily?" — the README's scripting section
+already answers it (any verb drops into a Hyprland bind, two `bindd`
+examples), but `help` never said so. Costa's call: "no UI for this. only
+agent help" — so one line in the `help` output, just above the README
+path, with a complete copy-pasteable `bindd` example. No menu change, no
+new keys. Verified live over IPC after a shell restart (the hand-copy
+alone reloaded the plugin but reused the cached compile — the known
+symlink gotcha applies to the real clone too when only the copy changes);
+journal clean. Hand-copied to the installed clone.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin
