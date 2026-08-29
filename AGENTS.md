@@ -303,8 +303,16 @@ an optional `hint` (dim second line,
   still filters nsfw examples but adds no tone line — the file owns the
   tone, and the built-in taste rules (no-clock, length cap, swear
   quota) go with it, a documented trade. Unreadable or empty file →
-  stderr note and the built-in prompt (the quotesFile fallback idiom).
-  Free-text path, so IPC/agent only — no menu row.
+  stderr note and the built-in prompt (the quotesFile fallback idiom) —
+  and surfaced, not just journaled (v1.37.1): `promptProbe` (`[[ -r &&
+  -s ]]`, mount + changes, the ttsProbe idiom) feeds `promptFileMissing`,
+  the `ai` verb appends "custom prompt: <path>" (with an unreadable
+  warning when so), and the `set promptFile` reply states the replace
+  contract. Free-text path, so IPC/agent only — no menu row. Note a
+  persona swap does NOT flush AgentBrain's cache: lines from the old
+  character linger up to 20 min (flushing in onPromptFileChanged would
+  fire on every mount's async settings delivery and cost a call per
+  remount — the rule is remounts stay cheap).
   `--context` prints the facts, `--prompt` the whole prompt. Output is a
   JSON array parsed three ways in turn: as JSON; else every JSON string
   literal in the text (claude sometimes emits the array with no commas);
@@ -338,8 +346,9 @@ an optional `hint` (dim second line,
   unset is the agent's CLI default (for claude that's the CLI default
   model, NOT settings.json's `model` — `--setting-sources ""` isolates
   it); shown in the "Lines from <agent>" row label when set, no picker
-  (names differ per agent). `set aiAgent`/`set aiModel`/`set
-  promptFile` while `ai` is off answer "ok — but ai is off…". Talk-back (v1.35.0): IPC `listen`
+  (names differ per agent). `set aiAgent`/`set aiModel` while
+  `ai` is off answer "ok — but ai is off…"; `set promptFile` always
+  answers with the replace contract, prefixed ok-but while `ai` is off. Talk-back (v1.35.0): IPC `listen`
   (toggle) / `reply <text>` and the menu's "Say it to his face" (shown
   only while `ai` is on AND voxtype exists — `voxProbe` feeds
   `voxtypeMissing`, probed on mount and menu open). `listen` records the
@@ -787,7 +796,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.37.0 (2026-08-29): everything above is live and
+Feature-complete at v1.37.1 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

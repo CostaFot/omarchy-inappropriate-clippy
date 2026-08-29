@@ -1302,3 +1302,32 @@ you.") — no Clippy register, no swears, which is exactly the point.
 README (table row + section paragraph), AGENTS.md (clippy-ai section,
 set replies, status), manifest 1.37.0; hand-copied to the installed
 clone.
+
+## The persona swap surfaced (v1.37.1, 2026-08-29)
+
+"Is all the necessary information exposed if the user wants to ask
+their agent to change stuff?" — an audit of promptFile's agent surface.
+The generic chain held (`settings` lists it, the unknown-key reply
+names it, `help` → README → the table row), but two gaps broke the
+house rules: the `ai` status verb never mentioned a custom prompt in
+effect (an agent asked "why does he sound like a ghost" would learn
+nothing), and a bad path fell back to the built-in character with only
+a stderr journal note — against "anything broken is surfaced in the UI
+and to agents, not just journaled". Closed with the ttsProbe idiom:
+`promptProbe` (`[[ -r && -s ]]`, mount + onPromptFileChanged) feeds
+`promptFileMissing`; `ai` now appends "custom prompt: <path> (replaces
+his whole character)" or the unreadable warning with the fix; and `set
+promptFile` answers with the replace contract itself (register
+examples from quotesFile only, bad path falls back, `ai` reports it),
+prefixed ok-but while ai is off — promptFile split back out of the
+aiAgent/aiModel reply line. Deliberately NOT added: flushing
+AgentBrain's cache on a persona change — onPromptFileChanged also
+fires on every mount's async settings delivery, so a flush there would
+cost an agent call per remount (the remounts-stay-cheap rule); old-
+character lines linger up to 20 min instead, documented. Verified live
+on the installed clone: `ai` clean with no prompt file, "custom
+prompt: … (replaces his whole character)" with the ghost set, the
+unreadable warning on a bogus path, the contract reply from `set` in
+both ai states, then everything unset and the config restored.
+AGENTS.md (clippy-ai section, set replies, status), README (the ai-
+verb sentence), manifest 1.37.1; hand-copied to the installed clone.

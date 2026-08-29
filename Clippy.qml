@@ -178,6 +178,24 @@ Item {
   // Register examples then come only from quotesFile. Free-text path, so
   // IPC/agent only, no menu row; a bad path falls back to the built-in.
   readonly property string promptFile: expandHome(setting("promptFile", ""))
+  // Whether that file is actually readable and non-empty — the `ai` verb
+  // reports it, so a typo'd path doesn't silently fall back to the
+  // built-in character with only a journal note (clippy-ai guards itself
+  // either way; this is the surfacing). Probed at mount and on changes;
+  // async like ttsProbe, so `ai` in the same breath as the `set` may
+  // read one probe stale.
+  property bool promptFileMissing: false
+  onPromptFileChanged: promptProbe.check()
+  Process {
+    id: promptProbe
+    function check() {
+      if (root.promptFile === "") { root.promptFileMissing = false; return }
+      command = ["bash", "-c", '[[ -r $1 && -s $1 ]]', "promptprobe", root.promptFile]
+      running = true
+    }
+    onExited: function (code) { root.promptFileMissing = code !== 0 }
+    Component.onCompleted: check()
+  }
   // Slapping: middle-click, or flinging the pointer across him. `slap: false`
   // turns both off and gives middle-click back to snooze.
   readonly property bool slapEnabled: setting("slap", true) !== false
@@ -2071,6 +2089,10 @@ Item {
       else if (root.replying) s += "; heard them, cooking the comeback"
       else if (root.lookFailed) s += "; the last screen look failed (journalctl --user -o cat | grep clippy)"
       else if (root.replyFailed) s += "; the last comeback failed (journalctl --user -o cat | grep clippy)"
+      if (root.promptFile !== "")
+        s += root.promptFileMissing
+          ? "; custom prompt: " + root.promptFile + " — unreadable or empty, so the BUILT-IN character is running (fix the path, or set promptFile unset)"
+          : "; custom prompt: " + root.promptFile + " (replaces his whole character)"
       return s
     }
     // Agent-first status for the voice: what `tts` resolves to and whether
@@ -2248,7 +2270,10 @@ Item {
           return "ok — heard once the clone voice is back on (set tts true)"
         return "ok — but the active voice isn't a clone, so this won't be heard (the knobs bend speak-clone voices only; espeak has ttsSpeed/ttsPitch)"
       }
-      if ((key === "aiAgent" || key === "aiModel" || key === "promptFile") && parsed !== undefined && !root.aiEnabled)
+      if (key === "promptFile" && parsed !== undefined)
+        return (root.aiEnabled ? "ok — " : "ok — but ai is off (set ai true first); once on, ")
+          + "that file's contents replace his whole AI prompt in every mode — persona, rules, tone — and register examples then come from quotesFile only; an unreadable path falls back to the built-in character, which the `ai` verb reports"
+      if ((key === "aiAgent" || key === "aiModel") && parsed !== undefined && !root.aiEnabled)
         return "ok — but ai is off, so there are no agent lines to apply it to; set ai true first"
       return "ok"
     }

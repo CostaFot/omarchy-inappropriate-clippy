@@ -185,9 +185,11 @@ all that is now whatever your file says. The built-in register examples step
 aside too: only your own `quotesFile` lines ride along, so his old book can't
 argue with whoever you turned him into. Everything else in this section
 (`clean`'s example filtering, the caching, the sparkle) applies unchanged. A
-path that doesn't exist falls back to the built-in gremlin. Fair warning: his
-built-in taste rules (no clock jokes, the length cap, "never be hateful") are
-part of what you are replacing — your prompt, your responsibility.
+path that doesn't exist falls back to the built-in gremlin, and
+`omarchy-shell costafot.clippy ai` tells you which character is actually
+running. Fair warning: his built-in taste rules (no clock jokes, the length
+cap, "never be hateful") are part of what you are replacing — your prompt,
+your responsibility.
 
 Verified with `claude` and `opencode`; `codex` and `pi` are wired the same way
 but weren't run here, and the rest are best guesses from their docs. To see
