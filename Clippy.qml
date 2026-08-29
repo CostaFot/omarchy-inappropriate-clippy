@@ -1190,7 +1190,7 @@ Item {
     dragLastT = 0
     actor.rotation = 0
     complain("dragged", "Where are you taking me???", "Alert")
-    dragTalk.interval = Math.round(rand(3000, 6000))
+    dragTalk.interval = Math.round(rand(5000, 9000))
     dragTalk.restart()
     return true
   }
@@ -1305,14 +1305,16 @@ Item {
     say(q ? q.text : fallback, q && q.anim ? q.anim : anim)
   }
 
-  // Another line every few seconds while he's still being carried.
+  // Another line every few seconds while he's still being carried. 5-9 s,
+  // not shorter: clone lines run 3-5 s, and a tighter beat cuts every one
+  // mid-word.
   Timer {
     id: dragTalk
     repeat: true
     onTriggered: {
       if (!root.dragging) { stop(); return }
       root.complain("dragged", "Put me down.", "GetAttention")
-      interval = Math.round(root.rand(3000, 6000))
+      interval = Math.round(root.rand(5000, 9000))
     }
   }
   Timer {

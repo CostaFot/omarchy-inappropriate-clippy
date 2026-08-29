@@ -250,7 +250,11 @@ if a.pitch != 1.0:
                             out])
         if r.returncode != 0:
             out = raw  # no ffmpeg or a bad filter: play it straight
-subprocess.run(["aplay", "-q", out])
+# exec, not a subprocess: the plugin SIGTERMs this pid to cut a replaced
+# line, and a child aplay would be orphaned and finish the old line over
+# the new one (drag chatter stacked voices). After execvp the pid IS
+# aplay, so the kill stops the audio.
+os.execvp("aplay", ["aplay", "-q", out])
 PY
   chmod +x "$base/speak-clone"
 

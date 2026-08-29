@@ -224,7 +224,9 @@ voice off (menu row or `set tts false`) parks the command in `ttsSaved`,
 and toggling back on restores it — you only get the espeak robot from
 `tts true` when there's nothing parked (`set ttsSaved unset` to force
 that). Whatever hides the bubble — a slap, a lock, his
-death — kills the voice mid-word. A pipeline like the piper one may finish its sentence anyway;
+death — kills the voice mid-word. The espeak robot and the clones cut off
+cleanly (speak-clone becomes aplay by play time, so the kill lands on the
+audio); a pipeline like the piper one may finish its sentence anyway —
 that's between bash and its children.
 
 When he talks, everything else shuts up. The moment a line starts, every

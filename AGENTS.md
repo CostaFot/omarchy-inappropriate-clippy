@@ -181,7 +181,9 @@ loader, like omarchy.menu — not to the bar widget.
   `["bash", "-c", cmd]` with the line on stdin (bash always starts, so a
   missing engine is exit 127 in `onExited` — a raw fail-to-start never
   fires `exited`; `exec` prepended to the built-in so the kill lands on
-  espeak itself; a custom pipeline keeps its bash and may finish the
+  espeak itself; speak-clone execvps into aplay at play time for the same
+  reason — v1.21.1, a child aplay survived the kill and stacked voices
+  during drags; a custom *pipeline* keeps its bash and may finish the
   line). One `ttsProc`. **Kills are `signal(15)`, never `running = false`
   — that quietly leaves the child alive** (verified with a sleep-30
   stand-in; same reason there's `Component.onDestruction: signal(15)`).
@@ -812,6 +814,27 @@ branch) go through the timer. Healing a poisoned app is pinning one of
 its live streams: play anything via aplay, `pactl set-sink-input-volume
 <id> 100%`. Verified: three rapid `talk`s then a fresh aplay stream
 starts at 100 %, duck state file clean, journal clean.
+
+Drag chatter untangled (2026-08-29, v1.21.1): "when i drag the icon, the
+voice messages interfere with each other" — overlapping voices during a
+drag. Root cause was not the QML (one ttsProc, replacement kills + queues,
+that held): speak-clone ended in `subprocess.run(["aplay", ...])`, so the
+plugin's SIGTERM killed the python client and ORPHANED the aplay child,
+which played the old line to the end while the next line's aplay started
+on top — dragged lines every 3-6 s against 3-5 s Rubick lines stacked two
+or three voices. Fix: `os.execvp("aplay", ...)` as speak-clone's last act,
+so the process the plugin holds IS aplay by play time and the kill stops
+the audio (same trick as the espeak `exec` prefix). Patched in the
+setup-voice heredoc, the installed plugin's copy, and the live
+~/.local/share/chatterbox-tts/speak-clone. Costa's "i guess we put more
+time between them?" also honored: dragTalk is 5-9 s (was 3-6). Verified:
+terminal TERM mid-line leaves no aplay, and back-to-back `talk`s over the
+plugin never showed 2 concurrent aplays, journal and duck state clean.
+Same-class papercut NOT fixed (offered): the kokoro and piper pipelines
+(`say.py | aplay`, `piper | aplay`) keep their bash, so a replaced line
+there still orphans the pipeline and may finish — fixing it means changing
+the generated command strings, which also means teaching applyVoice's
+georgeCmd/piperCmd the new shape or the picker calls them "custom".
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
