@@ -1004,6 +1004,11 @@ the test rows (testcosta, uatest, envtest) were DELETEd over `railway ssh
 --service Postgres -- psql` (the DB is internal-only, no public proxy —
 keep it that way) and the handle unset, so the board ships empty and Costa
 picks his real handle himself. Files hand-copied to the installed clone.
+Discoverability ("how does a user know to opt in?"): a dim menu-footer
+hint under the tally — "graveyard: he can die publicly — set leaderboard
+<name> (ask your agent)" — shown only while `leaderboard` is unset, the
+Voice-hint stranded-audience rule; the menu can't take free text, so it
+points at the agent/terminal. Verified by screenshot.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

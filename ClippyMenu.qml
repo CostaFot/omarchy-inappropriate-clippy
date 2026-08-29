@@ -317,6 +317,19 @@ PanelWindow {
         font.pixelSize: card.fontSize
         topPadding: Style.space(4)
       }
+
+      // The graveyard nudge, only while he's not on the board — the same
+      // stranded-audience rule as the Voice row's setup-voice hint. The menu
+      // can't take a free-text handle, so it points at the agent/terminal.
+      Text {
+        visible: menu.clippy ? !menu.clippy.leaderboardOn : false
+        text: "graveyard: he can die publicly — set leaderboard <name> (ask your agent)"
+        color: Color.popups.text
+        opacity: 0.4
+        font.family: Style.fontFamily
+        font.pixelSize: card.fontSize - 2
+        topPadding: Style.space(1)
+      }
     }
   }
 }
