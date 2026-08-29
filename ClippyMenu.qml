@@ -275,6 +275,41 @@ PanelWindow {
         leftPadding: Style.space(8)
         bottomPadding: Style.space(3)
       }
+      // The clone bend (v1.26.0): cloneTempo/clonePitch as preset chips.
+      // Only while a speak-clone voice is the one talking — for every other
+      // voice the keys do nothing, so the rows would be dead weight. An
+      // off-preset value set over IPC just highlights the nearest chip,
+      // the Size row's rule.
+      Choice {
+        visible: menu.open && menu.clippy ? menu.clippy.cloneKnobsApply : false
+        label: "Tempo"
+        options: [
+          { label: "slow", value: 0.9 },
+          { label: "normal", value: 1 },
+          { label: "brisk", value: 1.1 },
+          { label: "fast", value: 1.25 }
+        ]
+        current: {
+          var t = menu.clippy ? menu.clippy.cloneTempo : 1
+          return t <= 0.95 ? 0 : (t < 1.05 ? 1 : (t < 1.18 ? 2 : 3))
+        }
+        onPicked: function (value) { menu.set("cloneTempo", value) }
+      }
+      Choice {
+        visible: menu.open && menu.clippy ? menu.clippy.cloneKnobsApply : false
+        label: "Pitch"
+        options: [
+          { label: "deep", value: 0.85 },
+          { label: "normal", value: 1 },
+          { label: "light", value: 1.15 },
+          { label: "squeaky", value: 1.35 }
+        ]
+        current: {
+          var p = menu.clippy ? menu.clippy.clonePitch : 1
+          return p <= 0.92 ? 0 : (p < 1.07 ? 1 : (p < 1.25 ? 2 : 3))
+        }
+        onPicked: function (value) { menu.set("clonePitch", value) }
+      }
       Choice {
         label: "Walks"
         options: [

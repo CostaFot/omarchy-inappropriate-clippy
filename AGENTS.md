@@ -1063,7 +1063,25 @@ both, pitch-only and the extreme 0.5+2.0 combo at exact expected
 durations, then live over IPC — `set cloneTempo 1.1`, a real agent line
 derived `{key}-t1.1.wav` at exactly raw/1.1 and played it, journal clean.
 `cloneTempo 1.1` left set on Costa's box — the original ask was "a little
-faster". Hand-copied to the installed clone.
+faster". Hand-copied to the installed clone. (The no-menu-row call lasted
+one ask — v1.26.0 below added preset chips.)
+
+Tempo/Pitch chips in the menu (2026-08-29, v1.26.0): "expose UI knobs for
+the speed and pitch on the panel … as simple as possible. We don't want it
+fancy" — so the v1.25.0 no-menu-row call is superseded the same day. Two
+`Choice` rows under the Voice picker (the Walks/Size preset pattern, no
+slider, no free numbers): Tempo slow 0.9 · normal 1 · brisk 1.1 · fast
+1.25, Pitch deep 0.85 · normal 1 · light 1.15 · squeaky 1.35, each tap a
+`menu.set("cloneTempo"|"clonePitch", value)` through the same chose→
+setSetting path as every chip. Shown ONLY while `cloneKnobsApply` (a
+speak-clone command is the live tts) — for every other voice the keys do
+nothing, so the rows would be dead weight; a QtQuick Column skips
+invisible children, so they collapse without a gap. An off-preset IPC
+value highlights the nearest chip, the Size row's rule. Verified by
+screenshot after a shell restart: rubick active shows both rows with
+brisk/normal selected (cloneTempo was 1.1), `useVoice off` hides them
+cleanly, rubick restored byte-identical, journal clean. Hand-copied to
+the installed clone.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

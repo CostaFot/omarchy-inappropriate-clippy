@@ -197,7 +197,9 @@ menu's Voice picker, and IPC `voice` tells your agent the whole story.
 Temper your expectations: the clone gets the accent and the cadence, not
 the soul. It's fun. It is not amazing.
 
-Tuning the clone: `cloneTempo` and `clonePitch` are settings like any other.
+Tuning the clone: `cloneTempo` and `clonePitch` are settings like any other,
+and the menu grows Tempo and Pitch rows (slow · normal · brisk · fast,
+deep · normal · light · squeaky) whenever a clone voice is the one talking.
 `set cloneTempo 1.1` and he talks a little faster, pitch untouched;
 `set clonePitch 0.85` and he's noticeably deeper, tempo untouched; both to
 `1.2` and you've built the chipmunk. They're applied to the line cache with
