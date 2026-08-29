@@ -1381,3 +1381,21 @@ reading 0 kills at the time, and the grave's epitaph "Death number 1.
 Back in 5 minutes" — then the file unset, him respawned, no QML
 warnings. README, AGENTS.md (the tally bullet, status), IDEAS.md (entry
 dropped), manifest 1.38.0; hand-copied to the installed clone.
+
+## Two sounds cut (v1.38.1, 2026-08-29)
+
+"where's all the wavs located? i want to clean the bad ones up" — a
+listen through `assets/sounds/` in the file manager, then two verdicts:
+`fall-mario.wav` ("not suited") and `slap-ahh.wav` ("not suited too").
+Both `git rm`'d and dropped from the hardcoded lists in `Clippy.qml`
+(`slapSounds` is now crack + punch, `flingSounds` is cartoon alone);
+the README table rows say "built-in two" / "built-in one", AGENTS.md's
+fling section names the one falling sound. Nothing else changes: the
+`slapSound`/`flingSound` contract (true / false / your own WAV path) is
+untouched and the random pick just draws from a shorter list. Verified
+on the installed clone after each cut with a shell restart, then an IPC
+`fling` and `slap`: sounds played, zero QML warnings. The two "can't
+load fall-mario.wav" lines that did show up were the shell hot-reloading
+the OLD compile against the already-deleted file, before the restart —
+the cached-compile gotcha, not a bug in the change. Manifest 1.38.1;
+hand-copied to the installed clone.

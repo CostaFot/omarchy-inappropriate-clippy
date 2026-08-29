@@ -228,8 +228,8 @@ Item {
     var dir = "file://" + pluginDir + "/assets/sounds/"
     return builtins.map(function (f) { return dir + f })
   }
-  readonly property var slapSounds: soundList(slapSoundSetting, ["slap-crack.wav", "slap-punch.wav", "slap-ahh.wav"])
-  readonly property var flingSounds: soundList(flingSoundSetting, ["fall-cartoon.wav", "fall-mario.wav"])
+  readonly property var slapSounds: soundList(slapSoundSetting, ["slap-crack.wav", "slap-punch.wav"])
+  readonly property var flingSounds: soundList(flingSoundSetting, ["fall-cartoon.wav"])
   // `tts`: false for silence (the default), true for espeak-ng — install that
   // yourself — or your own shell command as a string, handed every line on
   // stdin. The machinery lives next to the SoundBanks below.

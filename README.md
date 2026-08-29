@@ -84,8 +84,8 @@ into the bar himself, settings and all.
 | `quotesFile` | — | Path to your own quotes JSON, merged into his |
 | `slap` | `true` | `false` turns slapping off. Middle-click snoozes again |
 | `slapSwipe` | `true` | `false` keeps middle-click but stops the pointer-fling counting as a slap |
-| `slapSound` | `true` | `false` mutes it; a path to a WAV plays that instead of the built-in three |
-| `flingSound` | follows `slapSound` | The falling sound when he's thrown. `false`, or a path to a WAV instead of the built-in two |
+| `slapSound` | `true` | `false` mutes it; a path to a WAV plays that instead of the built-in two |
+| `flingSound` | follows `slapSound` | The falling sound when he's thrown. `false`, or a path to a WAV instead of the built-in one |
 | `slapsToKill` | `10` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |

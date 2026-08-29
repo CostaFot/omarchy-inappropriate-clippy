@@ -459,7 +459,7 @@ an optional `hint` (dim second line,
   `flingHold`), then is hidden with `Bubble.fadeMs` stretched to
   `flingEchoMs` (1500) so it trails off, then `flingEcho` restores
   `fadeMs` and runs `finishDeath()`. `revive()` resets `rotation` and
-  re-places him. One of two falling sounds (`assets/sounds/fall-*.wav`)
+  re-places him. The falling sound (`assets/sounds/fall-cartoon.wav`)
   plays through the same SoundBank component as the slaps; `flingSound`
   defaults to `slapSoundOn` so the menu's "Sounds" row mutes both. IPC
   `fling left|right`; `fling: false` makes a fast release a plain drop.
@@ -805,7 +805,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.38.0 (2026-08-29): everything above is live and
+Feature-complete at v1.38.1 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.
