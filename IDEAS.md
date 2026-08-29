@@ -3,14 +3,10 @@
 Pitched 2026-08-28, in rough order of payoff-to-effort. (The short list
 that used to live in AGENTS.md was merged in here 2026-08-29.)
 
-## Talk back to him
+## Talk-back leftovers
 
-SHIPPED as v1.35.0: IPC `listen` (mic → local voxtype transcription →
-`clippy-ai --reply` comeback) and `reply <text>`, exactly the "voxtype
-push-to-talk piped in" pitch — the unbeatable demo, live. The heckler
-framing survived into the prompt (combative, mocks questions he can't
-answer, never an oracle). What remains of this idea: the clipboard-roast
-verb (`wl-paste` as the input — explicit and one-shot, unlike the
+What v1.35.0's `listen`/`reply` didn't cover: a clipboard-roast verb
+(`wl-paste` as the input — explicit and one-shot, unlike the
 decided-against snooping) and a bindd spawning a walker/floating-terminal
 prompt for typed input without a terminal. Deferred from the build:
 ducking other audio while the mic records — if ever wanted, it's a
@@ -56,12 +52,12 @@ completion out loud — background plumbing shouldn't speak.
 
 ## Reactive lines without the agent
 
-First instance shipped as v1.34.0's crash reactions (`crashed` book key,
-fired off systemd-coredump's journal stream). What remains: battery, CPU,
-hour of the day: `shell.serviceFor("omarchy.notifications")` and the
-agents plugin state are reachable from a panel — see
-~/Work/omarchy-navbar-cat for how it listens to Hyprland/MPRIS/UPower. Or
-feed more of that into `clippy-ai`'s facts: notifications, the workspace.
+Same shape as the crash reactions (`crashed` book key, fired off the
+journal stream), for battery, CPU, hour of the day:
+`shell.serviceFor("omarchy.notifications")` and the agents plugin state
+are reachable from a panel — see ~/Work/omarchy-navbar-cat for how it
+listens to Hyprland/MPRIS/UPower. Or feed more of that into `clippy-ai`'s
+facts: notifications, the workspace.
 
 ## Window-class reactions
 
