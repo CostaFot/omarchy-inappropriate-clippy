@@ -766,6 +766,12 @@ clone of v1.20.0 again (the new-user tryout Costa asked for), so this fix
 was hand-copied into the installed dir; Costa re-rigged rubick from the
 picker himself and `duck true` was restored.
 
+Poverty notice (2026-08-29, v1.20.2): setup-voice's no-GPU fallback line now
+reads "no NVIDIA GPU with 6 GB to spare — you're poor. Get more RAM. Until
+then, the robot it is" — Costa's ask verbatim ("tell them they are poor and
+they need to get more RAM"; yes it's VRAM, the wrongness is part of the
+joke). One echo, no behavior change.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin

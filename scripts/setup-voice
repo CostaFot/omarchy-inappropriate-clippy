@@ -47,7 +47,7 @@ elif [ $# -eq 0 ]; then
     echo "NVIDIA GPU found — you get the shipped voice, a Rubick clone (--robot skips the GPU)"
   else
     BLESSED=1
-    echo "no NVIDIA GPU with 6 GB to spare — the robot it is"
+    echo "no NVIDIA GPU with 6 GB to spare — you're poor. Get more RAM. Until then, the robot it is"
   fi
 fi
 
