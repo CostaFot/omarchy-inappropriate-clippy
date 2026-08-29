@@ -114,7 +114,7 @@ Item {
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
-    ttsSaved: "", cloneTempo: 1, clonePitch: 1,
+    ttsSaved: "", cloneTempo: 1, clonePitch: 1, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true,
     greeted: false, leaderboard: "", leaderboardSaved: ""
@@ -224,12 +224,32 @@ Item {
   readonly property real cloneTempo: clamp(Number(setting("cloneTempo", 1)) || 1, 0.5, 2)
   readonly property real clonePitch: clamp(Number(setting("clonePitch", 1)) || 1, 0.5, 2)
   readonly property bool cloneKnobsApply: typeof ttsSetting === "string" && ttsSetting.indexOf("speak-clone") !== -1
-  // Ducking is always on: everyone else's audio drops to 80 % while he
-  // speaks and comes back after. No setting — Costa: "ALWAYS duck other
-  // audio", stupid simple (30 % was "kinda annoying"). Works with any
-  // engine: the snapshot is taken before the engine spawns (see
-  // scripts/duck).
-  readonly property real duckFactor: 0.8
+  // Ducking: every *other* audio stream drops to `duck` of its volume
+  // while he speaks and comes back after. Works with any engine: the
+  // snapshot is taken before the engine spawns (see scripts/duck).
+  // Hardwired 0.3 originally ("ALWAYS duck other audio"), softened to
+  // 0.8 ("kinda annoying"), then made a setting (v1.31.0): a 0-1
+  // fraction by IPC, on/off in the menu — the ratio is terminal/agent
+  // only, Costa's call. false (or 1) means no duck; the menu toggle
+  // parks a custom ratio in duckSaved so off/on round-trips it.
+  readonly property real duckFactor: {
+    var v = setting("duck", 0.8)
+    if (v === false) return 1
+    if (v === true) return 0.8
+    var n = Number(v)
+    return isNaN(n) ? 0.8 : clamp(n, 0, 1)
+  }
+  readonly property bool duckOn: duckFactor < 1
+  // The ttsSaved idiom a third time: off stashes an explicit ratio, on
+  // restores it (else the default), one setSettings write each way.
+  function setDuckEnabled(on) {
+    if (on) {
+      var stash = setting("duckSaved", undefined)
+      return setSettings({ duck: typeof stash === "number" ? stash : undefined, duckSaved: undefined })
+    }
+    var cur = setting("duck", undefined)
+    return setSettings({ duck: false, duckSaved: typeof cur === "number" ? cur : undefined })
+  }
   // An inline `set` doesn't remount us (keepLoaded — the binding just
   // updates), so a changed engine gets its failure warning back here, and
   // turning the voice off shuts him up instead of finishing the line. Two
@@ -1149,7 +1169,9 @@ Item {
     // replacement line finds `ducked` already true and skips straight to
     // the engine.
     duckRelease.stop() // a line inside the release window keeps the duck
-    if (!ducked) { ducked = true; duckRun("start"); return }
+    // Ducking off skips the fork entirely; a duck already held (the
+    // setting flipped mid-window) still gets its restore via duckStop.
+    if (!ducked && duckOn) { ducked = true; duckRun("start"); return }
     launchTts()
   }
   function launchTts() {
@@ -1853,6 +1875,31 @@ Item {
         if (root.lbCurlMissing) return "ok — but curl isn't installed, so nothing gets posted"
         return "ok — posting as " + handle + "; the graveyard: " + root.leaderboardUrl + " (`leaderboard` reports your rank)"
       }
+      if (key === "duck") {
+        // Booleans take the menu toggle's stash/restore path; a number is
+        // the fraction of volume other audio keeps while he talks (the
+        // ratio is IPC-only — no chips in the menu, Costa's call).
+        if (parsed === false) {
+          if (!root.setDuckEnabled(false)) return "can't write shell.json"
+          return "ok — ducking off; other audio keeps its volume while he talks (a custom ratio is parked in duckSaved; set duck true restores it)"
+        }
+        if (parsed === true) {
+          var duckStash = root.setting("duckSaved", undefined)
+          if (!root.setDuckEnabled(true)) return "can't write shell.json"
+          var restored = typeof duckStash === "number" ? root.clamp(duckStash, 0, 1) : 0.8
+          return "ok — other audio drops to " + Math.round(restored * 100) + "% of its volume while he talks"
+        }
+        if (parsed === undefined) {
+          if (!root.setSetting(key, undefined)) return "can't write shell.json"
+          return "ok — the default: other audio drops to 80% of its volume while he talks"
+        }
+        if (typeof parsed !== "number") return "no — duck is 0-1 (the fraction of volume other audio keeps while he talks), or true/false"
+        var duckVal = root.clamp(parsed, 0, 1)
+        if (!root.setSettings({ duck: duckVal, duckSaved: undefined })) return "can't write shell.json"
+        if (duckVal >= 1) return "ok — 1 is no duck; other audio keeps its volume while he talks"
+        return "ok — other audio drops to " + Math.round(duckVal * 100) + "% of its volume while he talks"
+          + (root.ttsOn ? "" : " (tts is off, so nothing talks yet)")
+      }
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
       if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
         if (typeof root.ttsSetting === "string") return "ok — but tts is a custom command, which ignores the built-in tuning (a clone bends with cloneTempo/clonePitch instead)"
@@ -1914,6 +1961,7 @@ Item {
       // off never throws away a custom command.
       else if (key === "tts" && (value === true || value === false)) root.setVoiceEnabled(value)
       else if (key === "graveyardOn") root.setLeaderboardEnabled(value)
+      else if (key === "duckOn") root.setDuckEnabled(value)
       else root.setSetting(key, value)
     }
   }

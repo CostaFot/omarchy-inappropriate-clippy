@@ -174,7 +174,9 @@ Design rules that outrank any single feature:
   `cloneKnobsApply`, since the keys do nothing for non-clone voices; a
   QtQuick Column skips invisible children so they collapse without a
   gap; an off-preset IPC value highlights the nearest chip, the Size
-  row's rule); `Entry` rows take an optional `hint` (dim second line,
+  row's rule); ●/○ `Entry` toggles for Sounds, "Duck other audio" (the
+duck ratio itself is IPC-only) and the leaderboard; `Entry` rows take
+an optional `hint` (dim second line,
   fontSize−2, only sized when non-empty). Footer: the dim tally, "· #N
   as <handle>" from `lbCache` when joined, and stranded-audience hints
   (setup-voice under Voice only in the `!needs && !custom` state; the
@@ -490,11 +492,19 @@ is one opaque string and ignores all three (clones bend via
 
 ## Ducking
 
-Always on, no setting — every *other* audio stream drops to 80 %
-(`duckFactor`, hardwired 0.8; was 0.3 until Costa found the dip "kinda
-annoying") while he speaks and is restored after
-("do not give option to duck other audio. ALWAYS duck other audio" —
-a stale inline `duck` key in shell.json is simply unread).
+On by default, configurable since v1.31.0 — every *other* audio stream
+drops to `duck` of its volume (default 0.8; the original hardwired 0.3
+was "kinda annoying", and "ALWAYS duck other audio" was Costa's own
+rule until he asked for the setting) while he speaks and is restored
+after. `duckFactor` derives from the key: false (or ≥1) means no duck
+and `startTts` skips the fork entirely (`duckOn`); a duck already held
+when the setting flips still gets its restore. The menu's "Duck other
+audio" ●/○ row is on/off only — the ratio is IPC-only ("the ratio
+should be done via terminal/agent only") — behind `setDuckEnabled(on)`,
+the ttsSaved idiom a third time: off parks an explicit ratio in
+`duckSaved`, on restores it; `set duck` takes booleans through the same
+path, clamps numbers 0-1, clears the stash on an explicit ratio, and
+refuses non-numbers.
 `scripts/duck` snapshots `pactl list sink-inputs` volumes (raw values,
 not the rounded percent — a 100 %+0.12 dB stream must restore exactly)
 into `$XDG_RUNTIME_DIR/clippy-duck` and scales each; the snapshot is

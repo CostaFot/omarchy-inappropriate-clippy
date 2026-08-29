@@ -249,6 +249,15 @@ PanelWindow {
         active: on
         onTapped: menu.set("slapSound", !on)
       }
+      // On/off only — the ratio is set duck <0-1> by IPC, no chips
+      // ("the ratio should be done via terminal/agent only").
+      Entry {
+        readonly property bool on: menu.clippy ? menu.clippy.duckOn : true
+        label: "Duck other audio"
+        mark: on ? "●" : "○"
+        active: on
+        onTapped: menu.set("duckOn", !on)
+      }
       Entry {
         readonly property bool on: menu.clippy ? menu.clippy.leaderboardOn : true
         label: "Online leaderboard"

@@ -89,6 +89,8 @@ into the bar himself, settings and all.
 | `ttsSaved` | — | Where a custom `tts` command parks while the voice is toggled off, so toggling doesn't lose it. Managed for you; `set ttsSaved unset` forgets it |
 | `cloneTempo` | `1` | How fast a cloned voice talks, pitch untouched — `1.1` is a little brisker, `0.9` slower (0.5–2). Instant: derived from the line cache, never the GPU |
 | `clonePitch` | `1` | Pitch for a cloned voice, tempo untouched — `0.85` deeper, `1.2` lighter (0.5–2). Set both knobs the same for the full chipmunk |
+| `duck` | `0.8` | The fraction of volume everything else keeps while he talks (0–1). `0.5` halves your music, `1` or `false` turns ducking off. The menu only toggles; the ratio is IPC-only |
+| `duckSaved` | — | Where a custom `duck` ratio parks while ducking is toggled off, so toggling doesn't lose it. Managed for you |
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
@@ -292,13 +294,16 @@ around `speak-clone`'s cache).
 When he talks, everything else steps back. The moment a line starts,
 every other audio stream dips to 80% of its volume — Spotify, a browser
 tab, a game, whatever's playing — and comes back the instant he's done.
-Voice assistants call this ducking; here it's not optional, because he
+Voice assistants call this ducking; he does it by default because he
 considers what he has to say more important than whatever you were
-listening to. It works with any engine, the espeak robot and the clones
-alike, only touches streams that were already playing when the line
-started (so his own voice is never ducked, and neither are his own
-sound effects), and volumes are snapshotted and restored exactly — if
-the shell dies mid-sentence, the next mount puts them back. A slap
+listening to. The `duck` setting is the fraction the others keep:
+`set duck 0.5` halves them, `set duck false` (or the menu's "Duck other
+audio" row) leaves your music alone. It works with any engine, the
+espeak robot and the clones alike, only touches streams that were
+already playing when the line started (so his own voice is never
+ducked, and neither are his own sound effects), and volumes are
+snapshotted and restored exactly — if the shell dies mid-sentence, the
+next mount puts them back. A slap
 reaction gets both, in order: the crack plays first at full volume, and
 the moment it ends he speaks the line — the voice never talks over its
 own sound effect.

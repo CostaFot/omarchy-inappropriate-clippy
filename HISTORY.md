@@ -893,3 +893,25 @@ is a −5.8 dB cut — then withdrew it ("ah no, it's ok"). README ducking
 paragraph re-toned ("steps back" instead of "shuts up"), AGENTS.md
 numbers updated; the old 30%→9%→1% compounding anecdote kept but dated
 to the 0.3 days. Hand-copied to the installed clone.
+
+Ducking made a setting (v1.31.0, 2026-08-29): Costa — "can we make
+ducking configurable?", then mid-build: "the menu should have duck
+on/off. the ratio should be done via terminal/agent only". His own
+"ALWAYS duck other audio" rule, retired by its author. `duck` key,
+default 0.8: the fraction of volume other audio keeps while he talks,
+clamped 0-1; false (or 1) is no duck and `startTts` skips the fork
+entirely (`duckOn`), a duck already held when the setting flips still
+restores. The menu grew a "Duck other audio" ●/○ row between Sounds
+and the leaderboard — on/off only, no chips — behind `setDuckEnabled`,
+the ttsSaved idiom a third time: off parks an explicit ratio in
+`duckSaved`, on restores it. `set duck` routes booleans through the
+same path, clears the stash on an explicit ratio, refuses non-numbers
+("no — duck is 0-1 …"), and every reply says the resulting percent.
+Costa's live entry had no stale `duck` key (the one AGENTS.md called
+"simply unread"), so the name was free. Verified live over IPC after a
+shell restart: 0.4 dipped real streams to exactly 40% mid-line, off
+spoke with volumes untouched and no snapshot file, true restored the
+parked 0.4, banana refused, unset back to 80%; menu row screenshots
+clean with the footer intact. README table rows + ducking paragraph,
+AGENTS.md Ducking section and menu row list rewritten. Hand-copied to
+the installed clone; box left on the 0.8 default.
