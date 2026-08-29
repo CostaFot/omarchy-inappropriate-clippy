@@ -92,9 +92,17 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 1. ~~**README removal line.**~~ Done in v1.40.2: `omarchy plugin remove
    costafot.clippy` sits under the install command.
-2. ~~**Tag/release.**~~ Done 2026-08-30. One release, moved onto every
-   fix commit the Yeet way (delete the old tag+release, tag the new SHA)
-   so the release always equals the commit under review.
+2. ~~**Tag/release.**~~ Done 2026-08-30. One release per pushed version,
+   never moved (v1.40.10 was moved onto each fix commit the Yeet way
+   until we read the marketplace's workflows: the bots validate HEAD of
+   `main` — `resolveSnapshot()` in `scripts/build-catalog.mjs` takes
+   `snapshotCommit || default branch`, and a `[Plugin]:` issue has no
+   snapshot commit — and approval re-inspects HEAD at approval time; the
+   release is only read via `releases/latest` as the listing's link, so a
+   fresh release per version keeps that link on the listed commit and
+   nothing depends on the tag). The bots re-run on `issues: opened |
+   edited | reopened | labeled | unlabeled` — an issue-body edit is the
+   re-run button; comments and pushes trigger nothing.
 3. ~~**Preview aspect.**~~ Done (2026-08-29): `preview.png` is 4267×2400
    like the other two; the 2400×260 strip is gone.
 3b. **Orphan screenshots.** Five tracked files under `assets/screenshots/`
@@ -163,5 +171,10 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   plugins on that night — `Text` elements without `textFormat` showing
   externally sourced strings — with `Text.PlainText` on all 13; issue
   edited to re-run the bots at each commit, release moved each time.
+  v1.40.11 (2026-08-30) swaps `preview.png` for the AI-generated
+  deckchair hero; the issue body's "The preview image is a screenshot
+  of the plugin" sentence must be edited to say it is an AI illustration
+  of the character under the same parody stance (that edit re-runs the
+  bots on the new HEAD).
   Next: maintainer applies `approved-and-verified`, then add the
   marketplace URL to README + docs/index.md.
