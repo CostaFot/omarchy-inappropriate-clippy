@@ -136,6 +136,12 @@ loader, like omarchy.menu — not to the bar widget.
   left|right` — the argument is required, IpcHandler has no optional
   params. `assets/sounds/slap-*.wav` are mono 44.1 kHz conversions of three
   mp3s Costa picked (SoundEffect wants WAV; `ffmpeg -ac 1 -ar 44100`).
+  Slapped lines are never spoken (v1.22.0, Costa: "i think it's funnier
+  with SFX") — `say()` grew a 4th `silent` arg landing in `bubble.silent`,
+  and `syncSpeech` treats a silent bubble as stop-speaking: the line shows,
+  any in-flight voice is cut, no duck fires, the crack plays clean. The
+  knockout (10th slap) still speaks its lastWords — a death, not a slap
+  reaction.
 - Dragging (in `Clippy.qml`): a 300 ms left press (`pressAndHoldInterval`)
   → `grab(x)`; `dragTo(x)` moves `actor.x` by the pointer's offset from
   `grabX` (the MouseArea rides on the actor, so the offset is how far the
@@ -231,7 +237,12 @@ loader, like omarchy.menu — not to the bar widget.
   `$XDG_RUNTIME_DIR/clippy-duck` and scales each; the snapshot is taken
   BEFORE the engine spawns, so his own stream is never in it — no
   name-matching against aplay/espeak/whatever a custom command runs, and
-  any engine works. Idempotent both ways under flock. QML side: `startTts`
+  any engine works. The one name-match (v1.22.0): sink-inputs with
+  `node.name = "quickshell"` are skipped — the slap/fall SoundEffects
+  play through quickshell itself, they're his audio not "other audio",
+  and a short SFX dying mid-duck poisoned its stream-restore memory to
+  a permanent 30 % (found live: the slap crack was quiet no matter what
+  until a live quickshell stream was pinned back to 100 %). Idempotent both ways under flock. QML side: `startTts`
   ducks first and the launch continues from `duckProc.onExited`
   (`launchTts` is the old body); the duck is held across a replacement
   line (`ducked` already true → straight to the engine, and the
@@ -853,6 +864,26 @@ shell.json still carries an OLD unwrapped string just sees the picker
 call it "custom" until they re-tap the chip — documented drift, nothing
 breaks. README's mid-word paragraph now covers all three engine shapes
 and hands hand-rolled pipelines the same wrap.
+
+Slap keeps its SFX (2026-08-29, v1.22.0): "since we got voice, it mutes
+the sound effects … i think it's funnier with SFX". Two causes, two
+fixes. (1) Slapped lines are silent now: `say()` grew a 4th `silent` arg
+→ `bubble.silent` (a plain property on the Bubble instance; the voice
+watches the bubble, so the flag must ride on it), `syncSpeech` treats a
+silent bubble as stop-speaking — the line shows, an in-flight voice line
+is still cut, no duck fires. Knockout/fling deaths still speak; Costa
+scoped the ask to the slap. (2) `scripts/duck` skips sink-inputs with
+`node.name = "quickshell"` — our own SoundEffects were being ducked to
+30 % under the voice line AND, worse, the short-lived SFX stream died
+mid-duck at some point and PipeWire stream-restore memorized quickshell
+at a permanent 30 % (caught live: the stream sat at 30 % with no duck
+active; healed by pinning it to 100 %, which slaps now confirmed audible
+— "wait slap is playng sorry"). The awk buffers each entry and flushes at
+the next `Sink Input` line because node.name sits in Properties, after
+Volume. Verified over IPC: slap → no aplay, no duck state, quickshell
+stream untouched; talk → Brave ducked 30 % and restored exactly,
+quickshell held 100 %, duck state clean, journal clean. Files hand-copied
+to the installed clone (still a real clone, not the symlink).
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

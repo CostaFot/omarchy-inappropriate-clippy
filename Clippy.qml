@@ -776,8 +776,10 @@ Item {
     schedule(rand(400, 1500))
   }
 
-  // `ai` marks an agent line; the bubble dresses it up.
-  function say(text, anim, ai) {
+  // `ai` marks an agent line; the bubble dresses it up. `silent` shows the
+  // line without speaking it — slap reactions, where the SFX is the joke
+  // and a voice line would duck it mid-crack.
+  function say(text, anim, ai, silent) {
     text = String(text || "").trim()
     if (text === "") return false
     if (mood === "dead" || mood === "dying" || mood === "reviving" || asleep) return false
@@ -785,6 +787,7 @@ Item {
     brain.stop()
     mood = "talking"
     bubble.ai = !!ai
+    bubble.silent = !!silent
     bubble.text = text
     bubble.shown = true
     var a = anim && sprite.has(anim) ? anim : randomFrom(talkAnims.filter(sprite.has))
@@ -837,6 +840,7 @@ Item {
     agentBrain.remember(lineKey === "knockedOut" ? "knocked him out with slaps" : "killed him")
     var words = randomLine(lineKey || "lastWords", "Fine. Fuck off then.")
     bubble.ai = false
+    bubble.silent = false
     bubble.text = words
     bubble.shown = true
     dieTimer.interval = 2500
@@ -894,6 +898,7 @@ Item {
     var q = randomQuoteFrom("epitaph")
     var text = (q ? q.text : "Here lies Clippy. You did this.").replace(/\{back\}/g, backText())
     bubble.ai = false
+    bubble.silent = false
     bubble.text = text
     bubble.shown = true
     bubbleTimer.interval = Math.max(4000, text.split(/\s+/).length * 450)
@@ -950,7 +955,7 @@ Item {
       return true
     }
     var q = randomQuoteFrom("slapped")
-    say(q ? q.text : "Ow.", q && q.anim ? q.anim : "Alert")
+    say(q ? q.text : "Ow.", q && q.anim ? q.anim : "Alert", false, true)
     return true
   }
 
@@ -985,7 +990,7 @@ Item {
   property string ttsQueued: ""  // spoken once the old process has died
   property bool ttsWarned: false // one journal line per engine, not per quote
   function syncSpeech() {
-    if (ttsOn && opened && bubble.shown && bubble.text !== "") {
+    if (ttsOn && opened && bubble.shown && bubble.text !== "" && !bubble.silent) {
       if (ttsLine === bubble.text && (ttsProc.running || ttsQueued !== "")) return
       ttsLine = bubble.text
       if (ttsProc.running) { ttsQueued = ttsLine; ttsProc.signal(15) }
@@ -1263,6 +1268,7 @@ Item {
     agentBrain.remember("threw him off the bar")
     playFlingSound()
     bubble.ai = false
+    bubble.silent = false
     bubble.text = randomLine("flung", "Noooooooooooooooooooooooooooo")
     bubble.shown = true
     var to = dir > 0 ? stage.width + actor.width : -actor.width * 2
@@ -1695,6 +1701,11 @@ Item {
 
       Bubble {
         id: bubble
+        // A silent line shows but is never spoken (slap reactions — the
+        // SFX is the joke). Lives on the bubble because the voice watches
+        // the bubble, not the say paths; a silent line landing mid-speech
+        // still cuts the old line (syncSpeech falls through to the stop).
+        property bool silent: false
         above: root.barBottom
         x: Math.round(root.clamp(stage.mouthX - width / 2, 4, Math.max(4, stage.width - width - 4)))
         y: root.barBottom ? (grave.shown ? grave.y : actor.y) - height - 2

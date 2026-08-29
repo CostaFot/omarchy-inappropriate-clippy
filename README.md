@@ -239,8 +239,11 @@ assistants call this ducking; here it's not optional, because he considers
 what he has to say more important than whatever you were listening to. It
 works with any engine, the espeak robot and the clones alike, only touches
 streams that were already playing when the line started (so his own voice
-is never ducked), and volumes are snapshotted and restored exactly — if
-the shell dies mid-sentence, the next mount puts them back.
+is never ducked, and neither are his own sound effects), and volumes are
+snapshotted and restored exactly — if the shell dies mid-sentence, the
+next mount puts them back. The one thing the voice never reads out is a
+slap reaction: the crack of the slap is the joke, so that line stays in
+the bubble and the SFX plays at full volume.
 
 Once voices are on disk, switching between them takes no terminal: the
 menu's Voice row is a picker showing everything installed — off, the espeak

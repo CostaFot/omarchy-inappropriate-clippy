@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
 # Audio ducking for the voice: lower every stream that is playing right now,
 # then put it back. The snapshot is taken BEFORE the TTS engine spawns, so
-# his own stream is never in it — no name-matching against aplay/espeak/
-# whatever a custom command runs.
+# the voice's own stream is never in it — no name-matching against aplay/
+# espeak/whatever a custom command runs. The one name that IS matched is
+# quickshell itself: the plugin's slap/fall SoundEffects play through it,
+# and they are his audio, not "other audio".
 #
 #   duck start [factor]   snapshot sink-input volumes, scale each by factor
 #   duck stop             restore the snapshot
@@ -30,17 +32,23 @@ start)
   tmp="$state.new"
   # A Volume line reads "front-left: 65829 / 100% / 0.12 dB, ..." — the raw
   # value is the integer sitting directly before a slash ("100% /" has the
-  # percent sign in the way, so it never matches).
+  # percent sign in the way, so it never matches). Quickshell's own streams
+  # (the slap/fall SoundEffects) are skipped — his sounds aren't "other
+  # audio", and a short SFX dying mid-duck would poison its stream-restore
+  # memory. node.name sits in the Properties block after Volume, so each
+  # entry is buffered and flushed at the next one.
   pactl list sink-inputs 2>/dev/null | awk '
-    /^Sink Input #/ { id = substr($3, 2) }
+    function flush() { if (id != "" && vols != "" && !skip) print id vols; id = ""; vols = ""; skip = 0 }
+    /^Sink Input #/ { flush(); id = substr($3, 2) }
+    /node\.name = "quickshell"/ { skip = 1 }
     /^\tVolume:/ {
       vols = ""; line = $0
       while (match(line, /[0-9]+ \//)) {
         vols = vols " " substr(line, RSTART, RLENGTH - 2)
         line = substr(line, RSTART + RLENGTH)
       }
-      if (id != "" && vols != "") { print id vols; id = "" }
-    }' > "$tmp"
+    }
+    END { flush() }' > "$tmp"
   if [[ ! -s $tmp ]]; then rm -f "$tmp"; exit 0; fi  # nothing playing
   while read -r id vols; do
     args=()
