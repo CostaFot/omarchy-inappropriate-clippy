@@ -983,13 +983,27 @@ docker Postgres (all four routes, case-folding, clamp 9999→50/-3→0,
 this box's sandbox, `make_server` works; production is gunicorn, doesn't
 care), and the plugin's FAILURE path live on the box: join while the
 server is down → one journal warn, deltas held (including a real slap of
-Costa's), backoff armed, verb honest about all of it. NOT yet verified:
-the happy path — Railway incident 8GL2R2U5 (deployment-init backlog, all
-regions) held both deploys QUEUED the whole session, so the live join
-flush, rank in verb/footer, and the testcosta cleanup (DELETE the test row
-over railway psql, then `set leaderboard unset` so Costa picks his real
-handle) are owed once the queue drains. Files hand-copied to the installed
-clone; the repo commit is this one.
+Costa's), backoff armed, verb honest about all of it. The happy path
+followed once Railway's incident 8GL2R2U5 (deployment-init backlog, all
+regions — it held both deploys QUEUED for ~75 min) drained: boot-time join
+fills lbCache with the rank at mount, 3 rapid `slap` + a `kill` over IPC
+landed exactly (server and verb both said #1, 1 kill, 3 slaps), the page
+scaled testcosta's stone to 1.0 against two 0.55 flat-liners, journal
+clean. The UA doorman verified in production: no-UA and Mozilla POSTs got
+the 403, the plugin UA passed, / and /api stayed open. Two fixes came out
+of the outage window: lbProc now collects stderr into the failure warn
+(exit 22 alone named nothing — the whole "plugin curl fails, terminal curl
+works" scare was just the edge being down/mid-swap, proven by running the
+identical command under systemd-run --user), and wakeUp() re-runs
+flushLeaderboard(true) — placed BEFORE the dead branch, kills matter to
+the graveyard, moods don't — because a remount while locked skips
+maybeBoot's flush (asleep returns first) and drops the old instance's
+retry timer, leaving the leaderboard dormant till the next slap; caught
+live when a `set` bounce remounted into Costa's locked session. Cleanup:
+the test rows (testcosta, uatest, envtest) were DELETEd over `railway ssh
+--service Postgres -- psql` (the DB is internal-only, no public proxy —
+keep it that way) and the handle unset, so the board ships empty and Costa
+picks his real handle himself. Files hand-copied to the installed clone.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

@@ -473,6 +473,11 @@ Item {
     console.log("clippy: awake after " + Math.round(away / 1000) + "s")
     var longEnough = away >= welcomeAfterMs
     if (longEnough) agentBrain.remember("came back after " + awayText(away) + " away")
+    // A remount while locked skips maybeBoot's flush (asleep returns first)
+    // and drops the retry timer with the old instance — so the wake re-runs
+    // it: held deltas land, lbCache refills, a dead server just backs off.
+    // Before the dead branch: the graveyard cares about kills, not moods.
+    if (leaderboardOn) flushLeaderboard(true)
     if (mood === "dead") {
       if (persisted.deadUntil > 0 && persisted.deadUntil <= Date.now()) revive()
       return
@@ -1260,6 +1265,7 @@ Item {
   Process {
     id: lbProc
     stdout: StdioCollector { id: lbOut }
+    stderr: StdioCollector { id: lbErr }
     onExited: function (code) {
       if (code === 0) {
         try { root.lbCache = JSON.parse(lbOut.text) } catch (e) { /* the POST still landed */ }
@@ -1274,7 +1280,8 @@ Item {
       root.lbSentKills = 0
       root.lbSentSlaps = 0
       if (root.lbFailures === 0)
-        console.warn("clippy: leaderboard POST failed (curl exit " + code + ") — holding the deltas, backing off")
+        console.warn("clippy: leaderboard POST failed (curl exit " + code + "): "
+          + String(lbErr.text).trim() + " — holding the deltas, backing off")
       root.lbFailures = Math.min(6, root.lbFailures + 1)
       lbRetry.interval = 30000 * Math.pow(2, root.lbFailures - 1)
       lbRetry.restart()
