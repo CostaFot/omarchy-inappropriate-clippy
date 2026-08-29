@@ -401,7 +401,7 @@ an optional `hint` (dim second line,
   Test without a mic: `reply "<text>"` over IPC.
 - `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut,
   dragged, dropped, flung, crashed, welcomeBack, epitaph, firstRun,
-  noBrain, heardNothing }` (the
+  noBrain, heardNothing, dodged }` (the
   key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
   merged in (same shape, or a bare array): quotes are two books, `book` +
@@ -438,7 +438,22 @@ an optional `hint` (dim second line,
   `slapsToKill` (10; 0 = never) inside `slapWindowMs` →
   `kill("knockedOut")`, and the knockout still speaks its lastWords — a
   death, not a slap reaction. `slap: false` restores the old
-  middle-click snooze. IPC `slap left|right`.
+  middle-click snooze. IPC `slap left|right`. The miss (v1.39.0):
+  `dodge` (0-1, default 0.1, flat — deliberately NOT scaled by the kill
+  tally; "just give him a small chance") is rolled first thing in
+  `slap()` after the state guards: a hit becomes `dodge(dir)` — a whoosh
+  (`assets/sounds/dodge-whoosh.wav`, Costa's pick, through a third
+  SoundBank; `dodgeSound` follows `slapSound` like `flingSound` does, so
+  the menu's Sounds row mutes all three) instead of the crack, no
+  `slapCount`, no leaderboard delta, no `slapTimes` entry (a miss can't
+  add up to a knockout), a 150 ms `shoveAnim` sidestep of 1.2× his
+  width the way the hand was going (flipped when the edge leaves no
+  room; `shoveAnim.duration` is set per use, 380 for the hit) with no
+  wobble, and a `dodged` book line that rides the same
+  silent-until-the-SFX-ends path as the slapped line (`slapWaitFx` +
+  `slapVoiceCap`). `slap()` returns "dodged" so IPC `slap` answers
+  `dodged` instead of `ok`; `agentBrain.remember()` gets "swung at him
+  and missed". `set dodge 1` is how to test it, `0`/`false` is off.
 - Dragging: a 300 ms left press (`pressAndHoldInterval`) → `grab(x)`;
   `dragTo(x)` moves `actor.x` by the pointer's offset from `grabX`,
   leaning `actor.rotation` against the pull with hand-rolled smoothing
@@ -805,7 +820,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.38.1 (2026-08-29): everything above is live and
+Feature-complete at v1.39.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

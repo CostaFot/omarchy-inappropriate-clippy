@@ -29,7 +29,9 @@ He's on the monitor Hyprland has focused, and follows you between screens.
 Left-click the bubble to dismiss it.
 
 Ten slaps inside six seconds and he's out cold, same as a kill; `slapsToKill`
-below changes the number (`0` and he takes it forever). However he goes, a
+below changes the number (`0` and he takes it forever). Now and then he
+slips one — one slap in ten misses, and a miss is a sidestep, a whoosh, a
+gloat and no score (`dodge` sets the odds). However he goes, a
 little tombstone marks the spot until he's back. The menu keeps score at
 the bottom — every slap, every death (well, since the last reboot; he
 forgives nothing, but the shell forgets). Snooze moved to the
@@ -87,6 +89,8 @@ into the bar himself, settings and all.
 | `slapSound` | `true` | `false` mutes it; a path to a WAV plays that instead of the built-in two |
 | `flingSound` | follows `slapSound` | The falling sound when he's thrown. `false`, or a path to a WAV instead of the built-in one |
 | `slapsToKill` | `10` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
+| `dodge` | `0.1` | Chance a slap misses — he sidesteps, gloats, and it counts for nothing. `0`/`false` = he takes every one, `1` = untouchable |
+| `dodgeSound` | follows `slapSound` | The whoosh when he slips one. `false`, or a path to a WAV instead of the built-in one |
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |
 | `crashLines` | `true` | When one of your programs dumps core he has a line about it, on the spot. `false` and crashes pass without comment |
@@ -110,8 +114,8 @@ into the bar himself, settings and all.
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
 `quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`,
-`flung`, `crashed`, `welcomeBack`, `epitaph`, `firstRun`, `noBrain` and
-`heardNothing` arrays. `{away}` in a `welcomeBack` line
+`flung`, `crashed`, `welcomeBack`, `epitaph`, `firstRun`, `noBrain`,
+`heardNothing` and `dodged` arrays. `{away}` in a `welcomeBack` line
 becomes how long you were gone ("47 minutes", "3 hours"); `{back}` in an
 `epitaph` becomes how long until he's back ("4 minutes", "never"); `{app}` in
 a `crashed` line becomes the program that just dumped core. `{kills}` and

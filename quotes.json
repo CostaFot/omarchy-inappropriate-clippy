@@ -211,5 +211,17 @@
   "firstRun": [
     { "text": "Welcome, you fuck. Set me up in the options — right-click me. Or ask your agent, eh?", "nsfw": true, "anim": "Wave" },
     { "text": "Welcome. Set me up in the options — right-click me, or ask your agent.", "nsfw": false, "anim": "Wave" }
+  ],
+  "dodged": [
+    { "text": "Missed. Your aim is as good as your typing.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Swing and a miss. Try it again with your eyes open.", "nsfw": false, "anim": "Wave" },
+    { "text": "Whiff. All that rage and nothing to show for it.", "nsfw": false, "anim": "Congratulate" },
+    { "text": "Too slow. I've dodged faster deadlines.", "nsfw": false, "anim": "Alert" },
+    { "text": "Nope. That one doesn't count.", "nsfw": false, "anim": "Writing" },
+    { "text": "Not today. Go slap something that can't move.", "nsfw": false, "anim": "GestureDown" },
+    { "text": "You couldn't hit water if you fell out of a boat.", "nsfw": false, "anim": "Explain" },
+    { "text": "Ha. Swing again, I've got all day.", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Fucking missed. Hands shaking already?", "nsfw": true, "anim": "Alert" },
+    { "text": "Missed, dickhead. Twenty years on a mouse and that's your best.", "nsfw": true, "anim": "GetTechy" }
   ]
 }

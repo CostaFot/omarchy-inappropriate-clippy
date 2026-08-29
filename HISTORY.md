@@ -1399,3 +1399,33 @@ load fall-mario.wav" lines that did show up were the shell hot-reloading
 the OLD compile against the already-deleted file, before the restart —
 the cached-compile gotcha, not a bug in the change. Manifest 1.38.1;
 hand-copied to the installed clone.
+
+## The dodge (v1.39.0, 2026-08-29)
+
+"any ideas?" → a pitch of the grudge as behavior (a growing miss chance
+scaled by the kill tally, plus a slower respawn) → "try the dodge one",
+then the scope cut before a line was written: "just give him a small
+chance to dodge. no need to add growing chance to miss". So it is one
+flat `dodge` key (0-1, default 0.1; true = always, false/0 = never, a
+non-number falls back), rolled first thing in `slap()` after the state
+guards. A miss is `dodge(dir)`: no crack, no `slapCount`, no leaderboard
+delta, no `slapTimes` entry — a miss can't add up to a knockout — a
+150 ms `shoveAnim` sidestep of 1.2× his width the way the hand was
+going (flipped when the edge leaves no room; `shoveAnim.duration` is
+now set per use, 380 for the hit) with no wobble, and a new `dodged`
+book key (ten lines, two nsfw, each with an anim). Mid-build: "play
+the whoosh-sfx.mp3 in downloads when he dodges" — ffmpeg'd to mono
+44.1 kHz s16le as `assets/sounds/dodge-whoosh.wav` (~1 s), a third
+SoundBank, a `dodgeSound` key that follows `slapSound` the way
+`flingSound` does (one menu toggle mutes all three), and the dodged
+line waits for the whoosh through the slap's own `slapWaitFx` path
+instead of speaking at once. `slap()` returns "dodged" so IPC `slap`
+answers `dodged` instead of `ok`; the help line says so;
+`agentBrain.remember()` gets "swung at him and missed". warm-voice
+iterates every key of the book, so the new lines pre-render on their
+own. Verified on the installed clone after a shell restart: `set dodge
+1` → two `slap`s answered `dodged` with `stats` still at 0 slaps and
+him in `talking`, the whoosh audible; `set dodge 0` → `ok` and 1 slap;
+`set dodge unset` → `get` back to 0.1; no QML warnings. README (table row, the slap
+paragraph, the quotesFile key list), AGENTS.md (slap bullet, key list,
+status), manifest 1.39.0; hand-copied to the installed clone.

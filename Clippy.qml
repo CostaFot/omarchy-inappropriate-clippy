@@ -108,18 +108,19 @@ Item {
   }
   // Every key a user (or their agent, over IPC `set`/`get`) may touch, with
   // its default. The README table and this list say the same thing.
-  // `flingSound` is null here because its default is whatever `slapSound` is.
+  // `flingSound`/`dodgeSound` are null here because their default is whatever
+  // `slapSound` is.
   readonly property var settingDefaults: ({
     size: 30, clean: false, intervalMin: 90, intervalMax: 420, speed: 40, restless: 0.3,
     respawn: 300, screen: "", quotesFile: "", promptFile: "",
-    slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
+    slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10, dodge: 0.1, dodgeSound: null,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
     ttsSaved: "", cloneTempo: 1, clonePitch: 1, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true,
     greeted: false, leaderboard: "", leaderboardSaved: ""
   })
-  function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
+  function defaultFor(key) { return key === "flingSound" || key === "dodgeSound" ? slapSoundSetting : settingDefaults[key] }
   function isSettingKey(key) { return Object.prototype.hasOwnProperty.call(settingDefaults, key) }
   // IPC hands us strings. true/false and numbers become themselves, "unset"
   // (or "default", or nothing) removes the key, anything else stays a string.
@@ -216,12 +217,21 @@ Item {
   readonly property real flingSpeed: 1.8 // px/ms at release
   readonly property bool slapSwipe: setting("slapSwipe", true) !== false
   readonly property int slapsToKill: Math.max(0, Number(setting("slapsToKill", 10)))
-  // `slapSound` / `flingSound`: true for the built-in ones, false for
-  // silence, or a path to a WAV of your own. `flingSound` follows
-  // `slapSound` unless set, so the menu's one toggle mutes both.
+  // Chance a slap misses (0-1). true = every one, false/0 = never; a
+  // non-number falls back to the default.
+  readonly property real dodgeChance: {
+    var v = setting("dodge", 0.1)
+    var n = v === true ? 1 : Number(v)
+    return clamp(isNaN(n) ? 0.1 : n, 0, 1)
+  }
+  // `slapSound` / `flingSound` / `dodgeSound`: true for the built-in ones,
+  // false for silence, or a path to a WAV of your own. `flingSound` and
+  // `dodgeSound` follow `slapSound` unless set, so the menu's one toggle
+  // mutes all three.
   readonly property var slapSoundSetting: setting("slapSound", true)
   readonly property bool slapSoundOn: slapSoundSetting !== false
   readonly property var flingSoundSetting: setting("flingSound", slapSoundOn)
+  readonly property var dodgeSoundSetting: setting("dodgeSound", slapSoundOn)
   function soundList(value, builtins) {
     if (value === false) return []
     if (typeof value === "string" && value !== "") return ["file://" + expandHome(value)]
@@ -230,6 +240,7 @@ Item {
   }
   readonly property var slapSounds: soundList(slapSoundSetting, ["slap-crack.wav", "slap-punch.wav"])
   readonly property var flingSounds: soundList(flingSoundSetting, ["fall-cartoon.wav"])
+  readonly property var dodgeSounds: soundList(dodgeSoundSetting, ["dodge-whoosh.wav"])
   // `tts`: false for silence (the default), true for espeak-ng — install that
   // yourself — or your own shell command as a string, handed every line on
   // stdin. The machinery lives next to the SoundBanks below.
@@ -598,7 +609,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun", "noBrain", "heardNothing"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun", "noBrain", "heardNothing", "dodged"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   function emptyBook() {
@@ -1358,6 +1369,7 @@ Item {
     if (!slapEnabled || dragging) return false
     if (mood === "dead" || mood === "dying" || mood === "reviving") return false
     dir = Number(dir) < 0 ? -1 : 1
+    if (dodgeChance > 0 && Math.random() < dodgeChance) return dodge(dir)
     var now = Date.now()
     var recent = slapTimes.filter(function (t) { return now - t < root.slapWindowMs })
     recent.push(now)
@@ -1376,6 +1388,7 @@ Item {
     var maxX = Math.max(0, stage.width - actor.width)
     var distance = rand(50, 120) * (spriteSize / 30)
     shoveAnim.stop()
+    shoveAnim.duration = 380
     shoveAnim.to = Math.round(clamp(actor.x + dir * distance, 0, maxX))
     shoveAnim.start()
     wobble.stop()
@@ -1393,8 +1406,42 @@ Item {
     return true
   }
 
+  // The miss (v1.39.0): a flat `dodge` chance per slap — a whoosh instead
+  // of the crack, no tally, no leaderboard delta, no entry in `slapTimes`
+  // (a miss can't add up to a knockout). He sidesteps the way the hand
+  // was going, fast (the shove's animation at a fraction of its duration,
+  // no wobble — a wobble is the hit landing), flipping to the other side
+  // when the edge leaves him no room, and gloats with a `dodged` line that
+  // waits for the whoosh the way the slapped line waits for the crack.
+  // Returns "dodged" so the IPC verb can say so.
+  function dodge(dir) {
+    agentBrain.remember("swung at him and missed")
+    var fx = playDodgeSound()
+    walkAnim.stop()
+    brain.stop()
+    bubbleTimer.stop()
+    bubble.shown = false
+    if (mood === "walking") sprite.exit()
+
+    var maxX = Math.max(0, stage.width - actor.width)
+    var distance = Math.round(actor.width * 1.2)
+    var to = Math.round(clamp(actor.x + dir * distance, 0, maxX))
+    if (Math.abs(to - actor.x) < distance / 2) to = Math.round(clamp(actor.x - dir * distance, 0, maxX))
+    shoveAnim.stop()
+    wobble.stop()
+    shoveAnim.duration = 150
+    shoveAnim.to = to
+    shoveAnim.start()
+
+    var q = randomQuoteFrom("dodged")
+    say(q ? q.text : "Missed.", q && q.anim ? q.anim : "GetAttention", false, !!fx)
+    if (fx) { slapWaitFx = fx; slapVoiceCap.restart() }
+    return "dodged"
+  }
+
   function playSlapSound() { return playOneOf(slapFx) }
   function playFlingSound() { playOneOf(flingFx) }
+  function playDodgeSound() { return playOneOf(dodgeFx) }
   function playOneOf(fxs) {
     if (!fxs.count) return null
     var fx = fxs.objectAt(Math.floor(Math.random() * fxs.count))
@@ -1404,7 +1451,8 @@ Item {
   }
 
   // One SoundEffect per file, decoded up front, so a slap lands without a
-  // load stall. The built-ins, or the one from `slapSound` / `flingSound`.
+  // load stall. The built-ins, or the one from `slapSound` / `flingSound` /
+  // `dodgeSound`.
   component SoundBank: Instantiator {
     delegate: SoundEffect {
       required property string modelData
@@ -1415,6 +1463,7 @@ Item {
   }
   SoundBank { id: slapFx; model: root.slapSounds }
   SoundBank { id: flingFx; model: root.flingSounds }
+  SoundBank { id: dodgeFx; model: root.dodgeSounds }
 
   // The slapped line waits for the crack: slap() shows it silent, and when
   // the chosen SoundEffect finishes — or slapVoiceCap gives up at 2 s (a
@@ -2000,7 +2049,7 @@ Item {
         "look — he screenshots his screen and your agent delivers the verdict in his bubble ~10 s later (needs ai true)",
         "listen — toggle the mic: he transcribes you locally (voxtype) and your agent fires the comeback back (needs ai true)",
         "reply <text> — the typed version of listen; same comeback, no mic",
-        "slap left|right — hit him; fling left|right — off the bar, fatal",
+        "slap left|right — hit him (answers dodged when he slips it); fling left|right — off the bar, fatal",
         "kill / respawn — the deliberate versions",
         "epitaph — poke the grave while he's dead",
         "snooze <minutes> / unsnooze",
@@ -2063,7 +2112,8 @@ Item {
     function slap(direction: string): string {
       var d = String(direction || "").toLowerCase()
       var dir = d === "left" ? -1 : (d === "right" ? 1 : (Math.random() < 0.5 ? -1 : 1))
-      return root.slap(dir) ? "ok" : (root.slapEnabled ? "not now" : "off")
+      var r = root.slap(dir)
+      return r === "dodged" ? "dodged" : r ? "ok" : (root.slapEnabled ? "not now" : "off")
     }
     // `fling left|right`: throws him off that end of the bar. Fatal.
     function fling(direction: string): string {
