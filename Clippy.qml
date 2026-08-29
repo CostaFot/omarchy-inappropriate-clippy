@@ -608,7 +608,21 @@ Item {
   // Brain: idle animation -> maybe walk -> idle ... ; quotes on their own timer.
   Timer { id: brain; repeat: false; onTriggered: root.decide() }
   Timer { id: quoteTimer; repeat: false; onTriggered: root.unprompted() }
-  Timer { id: bubbleTimer; repeat: false; onTriggered: root.hideBubble() }
+  // The word-count interval can lose the race with the voice — a clone pays
+  // ~2 s of synthesis on a novel line and speaks slower than 450 ms/word —
+  // and hiding the bubble cuts the engine mid-word (every deliberate hide
+  // relies on exactly that). So the timeout, and only the timeout, waits:
+  // while the voice is still on this line it re-arms in half-second beats,
+  // capped so a hung engine can't pin him in `talking` forever.
+  Timer {
+    id: bubbleTimer
+    repeat: false
+    property int holds: 0
+    onTriggered: {
+      if (root.speakingThisBubble() && holds < 60) { holds++; interval = 500; restart() }
+      else root.hideBubble()
+    }
+  }
   Timer { id: respawnTimer; repeat: false; onTriggered: if (!root.asleep) root.revive() }
   Timer {
     id: dieTimer
@@ -793,6 +807,7 @@ Item {
     var a = anim && sprite.has(anim) ? anim : randomFrom(talkAnims.filter(sprite.has))
     sprite.play(a || "Explain", false)
     var words = text.split(/\s+/).length
+    bubbleTimer.holds = 0
     bubbleTimer.interval = Math.max(4000, words * 450)
     bubbleTimer.restart()
     return true
@@ -901,6 +916,7 @@ Item {
     bubble.silent = false
     bubble.text = text
     bubble.shown = true
+    bubbleTimer.holds = 0
     bubbleTimer.interval = Math.max(4000, text.split(/\s+/).length * 450)
     bubbleTimer.restart()
     return true
@@ -996,6 +1012,15 @@ Item {
       if (ttsProc.running) { ttsQueued = ttsLine; ttsProc.signal(15) }
       else startTts()
     } else stopSpeaking()
+  }
+  // True while the voice is (or is about to be) speaking the current bubble
+  // line: engine running, a replacement parked, or the duck snapshot still
+  // in flight ahead of the launch. ttsLine alone isn't enough — a normal
+  // exit leaves it holding the finished line.
+  function speakingThisBubble() {
+    return ttsOn && !bubble.silent && ttsLine === bubble.text
+        && (ttsProc.running || ttsQueued !== ""
+            || (ducked && duckProc.running && duckProc.action === "start"))
   }
   // IPC replies that would say "ok" while the voice can't be heard say so.
   function ipcOkVoice() { return ttsOn && ttsNeedsEngine ? "ok — but silent: espeak-ng not installed" : "ok" }

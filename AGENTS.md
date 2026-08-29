@@ -885,6 +885,27 @@ stream untouched; talk → Brave ducked 30 % and restored exactly,
 quickshell held 100 %, duck state clean, journal clean. Files hand-copied
 to the installed clone (still a real clone, not the symlink).
 
+Long lines finish (2026-08-29, v1.22.1): "if the line is too long, clippy
+will cut off when saying it" — `bubbleTimer` runs at 450 ms/word (min
+4 s), and its `hideBubble()` cuts the voice (that's the deliberate-hide
+contract), but a clone pays ~2 s synthesis on a novel line (~11 s cold)
+and speaks slower than 450 ms/word, so long lines lost the race and died
+mid-sentence. Fix: the timeout — and ONLY the timeout — now waits for
+the voice: `bubbleTimer.onTriggered` checks `speakingThisBubble()` (ttsOn,
+not silent, `ttsLine === bubble.text`, and engine running / replacement
+queued / duck snapshot in flight — `ttsLine` alone is stale after a
+normal exit) and re-arms itself in 500 ms beats instead of hiding, capped
+at 60 holds (30 s past the word timeout) so a hung engine can't pin him
+in `talking` forever; the two arm sites (`say()`, `epitaph()`) zero
+`bubbleTimer.holds`. Every deliberate hide — click dismissal, `shutUp`,
+sleep, slap replacement — still cuts mid-word, untouched. No new
+settings. Verified live with the Rubick clone: a 38-word novel line
+(old timeout 17.1 s) took ~11.5 s synthesis + ~10.5 s playback, state
+held `talking` the whole way and flipped to idle within half a second
+of aplay exiting; short cached lines hide on the old schedule (the
+predicate is false at trigger time); journal clean. Hand-copied to the
+installed clone with the manifest bump.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin

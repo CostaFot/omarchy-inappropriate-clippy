@@ -231,6 +231,9 @@ pipeline in a trap so the kill reaches their aplay too. A hand-rolled
 command like the example above may finish its sentence anyway — bash sits
 on signals while a foreground pipeline runs. Borrow the wrap if that
 bothers you: `trap 'kill $! 2>/dev/null' TERM; <your pipeline> & wait $!`.
+The bubble's own timer is the one thing that waits its turn: a long line
+stays on screen until he's actually finished saying it, instead of
+cutting him off mid-rant.
 
 When he talks, everything else shuts up. The moment a line starts, every
 other audio stream drops to 30% — Spotify, a browser tab, a game,
