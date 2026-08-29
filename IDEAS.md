@@ -1,7 +1,6 @@
 # Ideas
 
-Pitched 2026-08-28, in rough order of payoff-to-effort. The tombstone was on
-this list and shipped the same day (v1.8.0, epitaph v1.9.0); AGENTS.md has a
+Pitched 2026-08-28, in rough order of payoff-to-effort. AGENTS.md has a
 shorter, older list too.
 
 ## Talk back to him
@@ -15,10 +14,9 @@ is also a heckler. The feature people would screenshot.
 
 ## Kill counter with a grudge
 
-Done in v1.10.0, the simple half: slap/kill totals persist across remounts
-and the menu shows them. The grudge half remains: expose `{kills}`/`{slaps}`
-placeholders to both books, same as `{away}`. "That's the ninth time you've
-murdered me. I keep a list."
+The tally exists (v1.10.0); the grudge half remains: expose
+`{kills}`/`{slaps}` placeholders to both books, same as `{away}`. "That's
+the ninth time you've murdered me. I keep a list."
 
 ## Window-class reactions
 
@@ -43,14 +41,6 @@ matching edge. Flings could carry across too: thrown off the left edge of
 the right monitor, he lands on the left one instead of dying. More work
 (the PanelWindow is per-screen), but multi-monitor is a common Omarchy
 setup and it doubles his territory.
-
-## Done
-
-- Tombstone + epitaph — a grave at the death spot, click it and he talks
-  back from beyond (v1.8.0, v1.9.0).
-- The global leaderboard — the graveyard page, exactly as pitched: one
-  headstone per handle, sized by kills. CostaFot/clippy-leaderboard on
-  Railway, opt-in `leaderboard` handle key (v1.24.0).
 
 ## Decided against
 
