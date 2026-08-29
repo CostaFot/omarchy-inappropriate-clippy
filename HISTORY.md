@@ -1169,3 +1169,59 @@ paragraph, scripting verbs, a SUPER SHIFT C V bindd + the press/release
 push-to-talk pair, key list), AGENTS.md (design rule, talk-back section,
 key list, status), IDEAS.md (marked shipped, remainder kept), manifest
 1.35.0.
+
+## More gremlin, fewer stats (v1.36.0, 2026-08-29)
+
+Costa, after living with the talk-back and the batches: "the AI answer
+generally focuses a bit too much on the system stats, on the windows, on
+the past history … we need to increase the absurdist, the Bill Burr like
+comeback … being antagonistic, being playful, being like a gremlin — it's
+not really an assistant." The diagnosis, from reading the prompt stack
+cold: the facts were the only material handed over and the batch rule
+"vary the target across the facts" quietly made every line a
+fact-assignment (3 facts in, 3 fact-jokes out); the rules policed the
+failure modes (no clock, not a report) but never asked for absurdity
+positively — Bill Burr was named as delivery, never as joke structure
+(the actual Burr move: one tiny real thing spiraled into a
+disproportionate rant); and in reply mode the user's words were one line
+against ~20 lines of "cross-reference only" facts, so sheer token weight
+dragged attention back to stats. Costa's calls, asked explicitly: one
+fact max per line then spiral (no fact-free license — that way lies
+generic slop), thin the reply context rather than just demote it, all
+three modes. Two mid-plan additions: the fuck-level swear escalation goes
+in EVERY non-clean prompt ("sonnet especially, it really needs
+prompting"), not batch-only as v1.32/v1.35 had deliberately left it; and
+the roleplay frame must be evident up front ("hey, you're roleplaying as
+Clippy … the user wants that"). Shipped, all in scripts/clippy-ai: the
+system prompt now OPENS with the consent frame (it survives --clean —
+it's the frame, not the register), names escalation as the signature
+move ("seize one small real thing and blow it wildly out of proportion,
+so that by the end of the sentence it is somehow about their whole
+life") and the character as a petty gremlin, not an assistant
+("helpfulness disgusts you"); the batch rules got the spiral pass
+(exactly ONE fact per line as launchpad, a line that reports a fact is a
+failure, "vary across the facts" cut down to "never spend two lines on
+the same fact"); the reply prompt got an escalate rule and the look got
+"cite it, then escalate — the disproportion is the joke"; a `minimal`
+flag thins reply context to focused window + track (no time, no window
+list, no extremes, no usage — a burning stat like "7 crashes today"
+outshines any insult), visible via `--reply x --context`. The first cut
+kept ONE shame draw as seasoning, until a live "hello" came back
+answered from Downloads ("the only thing ringing is grossman.wav for
+the 62nd fucking time" — a good line, wrong feeling): Costa flagged
+"it answers from my folders", and the draw was cut on his call — a
+comeback that rummages folders reads as him ignoring them, and the
+right-now facts plus their words are the whole exchange.
+The swear quota went mode-aware — and the first sonnet pass ignored the
+plain "must" (zero swears in a batch), so both variants got a
+check-before-you-answer clause ("if none of them does, rewrite one until
+it does"), after which sonnet swore in every mode tested. Verified with
+real calls: batch "Thirty-one screenshots in Pictures, not one photo of
+a person. That folder is a fucking crime scene."; reply to "you are
+useless" → "Useless? You're building a repo about me and can't even
+fucking commit it — I'm your whole personality now."; the look read the
+very plan file on screen and called its Costa-judges-last step "a
+fucking QA gate made of nothing". README (talk-back disclosure now
+names the slim fact cut that rides along with the transcript), AGENTS.md
+(facts tiers, prompt-rules paragraph, talk-back section, status),
+manifest 1.36.0; hand-copied to the installed clone.

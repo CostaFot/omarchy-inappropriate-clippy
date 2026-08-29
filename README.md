@@ -168,7 +168,8 @@ after 15 seconds. He is combative about it: tell him to shut up and he
 squares up, ask him a question and he mocks you for asking a paperclip. The
 audio is transcribed **on your machine** by [voxtype](https://voxtype.io)
 (which ships with Omarchy) and the recording is deleted right after — only
-the transcribed text goes to your agent, and the mic only ever opens on your
+the transcribed text goes to your agent (with a slim cut of the usual
+facts: just the focused window and what's playing), and the mic only ever opens on your
 explicit gesture, same rule as the screenshot. Say nothing and he notices
 that too, without spending a call on it. No mic handy? `omarchy-shell
 costafot.clippy reply "your words"` is the same fight, typed. Without an

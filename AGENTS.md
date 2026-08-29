@@ -262,20 +262,36 @@ an optional `hint` (dim second line,
   commit drought in `~/Work`, most-typed history command, trash, loose
   `$HOME` files, workspace and browser-tab counts) and `shuf -n 3` of
   the survivors go in — so `--context` is one random draw and batches
-  don't converge on one stat. All handed over as text,
+  don't converge on one stat. A `--reply` call thins all of it
+  (v1.36.0): no time, no window list, no extremes, no usage, no shame
+  pool — just the focused window and the track, the right-now facts, so
+  their words are most of what the model reads (a shame draw was in the
+  first cut, until a "hello" got answered from Downloads — a comeback
+  that rummages folders reads as him ignoring them;
+  `--reply x --context` shows the thin set).
+  All handed over as text,
   tool-less, from `$TMPDIR` so no CLAUDE.md is picked up. Twelve random
   lines from `quotes.json` (+ `--quotes <quotesFile>`, nsfw dropped under
   `--clean`) go in the system prompt as register examples; the prompt
-  asks for "jabs" under explicit rules (accusation not description, hunt
-  the stupid little detail, one short sentence, numbers only as setups,
-  no "champ"/Twitch-isms, and the image mode's no-clock-jokes discard
-  rule now in the batch prompt too). The
-  delivery is named as "the Bill Burr school" — exasperated, escalating —
-  with an explicit not-an-impression fence (no catchphrases, no crowd
-  work), and swearing is prescriptive, not just permitted: batches must
-  land at least one "fuck-level, not damn-level" line (sonnet stays at
-  "damn" under mere permission), the one-jab image mode drops that
-  quota, and `--clean` replaces the whole tone line.
+  asks for "jabs" under explicit rules (v1.36.0 — the spiral pass:
+  exactly ONE fact per line as the launchpad, the joke is the
+  escalation built on it, a line that reports a fact is a failure;
+  hunt the stupid little detail, one short sentence, no
+  "champ"/Twitch-isms, the no-clock-jokes discard rule in every mode).
+  The system prompt OPENS with the roleplay/consent frame ("installed
+  this bit on purpose … pulling punches is breaking character" — it
+  used to sit mid-prompt in `tone`; it survives `--clean`, being the
+  frame, not the register), names escalation as the signature move (one
+  small real thing blown wildly out of proportion until it is about
+  their whole life — the Bill Burr school, still fenced: not an
+  impression, no catchphrases, no crowd work) and the character as a
+  petty gremlin, not an assistant. Swearing is prescriptive in EVERY
+  non-clean mode (v1.36.0 — it was batch-only, and sonnet stayed
+  swearless even under the batch "must"): batches must land at least
+  one "fuck-level, not damn-level" line, one-jab calls (look/reply)
+  must carry one in their single line, both with a
+  check-before-you-answer clause (that clause is what finally moved
+  sonnet), and `--clean` replaces the whole tone line.
   `--context` prints the facts, `--prompt` the whole prompt. Output is a
   JSON array parsed three ways in turn: as JSON; else every JSON string
   literal in the text (claude sometimes emits the array with no commas);
@@ -326,10 +342,13 @@ an optional `hint` (dim second line,
   hallucinates "." on silence) gets a `heardNothing` book line and no
   agent call; a real one goes to `clippy-ai --reply <text> --said
   <bubble.text>` (his last line survives bubble hide) — one combative
-  comeback, image-mode-shaped prompt (fight rules, mocks questions
-  instead of answering — the heckler, never an oracle; no swear quota,
-  and the whole non-clean prompt carries the roleplay/consent framing in
-  `tone`), said agent-dressed. IPC `reply` enters the same back half
+  comeback, image-mode-shaped prompt (fight rules, an escalate rule —
+  the comeback ends bigger and stupider than the insult started — and
+  it mocks questions instead of answering: the heckler, never an
+  oracle; the one-jab swear quota applies since v1.36.0, and the
+  roleplay/consent framing now opens the system prompt itself), said
+  agent-dressed, over the thinned reply context (focused window and
+  track only). IPC `reply` enters the same back half
   (`sendReply()`) without the mic. Rules of the machinery: he never
   speaks while the mic is live (`say()` refuses on `listening` — his TTS
   must not transcribe itself; starting a listen hides the bubble first);
@@ -750,7 +769,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.35.0 (2026-08-29): everything above is live and
+Feature-complete at v1.36.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

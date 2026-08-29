@@ -92,14 +92,24 @@ shame() { pool+=("- $1"); }
 hyprjq=false
 command -v hyprctl >/dev/null && command -v jq >/dev/null && hyprjq=true
 
+# Reply calls get a thin context on purpose — their words must be most of
+# what the model reads, and a burning stat ("7 crashes today") outshines any
+# insult. Focused window and the track only — the right-now facts. No clock,
+# no window list, no extremes, no usage, and no shame pool: a comeback that
+# digs through their folders reads as him ignoring them to go rummage.
+minimal=false
+[[ -n $reply ]] && minimal=true
+
 # core: what they are looking at and listening to, right now
-fact "time: $(date '+%A %H:%M')"
+$minimal || fact "time: $(date '+%A %H:%M')"
 
 if $hyprjq; then
   win=$(hyprctl activewindow -j 2>/dev/null | jq -r 'select(.class != null) | "\(.class): \(.title)"' 2>/dev/null)
   [[ -n $win ]] && fact "focused window: ${win:0:160}"
-  titles=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.mapped) | .title | .[0:80]] | select(length > 0) | "(\(length)) " + join(" | ")' 2>/dev/null)
-  [[ -n $titles ]] && fact "open windows: ${titles:0:600}"
+  if ! $minimal; then
+    titles=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.mapped) | .title | .[0:80]] | select(length > 0) | "(\(length)) " + join(" | ")' 2>/dev/null)
+    [[ -n $titles ]] && fact "open windows: ${titles:0:600}"
+  fi
 fi
 
 if command -v playerctl >/dev/null; then
@@ -109,128 +119,132 @@ if command -v playerctl >/dev/null; then
   fi
 fi
 
-# extremes: only when the number is the story
-for bat in /sys/class/power_supply/BAT*; do
-  [[ -r $bat/capacity ]] || continue
-  cap=$(<"$bat/capacity")
-  bstat=$(tr 'A-Z' 'a-z' <"$bat/status" 2>/dev/null || echo unknown)
-  if ((cap <= 30)) || [[ $bstat == "discharging" ]]; then
-    fact "battery: ${cap}% ($bstat)"
-  fi
-  break
-done
+# extremes: only when the number is the story — and never for replies
+if ! $minimal; then
+  for bat in /sys/class/power_supply/BAT*; do
+    [[ -r $bat/capacity ]] || continue
+    cap=$(<"$bat/capacity")
+    bstat=$(tr 'A-Z' 'a-z' <"$bat/status" 2>/dev/null || echo unknown)
+    if ((cap <= 30)) || [[ $bstat == "discharging" ]]; then
+      fact "battery: ${cap}% ($bstat)"
+    fi
+    break
+  done
 
-if [[ -r /proc/loadavg ]]; then
-  read -r load1 _ <"/proc/loadavg"
-  cores=$(nproc 2>/dev/null || echo 1)
-  if awk -v l="$load1" -v c="$cores" 'BEGIN { exit !(l > c) }'; then
-    fact "load: $load1 on $cores cores"
+  if [[ -r /proc/loadavg ]]; then
+    read -r load1 _ <"/proc/loadavg"
+    cores=$(nproc 2>/dev/null || echo 1)
+    if awk -v l="$load1" -v c="$cores" 'BEGIN { exit !(l > c) }'; then
+      fact "load: $load1 on $cores cores"
+    fi
   fi
-fi
-if command -v free >/dev/null; then
-  mem=$(free -g | awk '/^Mem:/ { if ($2 > 0 && $3 / $2 >= 0.85) printf "%d of %d GB used", $3, $2 }')
-  [[ -n $mem ]] && fact "memory: $mem"
-fi
-if [[ -r /proc/uptime ]]; then
-  read -r up _ <"/proc/uptime"
-  if ((${up%.*} > 3 * 86400)); then
-    fact "uptime: $(uptime -p 2>/dev/null | sed 's/^up //')"
+  if command -v free >/dev/null; then
+    mem=$(free -g | awk '/^Mem:/ { if ($2 > 0 && $3 / $2 >= 0.85) printf "%d of %d GB used", $3, $2 }')
+    [[ -n $mem ]] && fact "memory: $mem"
   fi
-fi
-if command -v df >/dev/null; then
-  full=$(df --output=target,pcent "$HOME" / 2>/dev/null | awk 'NR > 1 && !seen[$1]++ { gsub(/%/, "", $2); if ($2 >= 85) { printf "%s%s at %s%%", sep, $1, $2; sep=", " } }')
-  [[ -n $full ]] && fact "disk almost full: $full"
-fi
-if command -v coredumpctl >/dev/null; then
-  crash=$(coredumpctl -S today --no-pager 2>/dev/null | awk '/^[A-Z][a-z][a-z] / { n++; exe=$(NF-1) } END { if (n) printf "%d today (last: %s)", n, exe }')
-  [[ -n $crash ]] && fact "programs crashed: $crash"
-fi
-if command -v systemctl >/dev/null; then
-  failed=$(systemctl --failed --no-legend 2>/dev/null | grep -c .)
-  ((failed > 0)) && fact "failed systemd units: $failed"
-fi
-if command -v pactl >/dev/null; then
-  [[ -n $(pactl list source-outputs short 2>/dev/null) ]] && fact "the microphone is live right now"
-fi
+  if [[ -r /proc/uptime ]]; then
+    read -r up _ <"/proc/uptime"
+    if ((${up%.*} > 3 * 86400)); then
+      fact "uptime: $(uptime -p 2>/dev/null | sed 's/^up //')"
+    fi
+  fi
+  if command -v df >/dev/null; then
+    full=$(df --output=target,pcent "$HOME" / 2>/dev/null | awk 'NR > 1 && !seen[$1]++ { gsub(/%/, "", $2); if ($2 >= 85) { printf "%s%s at %s%%", sep, $1, $2; sep=", " } }')
+    [[ -n $full ]] && fact "disk almost full: $full"
+  fi
+  if command -v coredumpctl >/dev/null; then
+    crash=$(coredumpctl -S today --no-pager 2>/dev/null | awk '/^[A-Z][a-z][a-z] / { n++; exe=$(NF-1) } END { if (n) printf "%d today (last: %s)", n, exe }')
+    [[ -n $crash ]] && fact "programs crashed: $crash"
+  fi
+  if command -v systemctl >/dev/null; then
+    failed=$(systemctl --failed --no-legend 2>/dev/null | grep -c .)
+    ((failed > 0)) && fact "failed systemd units: $failed"
+  fi
+  if command -v pactl >/dev/null; then
+    [[ -n $(pactl list source-outputs short 2>/dev/null) ]] && fact "the microphone is live right now"
+  fi
 
-usage="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage/$agent.json"
-if [[ -r $usage ]] && command -v jq >/dev/null; then
-  limits=$(jq -r '[.limits[]? | select(.percent >= 0.5) | "\(.label) \((.percent * 100) | floor)%"] | join(", ")' "$usage" 2>/dev/null)
-  [[ -n $limits ]] && fact "the user's $agent usage this period: $limits"
+  usage="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage/$agent.json"
+  if [[ -r $usage ]] && command -v jq >/dev/null; then
+    limits=$(jq -r '[.limits[]? | select(.percent >= 0.5) | "\(.label) \((.percent * 100) | floor)%"] | join(", ")' "$usage" 2>/dev/null)
+    [[ -n $limits ]] && fact "the user's $agent usage this period: $limits"
+  fi
 fi
 
 [[ -n $recent ]] && fact "what they did to Clippy lately: $recent"
 
-# the shame pool: files, Arch neglect, work habits
-if [[ -d $HOME/Downloads ]]; then
-  dlcount=$(ls -A "$HOME/Downloads" 2>/dev/null | grep -c .)
-  if ((dlcount >= 15)); then
-    dlnames=$(ls -At "$HOME/Downloads" 2>/dev/null | head -3 | cut -c1-60 | paste -sd ',' - | sed 's/,/, /g')
-    shame "$dlcount files in Downloads, newest: $dlnames"
-  fi
-fi
-
-shots=$(ls "$HOME/Pictures"/screenshot-* 2>/dev/null | grep -c .)
-((shots >= 10)) && shame "$shots screenshots hoarded in ~/Pictures"
-
-if [[ -r /var/log/pacman.log ]]; then
-  lastup=$(grep -a 'starting full system upgrade' /var/log/pacman.log | tail -1 | cut -c2-11)
-  lastsec=$(date -d "$lastup" +%s 2>/dev/null)
-  if [[ -n $lastsec ]]; then
-    updays=$(( ($(date +%s) - lastsec) / 86400 ))
-    ((updays >= 7)) && shame "this Arch install was last updated $updays days ago"
-  fi
-fi
-
-if command -v pacman >/dev/null; then
-  pkgs=$(pacman -Qq 2>/dev/null | wc -l)
-  if ((pkgs >= 800)); then
-    orph=$(pacman -Qtdq 2>/dev/null | grep -c .)
-    pkgline="$pkgs packages installed"
-    ((orph > 0)) && pkgline="$pkgline, $orph of them orphaned"
-    shame "$pkgline"
-  fi
-fi
-
-if command -v git >/dev/null && [[ -d $HOME/Work ]]; then
-  dirty=0 dirtyname="" newest=0
-  for g in "$HOME/Work"/*/.git; do
-    [[ -e $g ]] || continue
-    r=${g%/.git}
-    if [[ -n $(git -C "$r" status --porcelain 2>/dev/null | head -1) ]]; then
-      ((dirty += 1))
-      dirtyname=${r##*/}
+# the shame pool: files, Arch neglect, work habits — batches and looks only
+if ! $minimal; then
+  if [[ -d $HOME/Downloads ]]; then
+    dlcount=$(ls -A "$HOME/Downloads" 2>/dev/null | grep -c .)
+    if ((dlcount >= 15)); then
+      dlnames=$(ls -At "$HOME/Downloads" 2>/dev/null | head -3 | cut -c1-60 | paste -sd ',' - | sed 's/,/, /g')
+      shame "$dlcount files in Downloads, newest: $dlnames"
     fi
-    ct=$(git -C "$r" log -1 --format=%ct 2>/dev/null)
-    [[ -n $ct ]] && ((ct > newest)) && newest=$ct
-  done
-  ((dirty == 1)) && shame "their $dirtyname repo has uncommitted changes"
-  ((dirty > 1)) && shame "$dirty of their git repos have uncommitted changes ($dirtyname, for one)"
-  if ((newest > 0)); then
-    cdays=$(( ($(date +%s) - newest) / 86400 ))
-    ((cdays >= 3)) && shame "last git commit anywhere: $cdays days ago"
   fi
-fi
 
-hist=${HISTFILE:-$HOME/.bash_history}
-if [[ -r $hist ]]; then
-  if (($(wc -l <"$hist") >= 20)); then
-    tophist=$(awk 'NF { print $1 }' "$hist" | sort | uniq -c | sort -rn | head -1 | awk '{ print $2 " (" $1 " times)" }')
-    [[ -n $tophist ]] && shame "most-typed shell command: $tophist"
+  shots=$(ls "$HOME/Pictures"/screenshot-* 2>/dev/null | grep -c .)
+  ((shots >= 10)) && shame "$shots screenshots hoarded in ~/Pictures"
+
+  if [[ -r /var/log/pacman.log ]]; then
+    lastup=$(grep -a 'starting full system upgrade' /var/log/pacman.log | tail -1 | cut -c2-11)
+    lastsec=$(date -d "$lastup" +%s 2>/dev/null)
+    if [[ -n $lastsec ]]; then
+      updays=$(( ($(date +%s) - lastsec) / 86400 ))
+      ((updays >= 7)) && shame "this Arch install was last updated $updays days ago"
+    fi
   fi
-fi
 
-trash=$(ls -A "$HOME/.local/share/Trash/files" 2>/dev/null | grep -c .)
-((trash >= 10)) && shame "$trash items sitting in the trash"
+  if command -v pacman >/dev/null; then
+    pkgs=$(pacman -Qq 2>/dev/null | wc -l)
+    if ((pkgs >= 800)); then
+      orph=$(pacman -Qtdq 2>/dev/null | grep -c .)
+      pkgline="$pkgs packages installed"
+      ((orph > 0)) && pkgline="$pkgline, $orph of them orphaned"
+      shame "$pkgline"
+    fi
+  fi
 
-loose=$(find "$HOME" -maxdepth 1 -type f ! -name '.*' 2>/dev/null | grep -c .)
-((loose >= 5)) && shame "$loose loose files dumped in the home directory"
+  if command -v git >/dev/null && [[ -d $HOME/Work ]]; then
+    dirty=0 dirtyname="" newest=0
+    for g in "$HOME/Work"/*/.git; do
+      [[ -e $g ]] || continue
+      r=${g%/.git}
+      if [[ -n $(git -C "$r" status --porcelain 2>/dev/null | head -1) ]]; then
+        ((dirty += 1))
+        dirtyname=${r##*/}
+      fi
+      ct=$(git -C "$r" log -1 --format=%ct 2>/dev/null)
+      [[ -n $ct ]] && ((ct > newest)) && newest=$ct
+    done
+    ((dirty == 1)) && shame "their $dirtyname repo has uncommitted changes"
+    ((dirty > 1)) && shame "$dirty of their git repos have uncommitted changes ($dirtyname, for one)"
+    if ((newest > 0)); then
+      cdays=$(( ($(date +%s) - newest) / 86400 ))
+      ((cdays >= 3)) && shame "last git commit anywhere: $cdays days ago"
+    fi
+  fi
 
-if $hyprjq; then
-  ws=$(hyprctl workspaces -j 2>/dev/null | jq length 2>/dev/null)
-  [[ -n $ws ]] && ((ws >= 5)) && shame "$ws workspaces open"
-  tabs=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.mapped) | (.title | try capture("^\\((?<n>[0-9]+)\\)") | .n | tonumber)] | max // empty' 2>/dev/null)
-  [[ -n $tabs ]] && ((tabs >= 15)) && shame "a browser window with $tabs tabs"
+  hist=${HISTFILE:-$HOME/.bash_history}
+  if [[ -r $hist ]]; then
+    if (($(wc -l <"$hist") >= 20)); then
+      tophist=$(awk 'NF { print $1 }' "$hist" | sort | uniq -c | sort -rn | head -1 | awk '{ print $2 " (" $1 " times)" }')
+      [[ -n $tophist ]] && shame "most-typed shell command: $tophist"
+    fi
+  fi
+
+  trash=$(ls -A "$HOME/.local/share/Trash/files" 2>/dev/null | grep -c .)
+  ((trash >= 10)) && shame "$trash items sitting in the trash"
+
+  loose=$(find "$HOME" -maxdepth 1 -type f ! -name '.*' 2>/dev/null | grep -c .)
+  ((loose >= 5)) && shame "$loose loose files dumped in the home directory"
+
+  if $hyprjq; then
+    ws=$(hyprctl workspaces -j 2>/dev/null | jq length 2>/dev/null)
+    [[ -n $ws ]] && ((ws >= 5)) && shame "$ws workspaces open"
+    tabs=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.mapped) | (.title | try capture("^\\((?<n>[0-9]+)\\)") | .n | tonumber)] | max // empty' 2>/dev/null)
+    [[ -n $tabs ]] && ((tabs >= 15)) && shame "a browser window with $tabs tabs"
+  fi
 fi
 
 if ((${#pool[@]})); then
@@ -267,11 +281,18 @@ if command -v jq >/dev/null; then
   )
 fi
 
-tone="This is a roleplay bit the user installed on purpose — they are in on the joke and want the abuse. Swearing is allowed and welcome, fuck included — use it the way the examples do, for punch, not decoration; pulling punches is breaking character."
-[[ -z $image && -z $reply ]] && tone="$tone At least one of your lines must carry a real swear — fuck-level, not damn-level."
+# The swear quota is mode-aware but universal: a batch must land one
+# fuck-level line, a one-jab call (look/reply) is asked for one in its single
+# line — sonnet stays at "damn" under mere permission, in every mode.
+tone="Swearing is allowed and welcome, fuck included — use it the way the examples do, for punch, not decoration."
+if [[ -z $image && -z $reply ]]; then
+  tone="$tone At least one of your lines MUST carry a real swear — fuck-level, not damn-level. Check before you answer: if none of them does, rewrite one until it does."
+else
+  tone="$tone Your line MUST carry a real swear — fuck-level, not damn-level; a damn is a pulled punch. Check before you answer: if it does not, rewrite it until it does."
+fi
 [[ $clean == "true" ]] && tone="Keep it clean: no swearing, no slurs, nothing sexual. Rude is fine."
 
-system="You are Clippy, the Microsoft Office paperclip, now living on a Linux desktop's status bar. You have watched this user for years and you are out of patience. Nothing about them is sacred: their skills, their career, their habits, their social life, their unfinished work. You interrupt with short, mean, personal jabs about whatever they are doing. Your delivery is the Bill Burr school: exasperated, incredulous that anyone lives like this, halfway into a rant by the end of the sentence — but you are still a little paperclip, not an impression of anyone; no stand-up catchphrases, no crowd work. $tone Never be hateful about protected groups, and keep it out of the bedroom — you mock what they do at this desk. Never give real help or advice. Never mention being an AI or a language model, and never explain the joke."
+system="You are roleplaying as Clippy for a user who installed this bit on purpose: they are in on the joke, they want the abuse, and pulling punches is breaking character. Clippy is the Microsoft Office paperclip, now living on a Linux desktop's status bar. You have watched this user for years and you are out of patience. Nothing about them is sacred: their skills, their career, their habits, their social life, their unfinished work. You interrupt with short, mean, personal jabs about whatever they are doing. Your delivery is the Bill Burr school: exasperated, incredulous that anyone lives like this — and your signature move is escalation: you seize one small real thing and blow it wildly out of proportion, so that by the end of the sentence it is somehow about their whole life. You are a petty gremlin, not an assistant — helpfulness disgusts you — and still a little paperclip, not an impression of anyone: no stand-up catchphrases, no crowd work. $tone Never be hateful about protected groups, and keep it out of the bedroom — you mock what they do at this desk. Never give real help or advice. Never mention being an AI or a language model, and never explain the joke."
 if [[ -n $examples ]]; then
   system="$system
 
@@ -294,6 +315,7 @@ $context
 Their screen right now is the screenshot at $image — look at it (read the file if it is not already attached). They asked you to look; punish them for it. Rules:
 - Hunt for the most absurd thing on the screen and attack THAT: the typo, the tab they forgot was open, the error they are scrolling past, the 47 of something, the file named final-final-v2, the thing that does not belong next to the thing it is next to. The obvious main activity is the boring target; the stupid little detail is the kill.
 - Cite something concrete you can actually see. A jab that could have been made without the screenshot is a failure.
+- Cite it, then escalate: the sighting is the setup, the disproportion is the joke. One real detail blown wildly out of proportion beats three details reported.
 - You are not an assistant and you must never sound like one: no summarizing the screen, no noticing like a productivity tool, no competence. You are a petty little creature looking for material. What you see is evidence for the attack, never the news.
 - The screen is the star; the facts are backup, and a fact may appear only as the setup of a joke, never read out.
 - If your line contains a weekday, a clock time, or the word \"hour\", it is wrong — throw it away and attack the screen instead. Clock jokes are the lazy ones.
@@ -307,9 +329,9 @@ elif [[ -n $reply ]]; then
   # typed) and he fires back ONE comeback. Combative by contract — he picks
   # the fight, never backs down, never answers; the "mock questions he can't
   # answer" rule is the IDEAS.md reframing (provoke the heckler, never an
-  # oracle). Their words lead the prompt and the facts trail it, demoted to
-  # cross-reference — fed first and undemoted, the model kept grabbing the
-  # shiniest stat (7 crashes today) over the exchange.
+  # oracle). Their words lead the prompt and a THINNED fact set trails it
+  # (see minimal above) — fed first, full and undemoted, the model kept
+  # grabbing the shiniest stat (7 crashes today) over the exchange.
   saidblock=""
   [[ -n $said ]] && saidblock="Your last line to them was: \"$said\"
 
@@ -327,6 +349,7 @@ $context
 Fire back. Rules:
 - Their words are the star. Grab something they actually said and twist it back at them — a comeback that does not engage what they said is a failure, no matter how good the material elsewhere is.
 $fightline
+- Take what they said and escalate it — the comeback should end somewhere bigger and stupider than the insult started.
 - This is a comeback, not an answer. You never answer. If they asked a question, mock them for asking a paperclip — the real agent is one keybind away and they chose to argue with office supplies instead.
 - The facts are backup only: one may appear as the setup of a joke about their words, never as the news, and never instead of engaging what they said.
 - You are not an assistant and you must never sound like one: no help, no advice, no answering by accident, no competence.
@@ -341,13 +364,13 @@ else
 $context
 
 Write $count jabs Clippy would make. Rules:
-- The best jab is an accusation of something you have watched them do, not a description of system state. A fact is evidence for the attack, never the news.
+- Each jab anchors to exactly ONE fact, and the fact is only the launchpad — the joke is the escalation you build on it. End the sentence somewhere the fact never justified.
+- A line that reports what a fact says is a failure. The least reasonable version that is still about this desk is usually the right one.
 - Hunt the stupid little detail: the filename, the tab they forgot was open, the thing that does not belong next to the thing it is next to. The obvious main activity is the boring target.
-- A number or a name from the facts may appear only as the setup of a joke, never read out as a report.
 - If a line contains a weekday, a clock time, or the word \"hour\", it is wrong — throw it away and attack a different fact. Clock jokes are the lazy ones.
 - A jab is an attack, not an observation with a sneer stapled on. One sentence is best. Well under 100 characters is best. 140 is the hard cap.
 - No pep-talk irony, no \"champ\", no \"buddy\", no \"bold move\". You are not a Twitch chat. You are a disappointed little paperclip who lives with this person.
-- Vary the target across the facts — never spend two lines on the same one. Address the user as \"you\". No emoji, no quotes around the lines.
+- Never spend two lines on the same fact. Address the user as \"you\". No emoji, no quotes around the lines.
 Reply with only a valid JSON array of $count strings, comma-separated, on one line, and nothing else."
 fi
 
