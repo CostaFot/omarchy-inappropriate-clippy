@@ -304,11 +304,13 @@ PanelWindow {
 
       Divider {}
 
-      // The body count.
+      // The body count, plus the graveyard rank when he's on the board.
       Text {
         readonly property int slaps: menu.clippy ? menu.clippy.slapCount : 0
         readonly property int kills: menu.clippy ? menu.clippy.killCount : 0
+        readonly property var lb: menu.clippy ? menu.clippy.lbCache : null
         text: slaps + (slaps === 1 ? " slap" : " slaps") + " · " + kills + (kills === 1 ? " kill" : " kills")
+          + (lb && lb.rank ? " · #" + lb.rank + " as " + lb.handle : "")
         color: Color.popups.text
         opacity: 0.55
         font.family: Style.fontFamily

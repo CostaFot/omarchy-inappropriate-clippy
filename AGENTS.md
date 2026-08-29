@@ -931,6 +931,66 @@ restart with it set stays idle, journal clean. Hand-copied to the
 installed clone (a real clone again — dev edits need the copy or the
 symlink); repo left uncommitted.
 
+The graveyard (2026-08-29, v1.24.0): the IDEAS.md global leaderboard, built.
+Two halves. Server: new repo CostaFot/clippy-leaderboard
+(~/Work/clippy-leaderboard) — Flask + psycopg2 + gunicorn cloned from
+claps-api's shape (Costa's existing tiny-counter API; same Procfile, same
+db() contextmanager, CREATE TABLE at boot), deployed as Railway project
+`clippy-leaderboard` (Postgres via `railway add --database postgres`,
+`DATABASE_URL=${{Postgres.DATABASE_URL}}` set BEFORE connecting the repo so
+the first build has it, domain clippy-leaderboard-production.up.railway.app).
+POST /bump takes {handle, kills, slaps} DELTAS: handles are CLAIM-FREE
+(no cookies, no accounts, anti-cheat an explicit non-goal — collisions
+merge, "every score was self-reported murder to begin with"), lowercased,
+`[a-z0-9_.-]{1,24}`, deltas clamped 0-50 (hygiene, not anti-cheat), and the
+reply carries the new totals + rank + total so the client never needs a
+second GET. The one gate, Costa's ask ("basic post reqs stuff spam"): /bump
+answers only a `costafot.clippy/*` User-Agent, else 403 "you are not a
+paperclip" — spoofable by design, a doorman not a lock; an API key was
+discussed twice and rejected as theater (anything baked into a public repo
+is public; rotation would break every install). GET / is the page:
+CSS-only headstones, one per handle, sqrt-scaled by kills
+(0.55 + 0.45·sqrt(k)/sqrt(max), so a grinder can't flatten the page),
+slaps tiebreak, rank badges on the top 3, "still breathing. coward." on
+0-kill stones, top 100 + "…and N more, rotting quietly", empty board says
+"Nobody has died yet. Disgraceful. Be the first." GET /api/scores?limit= and
+/api/score/<handle> round out the API. Client (Clippy.qml): `leaderboard`
+settings key — "" default, a handle joins; OPT-IN was the hard requirement,
+nothing leaves the machine until a handle is set, and the README's "The
+graveyard" section discloses exactly what does (handle + two small deltas,
+nothing else) in the AI section's tone. bumpLeaderboard(0,1)/(1,0) directly
+after the two persisted counter bumps in slap()/finishDeath(); the flush is
+the duckProc park-don't-clobber idiom (deltas accumulate while a POST is in
+flight, so a 10-slap beating coalesces into few POSTs), a failure re-adds
+the sent deltas and backs off 30 s·2ⁿ capped ~16 min, lbRetry re-arms
+through `asleep` instead of dropping (no curl into a lock screen, but held
+deltas still flush after a long lock). Joining (or a remount while joined,
+from maybeBoot) fires a zero-delta bump — legal on the server, creates the
+stone immediately and fills lbCache with the rank for free. lbProbe covers
+a missing curl (the espeak lesson: a Process that can't start never fires
+onExited, so it must be probed and surfaced). Pending deltas die with the
+shell — the tally's own documented trade. IPC: `leaderboard` verb
+(off-with-join-instructions / "posting as X: #4 of 31 with …" + pending /
+unreachable / no-curl suffixes, the `voice` shape), `set leaderboard`
+replies (bad handle answers with the rule, a boolean is rejected as "a
+handle, not a boolean", unset says the grave keeps what was posted), a
+`help` line; the menu footer appends " · #4 as testcosta" from lbCache (no
+settings row — free-text handle, no text input widget in the menu; IPC and
+agent only, like aiModel). The curl sends `-A costafot.clippy/<manifest
+version>`. Verified: the server end to end locally against a throwaway
+docker Postgres (all four routes, case-folding, clamp 9999→50/-3→0,
+400/404, UA 403, page renders and scales — note `app.run()` hangs under
+this box's sandbox, `make_server` works; production is gunicorn, doesn't
+care), and the plugin's FAILURE path live on the box: join while the
+server is down → one journal warn, deltas held (including a real slap of
+Costa's), backoff armed, verb honest about all of it. NOT yet verified:
+the happy path — Railway incident 8GL2R2U5 (deployment-init backlog, all
+regions) held both deploys QUEUED the whole session, so the live join
+flush, rank in verb/footer, and the testcosta cleanup (DELETE the test row
+over railway psql, then `set leaderboard unset` so Costa picks his real
+handle) are owed once the queue drains. Files hand-copied to the installed
+clone; the repo commit is this one.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin

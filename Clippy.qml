@@ -112,7 +112,7 @@ Item {
     ttsSaved: "",
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true,
-    greeted: false
+    greeted: false, leaderboard: ""
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
   function isSettingKey(key) { return Object.prototype.hasOwnProperty.call(settingDefaults, key) }
@@ -623,6 +623,7 @@ Item {
     idleAnim()
     scheduleQuote()
     maybeGreet()
+    if (leaderboardOn) flushLeaderboard(true) // refill lbCache after a remount
   }
 
   // Brain: idle animation -> maybe walk -> idle ... ; quotes on their own timer.
@@ -885,6 +886,7 @@ Item {
   function finishDeath() {
     mood = "dead"
     persisted.killCount++
+    bumpLeaderboard(1, 0)
     placeGrave()
     persisted.deadUntil = respawnSeconds > 0 ? Date.now() + respawnSeconds * 1000 : -1
     armRespawn()
@@ -968,6 +970,7 @@ Item {
     slapTimes = recent
 
     persisted.slapCount++
+    bumpLeaderboard(0, 1)
     agentBrain.remember("slapped him")
     playSlapSound()
     walkAnim.stop()
@@ -1197,6 +1200,93 @@ Item {
     }
   }
 
+  // ---- leaderboard --------------------------------------------------------
+  // Opt-in bragging: a handle in `leaderboard` and every slap and kill is
+  // POSTed as a delta to the public graveyard — the handle and two small
+  // numbers, nothing else. Handles are claim-free: the server merges
+  // collisions and an IPC while-loop is an instant world record, which is
+  // fine — every score was self-reported murder to begin with. The flush is
+  // the duckProc park-don't-clobber idiom (deltas accumulate while a POST
+  // is in flight, so a beating coalesces), a failure puts the sent deltas
+  // back and backs off like AgentBrain's topUp. Pending deltas die with the
+  // shell — the same trade the tally itself makes.
+  readonly property string leaderboardUrl: "https://clippy-leaderboard-production.up.railway.app"
+  readonly property string leaderboardHandle: String(setting("leaderboard", "") || "").trim().toLowerCase()
+  readonly property bool leaderboardOn: leaderboardHandle !== ""
+  property int lbPendingKills: 0
+  property int lbPendingSlaps: 0
+  property int lbSentKills: 0
+  property int lbSentSlaps: 0
+  property int lbFailures: 0
+  property var lbCache: null // last /bump reply: {handle, kills, slaps, rank, total}
+  // curl missing means the Process never starts and onExited never fires
+  // (the espeak lesson), so it has to be probed and said out loud.
+  property bool lbCurlMissing: false
+  Process {
+    id: lbProbe
+    command: ["bash", "-c", "command -v curl >/dev/null"]
+    onExited: function (code) { root.lbCurlMissing = code !== 0 }
+    Component.onCompleted: running = true
+  }
+  // Joining announces the handle with a zero-delta bump: the stone appears
+  // on the page at once and the reply fills lbCache with the rank. Leaving
+  // just stops posting — claim-free has no delete. A remount while joined
+  // re-announces from maybeBoot for the same cache refill.
+  onLeaderboardHandleChanged: {
+    lbCache = null
+    lbFailures = 0
+    lbRetry.stop()
+    if (leaderboardOn) { lbProbe.running = true; flushLeaderboard(true) }
+  }
+  function bumpLeaderboard(kills, slaps) {
+    if (!leaderboardOn) return
+    lbPendingKills += kills
+    lbPendingSlaps += slaps
+    flushLeaderboard(false)
+  }
+  function flushLeaderboard(force) {
+    if (!leaderboardOn || lbProc.running || lbCurlMissing) return
+    if (!force && lbPendingKills === 0 && lbPendingSlaps === 0) return
+    lbSentKills = lbPendingKills
+    lbSentSlaps = lbPendingSlaps
+    lbPendingKills = 0
+    lbPendingSlaps = 0
+    var body = JSON.stringify({ handle: leaderboardHandle, kills: lbSentKills, slaps: lbSentSlaps })
+    // The server's doorman: /bump only answers to this User-Agent prefix.
+    var ua = "costafot.clippy/" + (manifest && manifest.version ? manifest.version : "dev")
+    lbProc.command = ["curl", "-fsS", "-m", "10", "-A", ua, "-H", "content-type: application/json", "-d", body, leaderboardUrl + "/bump"]
+    lbProc.running = true
+  }
+  Process {
+    id: lbProc
+    stdout: StdioCollector { id: lbOut }
+    onExited: function (code) {
+      if (code === 0) {
+        try { root.lbCache = JSON.parse(lbOut.text) } catch (e) { /* the POST still landed */ }
+        root.lbSentKills = 0
+        root.lbSentSlaps = 0
+        root.lbFailures = 0
+        root.flushLeaderboard(false) // deltas that accumulated mid-flight
+        return
+      }
+      root.lbPendingKills += root.lbSentKills
+      root.lbPendingSlaps += root.lbSentSlaps
+      root.lbSentKills = 0
+      root.lbSentSlaps = 0
+      if (root.lbFailures === 0)
+        console.warn("clippy: leaderboard POST failed (curl exit " + code + ") — holding the deltas, backing off")
+      root.lbFailures = Math.min(6, root.lbFailures + 1)
+      lbRetry.interval = 30000 * Math.pow(2, root.lbFailures - 1)
+      lbRetry.restart()
+    }
+  }
+  Timer {
+    id: lbRetry
+    // Gated like AgentBrain.paused: no curl into a lock screen. Re-arms
+    // instead of dropping, so held deltas still flush after a long lock.
+    onTriggered: root.asleep ? lbRetry.restart() : root.flushLeaderboard(true)
+  }
+
   NumberAnimation {
     id: shoveAnim
     target: actor
@@ -1418,6 +1508,7 @@ Item {
         "state / stats — what he's doing, the lifetime tally",
         "ai / voice — the agent lines and the voice; each answers with what's wrong and the fix",
         "voices / useVoice <name> — every voice installed on this machine, and switching to one",
+        "leaderboard — the public graveyard: your handle, rank and the page (set leaderboard <handle> to join)",
         "set <key> <value> / get <key> / settings — the config; settings lists every key, unset restores a default",
         "README: " + root.pluginDir + "/README.md"
       ].join("\n")
@@ -1528,6 +1619,24 @@ Item {
       return root.slapCount + (root.slapCount === 1 ? " slap, " : " slaps, ")
         + root.killCount + (root.killCount === 1 ? " kill" : " kills")
     }
+    // Agent-first status for the graveyard: who he posts as, the rank the
+    // last reply carried, and whatever is currently wrong.
+    function leaderboard(): string {
+      if (!root.leaderboardOn)
+        return "off — set leaderboard <handle> (1-24 of a-z 0-9 _ . -) to join the public graveyard: " + root.leaderboardUrl
+      var s = "posting as " + root.leaderboardHandle
+      var c = root.lbCache
+      if (c && c.rank)
+        s += ": #" + c.rank + " of " + c.total + " with " + c.kills + (c.kills === 1 ? " kill, " : " kills, ")
+          + c.slaps + (c.slaps === 1 ? " slap" : " slaps")
+      else
+        s += " — no reply from the graveyard yet"
+      s += " — " + root.leaderboardUrl
+      var held = root.lbPendingKills + root.lbSentKills + root.lbPendingSlaps + root.lbSentSlaps
+      if (root.lbCurlMissing) s += "; curl isn't installed, so nothing is being posted"
+      else if (root.lbFailures > 0) s += "; unreachable — holding " + held + (held === 1 ? " delta" : " deltas") + ", retrying"
+      return s
+    }
     // The settings, same keys as shell.json and the menu: `set clean true`,
     // `set size 40`, `set aiModel unset`. Writes shell.json, so we remount.
     function set(key: string, value: string): string {
@@ -1554,6 +1663,20 @@ Item {
         if (typeof parsed === "string" && parsed.indexOf("speak-clone") !== -1 && parsed !== wasTts)
           return "ok — new clone voice: rerun scripts/warm-voice (plugin dir) to pre-render the book for it, or every line pays ~2 s of GPU once"
         return "ok"
+      }
+      if (key === "leaderboard" && parsed !== undefined) {
+        // A handle, not a toggle — and the server's rule, said up front.
+        if (parsed === true || parsed === false) return "a handle, not a boolean — set leaderboard <name> (unset leaves)"
+        var handle = String(parsed).trim().toLowerCase()
+        if (!/^[a-z0-9_.-]{1,24}$/.test(handle)) return "no — a handle is 1-24 of a-z 0-9 _ . - (it lands lowercased)"
+        if (!root.setSetting(key, handle)) return "can't write shell.json"
+        if (root.lbCurlMissing) return "ok — but curl isn't installed, so nothing gets posted"
+        return "ok — posting as " + handle + "; the graveyard: " + root.leaderboardUrl + " (`leaderboard` reports your rank)"
+      }
+      if (key === "leaderboard" && parsed === undefined && root.leaderboardOn) {
+        var was = root.leaderboardHandle
+        if (!root.setSetting(key, undefined)) return "can't write shell.json"
+        return "ok — off; the graveyard keeps what " + was + " already posted (handles are claim-free, there is no delete)"
       }
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
       if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
