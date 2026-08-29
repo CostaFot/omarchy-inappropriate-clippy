@@ -32,6 +32,7 @@ Item {
   Behavior on opacity { NumberAnimation { duration: root.fadeMs } }
 
   Text {
+    textFormat: Text.PlainText
     id: metrics
     visible: false
     text: root.text
@@ -81,6 +82,7 @@ Item {
     border.width: 1
 
     Text {
+      textFormat: Text.PlainText
       id: label
       x: root.pad
       y: root.pad
@@ -94,6 +96,7 @@ Item {
 
     // nf-md-creation, the four-point sparkle everything AI wears these days.
     Text {
+      textFormat: Text.PlainText
       id: badge
       visible: root.ai
       x: body.width - root.pad - width + 2

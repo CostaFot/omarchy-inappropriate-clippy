@@ -887,6 +887,12 @@ stays free text — IPC and agent only.
   destructors run. Don't rely on a `set` to reset plain state.
 - `shell.bar` is null while the bar loads and is reassigned on bar
   reload — every geometry read guards it and falls back to `Style.bar.*`.
+- Every `Text` sets `textFormat: Text.PlainText` (v1.40.10) — the
+  `AutoText` default renders anything that looks like HTML as markup,
+  and the bubble shows agent output, crash app names and `quotesFile`
+  lines while the menu footer shows the graveyard's reply. No string in
+  the plugin uses markup, so it costs nothing; the marketplace's security
+  review blocks on a `Text` without it. A new `Text` gets the line too.
 - Never name a property on any Item-derived object after an Item
   property (`bottom`, `top`, `state`, `scale`…) — "Cannot override FINAL
   property", and the reported line can be stale when the compile is
@@ -937,7 +943,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.40.9 (2026-08-30): everything above is live and
+Feature-complete at v1.40.10 (2026-08-30): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and

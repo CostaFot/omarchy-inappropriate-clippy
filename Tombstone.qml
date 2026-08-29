@@ -60,6 +60,7 @@ Item {
       anchors.centerIn: parent
       anchors.verticalCenterOffset: Math.round(stone.height * 0.04)
       Text {
+        textFormat: Text.PlainText
         anchors.horizontalCenter: parent.horizontalCenter
         text: "󰏢"
         color: Color.tooltip.text
@@ -68,6 +69,7 @@ Item {
         font.pixelSize: Math.max(7, Math.round(root.stoneH * 0.34))
       }
       Text {
+        textFormat: Text.PlainText
         anchors.horizontalCenter: parent.horizontalCenter
         text: "RIP"
         color: Color.tooltip.text

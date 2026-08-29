@@ -88,6 +88,7 @@ PanelWindow {
       spacing: Style.space(2)
 
       Text {
+        textFormat: Text.PlainText
         text: "Inappropriate Clippy"
         color: Color.popups.text
         opacity: 0.55
@@ -118,6 +119,7 @@ PanelWindow {
           spacing: Style.space(1)
 
           Text {
+            textFormat: Text.PlainText
             text: (row.mark !== "" ? row.mark + " " : "") + row.label
             color: Color.popups.text
             opacity: row.active ? 1.0 : 0.75
@@ -125,6 +127,7 @@ PanelWindow {
             font.pixelSize: card.fontSize
           }
           Text {
+            textFormat: Text.PlainText
             visible: row.hint !== ""
             text: row.hint
             color: Color.popups.text
@@ -150,6 +153,7 @@ PanelWindow {
         implicitHeight: choiceLabel.implicitHeight + chips.implicitHeight + Style.space(10)
 
         Text {
+          textFormat: Text.PlainText
           id: choiceLabel
           x: Style.space(8)
           y: Style.space(4)
@@ -182,6 +186,7 @@ PanelWindow {
               border.width: 1
               border.color: Color.popups.border
               Text {
+                textFormat: Text.PlainText
                 id: chipText
                 anchors.centerIn: parent
                 text: chip.modelData.label
@@ -288,6 +293,7 @@ PanelWindow {
       // how to claim a stone. The menu can't take a free-text handle, so it
       // points at the agent/terminal.
       Text {
+        textFormat: Text.PlainText
         visible: menu.clippy ? menu.clippy.leaderboardOn : false
         text: menu.clippy && menu.clippy.leaderboardNamed
           ? "as " + menu.clippy.leaderboardHandle
@@ -316,6 +322,7 @@ PanelWindow {
         onPicked: function (value) { menu.set("voice", value) }
       }
       Text {
+        textFormat: Text.PlainText
         // The robot chips are the floor — tell the audience that has nothing
         // better installed where the real voices come from.
         readonly property var inv: menu.open && menu.clippy ? menu.clippy.voiceInv : null
@@ -394,6 +401,7 @@ PanelWindow {
 
       // The body count, plus the graveyard rank when he's on the board.
       Text {
+        textFormat: Text.PlainText
         readonly property int slaps: menu.clippy ? menu.clippy.slapCount : 0
         readonly property int kills: menu.clippy ? menu.clippy.killCount : 0
         readonly property var lb: menu.clippy ? menu.clippy.lbCache : null

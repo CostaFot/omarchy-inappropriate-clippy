@@ -58,7 +58,7 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 ## What Clippy already has
 
-- Manifest: all required fields, id `costafot.clippy`, version 1.40.9 at
+- Manifest: all required fields, id `costafot.clippy`, version 1.40.10 at
   the time of writing (check `manifest.json` — this file goes stale),
   kinds `panel` + `bar-widget`. Validate passes (exit 0, silent) with the
   `docs/` folder in the tree.
@@ -91,8 +91,9 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 1. ~~**README removal line.**~~ Done in v1.40.2: `omarchy plugin remove
    costafot.clippy` sits under the install command.
-2. ~~**Tag/release.**~~ Done 2026-08-30: `v1.40.8` tagged and released
-   at `8abcf7f7a108d0a9c13be90b8c8150cf6b188727`, the submitted SHA.
+2. ~~**Tag/release.**~~ Done 2026-08-30. One release, moved onto every
+   fix commit the Yeet way (delete the old tag+release, tag the new SHA)
+   so the release always equals the commit under review.
 3. ~~**Preview aspect.**~~ Done (2026-08-29): `preview.png` is 4267×2400
    like the other two; the 2400×260 strip is gone.
 3b. **Orphan screenshots.** Five tracked files under `assets/screenshots/`
@@ -156,6 +157,10 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   the script says so and exits) — plus four informational capabilities
   (a `sudo pacman -S espeak-ng` hint string in Clippy.qml, pip/uv into
   setup-voice's own venv, read-only `systemctl --failed` in clippy-ai,
-  setup-voice being an installer file) answered in the thread. Next:
-  maintainer applies `approved-and-verified`, then add the marketplace
-  URL to README + docs/index.md.
+  setup-voice being an installer file) answered in the thread.
+  v1.40.10 pre-empted the finding the maintainer was blocking other
+  plugins on that night — `Text` elements without `textFormat` showing
+  externally sourced strings — with `Text.PlainText` on all 13; issue
+  edited to re-run the bots at each commit, release moved each time.
+  Next: maintainer applies `approved-and-verified`, then add the
+  marketplace URL to README + docs/index.md.
