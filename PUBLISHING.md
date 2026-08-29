@@ -44,13 +44,21 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   the thread. Still open as of 2026-08-28.
 - Both shipped with a `v1.0.0` GitHub release and a ~16:9 `preview.png`
   (4267×2400).
+- **There is another Clippy in the queue:** #1900, "[Plugin]: Omarchy
+  Clippy" (`dev.ebbo.omaclippy`, BernhardRode, submitted 2026-08-23), stuck
+  at `needs-fixes` + `security-review-required` because opening it starts a
+  tmux session running `claude --dangerously-skip-permissions`. Different
+  id, different plugin, no collision — but say so in the maintainer notes
+  before a maintainer conflates them: ours runs the user's agent one-shot
+  with tools off (`--tools ""`), only with `ai: true`, and never
+  persistently.
 - `gh issue view <n> -R HANCORE-linux/omarchy-plugin-marketplace --json body`
   gives the exact body shape; `SUBMISSION.md` there also has a
   `gh issue create` heredoc for doing it from the CLI.
 
 ## What Clippy already has
 
-- Manifest: all required fields, id `costafot.clippy`, version 1.40.5 at
+- Manifest: all required fields, id `costafot.clippy`, version 1.40.8 at
   the time of writing (check `manifest.json` — this file goes stale),
   kinds `panel` + `bar-widget`. Validate passes (exit 0, silent) with the
   `docs/` folder in the tree.
@@ -83,13 +91,19 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 1. ~~**README removal line.**~~ Done in v1.40.2: `omarchy plugin remove
    costafot.clippy` sits under the install command.
-2. **Tag/release.** Repo has zero tags although the manifest says 1.4.0.
-   Not required by the marketplace, but both others had `v1.0.0` at
-   submission. Tag the submitted commit (`git tag v1.4.0` or whatever the
-   manifest says then; `gh release create`). Pushing/tagging is Costa's
+2. **Tag/release.** `main` is pushed (2026-08-30 sweep) but the repo has
+   zero tags. Not required by the marketplace, but both others had
+   `v1.0.0` at submission. Tag the submitted commit with whatever
+   `manifest.json` says (`git tag v1.40.8 && git push --tags`;
+   `gh release create v1.40.8 --generate-notes`). Tagging is Costa's
    call — prepare, don't push, unless asked.
-3. **Preview aspect.** Done (2026-08-29): `preview.png` is 4267×2400 like the
-   other two; the 2400×260 strip is gone.
+3. ~~**Preview aspect.**~~ Done (2026-08-29): `preview.png` is 4267×2400
+   like the other two; the 2400×260 strip is gone.
+3b. **Orphan screenshots.** Five tracked files under `assets/screenshots/`
+   are referenced by nothing (`line-book.png`, `line-book-2.png`,
+   `menu-2.png`, `screen-look.png`, `slap-line-2.png`, 1.7 MB together)
+   and ship in every plugin clone. Delete or keep — Costa's call; the
+   README pass that dropped `screen-look.png` left it on purpose.
 4. **Maintainer notes** (the form's free text) — say all of this:
    - Profane by default; `clean: true` (menu row "Clean") drops every line
      tagged `nsfw`. The marketplace has no content policy, but disclose it.
@@ -124,6 +138,8 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
    - Docs link: https://costafot.github.io/omarchy-inappropriate-clippy/
      — the full manual (every setting, the agent/voice/graveyard pages,
      what leaves the machine and when).
+   - Not #1900. One sentence: different plugin and id; the agent here is
+     opt-in, one-shot, tools off — see the prior-art bullet above.
 5. **Category/tags.** Desktop (same as autoduck) or Other; tags Bar +
    Quickshell (Games is a stretch); suggest "Fun" as the missing tag.
 

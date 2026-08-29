@@ -934,7 +934,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.40.7 (2026-08-30): everything above is live and
+Feature-complete at v1.40.8 (2026-08-30): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
