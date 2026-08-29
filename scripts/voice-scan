@@ -1,0 +1,38 @@
+#!/bin/bash
+# What voices are on this machine, as one JSON object — the panel's menu
+# picker and the `voices` IPC verb are fed by it, and an agent can run it
+# directly. It reports only what is already installed: putting NEW voices
+# on disk is scripts/setup-voice's job.
+set -uo pipefail
+
+e=false; command -v espeak-ng >/dev/null && e=true
+g=false; command -v nvidia-smi >/dev/null && g=true
+
+# kokoro: the say.py + models setup-voice writes, plus ffmpeg for the
+# robot-george effect chain.
+k=false; kk="$HOME/.local/share/kokoro-tts"
+[ -x "$kk/say.py" ] && [ -s "$kk/kokoro-v1.0.onnx" ] && [ -s "$kk/voices-v1.0.bin" ] \
+  && command -v ffmpeg >/dev/null && k=true
+
+# clones: every reference wav next to a working speak-clone. Names are
+# already [A-Za-z0-9_-] only — setup-voice filters them on the way in.
+cb="$HOME/.local/share/chatterbox-tts"; c=""
+if [ -x "$cb/speak-clone" ]; then
+  for f in "$cb"/voices/*.wav; do
+    [ -e "$f" ] || continue
+    c="$c\"$(basename "$f" .wav)\","
+  done
+fi
+
+# piper: every downloaded model, with the sample rate aplay needs.
+pp="$HOME/.local/share/piper-tts/venv/bin/piper"; pv="$HOME/.local/share/piper-voices"; p=""
+if [ -x "$pp" ] && command -v jq >/dev/null; then
+  for f in "$pv"/*.onnx; do
+    [ -e "$f" ] || continue
+    r="$(jq -r '.audio.sample_rate // empty' "$f.json" 2>/dev/null)"
+    [ -n "$r" ] && p="$p{\"name\":\"$(basename "$f" .onnx)\",\"rate\":$r},"
+  done
+fi
+
+printf '{"espeak":%s,"gpu":%s,"kokoro":%s,"clones":[%s],"piper":[%s]}\n' \
+  "$e" "$g" "$k" "${c%,}" "${p%,}"

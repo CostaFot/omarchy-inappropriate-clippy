@@ -249,20 +249,31 @@ PanelWindow {
         active: on
         onTapped: menu.set("slapSound", !on)
       }
-      Entry {
-        readonly property bool on: menu.clippy ? menu.clippy.ttsOn : false
-        readonly property bool needs: menu.clippy ? menu.clippy.ttsNeedsEngine : false
-        // A stashed command counts: the label keeps reading "custom" while
-        // the voice is toggled off, so it's visible the command survives.
-        readonly property bool custom: menu.clippy ? (typeof menu.clippy.ttsSetting === "string"
-          || String(menu.clippy.setting("ttsSaved", "") || "") !== "") : false
-        label: needs ? "Voice · install espeak-ng" : (custom ? "Voice · custom" : "Voice")
-        // The robot is the floor, not the ceiling — say so, but only to the
-        // audience still on it (a custom voice, parked or live, knows already).
-        hint: !needs && !custom ? "better voices: scripts/setup-voice in the plugin dir" : ""
-        mark: on ? "●" : "○"
-        active: on
-        onTapped: menu.set("tts", !on)
+      // The voice picker: every voice already on disk, as chips — a tap is an
+      // instant `set tts` write (applyVoice, same resolver as IPC useVoice).
+      // Installing NEW voices stays with scripts/setup-voice; a menu tap
+      // must never start a 2 GB download.
+      Choice {
+        label: menu.open && menu.clippy && menu.clippy.ttsNeedsEngine
+          ? "Voice · the robot needs espeak-ng" : "Voice"
+        options: menu.open && menu.clippy
+          ? menu.clippy.voiceOptions.map(function (v) { return { label: v, value: v } }) : []
+        current: menu.open && menu.clippy
+          ? menu.clippy.voiceOptions.indexOf(menu.clippy.currentVoiceId) : -1
+        onPicked: function (value) { menu.set("voice", value) }
+      }
+      Text {
+        // The robot chips are the floor — tell the audience that has nothing
+        // better installed where the real voices come from.
+        readonly property var inv: menu.open && menu.clippy ? menu.clippy.voiceInv : null
+        visible: inv !== null && !(inv.kokoro || (inv.gpu && inv.clones.length > 0) || inv.piper.length > 0)
+        text: "better voices: scripts/setup-voice in the plugin dir"
+        color: Color.popups.text
+        opacity: 0.45
+        font.family: Style.fontFamily
+        font.pixelSize: card.fontSize - 2
+        leftPadding: Style.space(8)
+        bottomPadding: Style.space(3)
       }
       Choice {
         label: "Walks"

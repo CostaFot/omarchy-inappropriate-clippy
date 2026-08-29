@@ -648,6 +648,43 @@ started with "the default voice sucks" — the new-user wipe had left bare
 espeak `tts: true`; the Rubick rig was restored first (set tts + warm-voice,
 all 154 book lines were still cached), `ai` was left off as found.
 
+Voice picker + agent voice surface done (2026-08-29, v1.19.0): Costa's ask
+was a UI to *select* voices and "make this app amazing for an agent". The
+split that shipped: switching lives in the plugin (instant, a `set tts`
+write), installing stays with setup-voice (a menu tap must never start a
+2 GB download). `scripts/voice-scan` (new) prints one JSON object of every
+voice on disk — espeak/GPU/kokoro presence, clone wavs, piper models with
+their sample rates — and feeds `voiceInv` via a Process (mount, tts
+changes, menu open). On top of it: `currentVoiceId` names the live tts
+value (off/robot/george/<clone>/<piper>/custom; clones keep their name
+through knob changes via the --ref regex), `voiceOptions` is the picker
+list (clones only when the GPU is there; "custom" appears when a hand-set
+command is live or parked), and `applyVoice(name)` is the one resolver
+behind both the menu and IPC — it rebuilds the exact command strings
+setup-voice writes (georgeCmd/cloneCmd/piperCmd; drift just means the
+picker says "custom") and parks an unrecognized custom command in
+`ttsSaved` before overwriting, the v1.16.0 no-eating rule. The menu's
+Voice toggle row became a `Choice` chips row (off · robot · george ·
+rubick · …, the Walks/Size pattern) plus a dim setup-voice hint shown only
+when nothing better than the robot is installed; ttsNeedsEngine moved into
+the group label. IPC: `voices` (active + installed + how to install more +
+the raw `set tts` contract) and `useVoice <name>` (agent-first replies:
+"ok — the rubick clone; …warm-voice…", "george isn't installed — run
+scripts/setup-voice --robot…", "unknown voice…"), both in `help`. No new
+settings keys. Verified live on the box (espeak+kokoro+3 clones+1 piper):
+switch to every kind byte-identical to setup-voice's strings, the
+custom→stash→restore round trip, off/unknown/already replies, menu chips
+by screenshot; the chip tap path shares applyVoice with the verified IPC
+path. Right after shipping, Costa found only rubick answered
+promptly (kokoro reloads its model per line, the c3po clones had a cold
+cache; both synthesized fine from the terminal) and asked for the rest to
+go — "less options. less to debug". They are PARKED, not deleted:
+`~/.local/share/chatterbox-tts/voices-parked/` holds the approved c3po +
+c3po-fast takes (never regenerate — move back to voices/ to re-offer),
+`piper-voices-parked` and `kokoro-tts-parked` sit next to their original
+dirs. The picker is inventory-driven, so moving anything back restores its
+chip. His box now offers off · robot · rubick, rubick active.
+
 New-user simulation (2026-08-29): the box left the dev loop — plugin
 disabled, symlink removed, then a real `omarchy plugin add
 https://github.com/CostaFot/omarchy-inappropriate-clippy --enable --yes`

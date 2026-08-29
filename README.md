@@ -188,8 +188,8 @@ machinery pointed at a sample we picked for you, so the same costs apply.
 A small daemon keeps the model warm
 between lines and exits after 15 idle minutes to give your VRAM back; every
 line is cached, so anything he's said before plays instantly and a fresh
-line costs a few seconds of GPU. The menu reads "Voice · custom" while any
-custom voice is wired, and IPC `voice` tells your agent the whole story.
+line costs a few seconds of GPU. Every clone shows up by name in the
+menu's Voice picker, and IPC `voice` tells your agent the whole story.
 Temper your expectations: the clone gets the accent and the cadence, not
 the soul. It's fun. It is not amazing.
 
@@ -227,6 +227,17 @@ that). Whatever hides the bubble — a slap, a lock, his
 death — kills the voice mid-word. A pipeline like the piper one may finish its sentence anyway;
 that's between bash and its children.
 
+Once voices are on disk, switching between them takes no terminal: the
+menu's Voice row is a picker showing everything installed — off, the espeak
+robot, robot george, every clone you've made, every piper model — and a tap
+switches instantly. Nothing in the menu ever downloads; installing a NEW
+voice is always `scripts/setup-voice`. The same picker speaks IPC for your
+agent: `voices` lists what's installed and where new ones come from,
+`useVoice rubick` switches (and answers with the fix when it can't —
+missing engine, no GPU, unknown name). Both are fed by
+`scripts/voice-scan`, one JSON object of every voice on the machine, which
+your agent can also run directly.
+
 ## Scripting him
 
 ```bash
@@ -245,6 +256,8 @@ omarchy-shell costafot.clippy showMenu  # the menu; hideMenu closes it
 omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden | asleep
 omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"
 omarchy-shell costafot.clippy voice      # off, "espeak-ng: ready", "espeak-ng: not installed — silent (...)", or the custom command
+omarchy-shell costafot.clippy voices     # every voice installed on this machine, and where new ones come from
+omarchy-shell costafot.clippy useVoice rubick  # switch to any installed voice by name
 omarchy-shell costafot.clippy stats      # the lifetime tally: "34 slaps, 5 kills"
 omarchy-shell costafot.clippy set clean true   # any key from the table; "unset" puts the default back
 omarchy-shell costafot.clippy get clean        # the value in effect, as JSON

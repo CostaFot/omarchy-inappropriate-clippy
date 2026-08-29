@@ -214,7 +214,7 @@ Item {
   // turning the voice off shuts him up instead of finishing the line. Two
   // handlers: inside onTtsSettingChanged the dependent ttsOn binding hasn't
   // re-evaluated yet, so a `!ttsOn` check there reads stale (bit us).
-  onTtsSettingChanged: { ttsWarned = false; ttsProbe.running = true }
+  onTtsSettingChanged: { ttsWarned = false; ttsProbe.running = true; voiceScan.running = true }
   // Whether the built-in engine exists — the menu row and the IPC `set`
   // reply point at it, so nobody wonders why the voice is silent. Probed at
   // mount, on `tts` changes and on menu open (fresh right after an
@@ -239,6 +239,114 @@ Item {
   // `hide` only flips `opened` — the bubble props stay put, and without this
   // he'd keep talking out of an invisible window.
   onOpenedChanged: if (!opened) stopSpeaking()
+
+  // ---- voice inventory ----------------------------------------------------
+  // Every voice already on disk, so the menu can offer a picker and an agent
+  // can enumerate (`voices`) and switch (`useVoice`) without reading the
+  // README. scripts/voice-scan fills it: espeak/GPU/kokoro presence, clone
+  // wavs, piper models. Installing NEW voices stays with scripts/setup-voice —
+  // switching here is only ever a `set tts` write, never a download.
+  property var voiceInv: ({ espeak: false, gpu: false, kokoro: false, clones: [], piper: [] })
+  Process {
+    id: voiceScan
+    command: [root.pluginDir + "/scripts/voice-scan"]
+    stdout: StdioCollector { id: voiceScanOut }
+    onExited: function (code) {
+      if (code !== 0) return
+      try { root.voiceInv = JSON.parse(voiceScanOut.text) } catch (e) { /* best-effort */ }
+    }
+    Component.onCompleted: running = true
+  }
+  // The exact command strings scripts/setup-voice writes, rebuilt so the
+  // picker and `useVoice` can switch between installed voices without the
+  // script. Keep in lockstep with setup-voice — drift just means the picker
+  // calls that voice "custom", nothing breaks.
+  readonly property string homeDir: Quickshell.env("HOME")
+  readonly property string georgeCmd: "KOKORO_VOICE=bm_george " + homeDir + "/.local/share/kokoro-tts/say.py"
+    + " | ffmpeg -hide_banner -loglevel quiet -f s16le -ar 24000 -ac 1 -i -"
+    + " -af 'asetrate=24000*1.15,aresample=24000,atempo=0.870,tremolo=f=45:d=0.8,acrusher=bits=6:mode=log:aa=1,highpass=f=250,lowpass=f=3400'"
+    + " -f s16le - | aplay -q -t raw -r 24000 -f S16_LE -c 1 -"
+  function cloneCmd(name) {
+    var cb = homeDir + "/.local/share/chatterbox-tts"
+    return "exec " + cb + "/speak-clone --ref " + cb + "/voices/" + name + ".wav --exag 0.5 --cfg 0.5"
+  }
+  function piperCmd(name, rate) {
+    return homeDir + "/.local/share/piper-tts/venv/bin/piper -m " + homeDir + "/.local/share/piper-voices/" + name
+      + ".onnx --output-raw 2>/dev/null | aplay -q -t raw -r " + rate + " -f S16_LE -c 1 -"
+  }
+  // The tts value, as a name: "off", "robot" (espeak), "george", a clone or
+  // piper name, or "custom" for any other command string. A clone keeps its
+  // name through knob changes (--exag/--cfg/--pitch) — it's still that voice.
+  readonly property string currentVoiceId: {
+    if (!ttsOn) return "off"
+    if (typeof ttsSetting !== "string") return "robot"
+    if (ttsSetting === georgeCmd) return "george"
+    var m = ttsSetting.match(/speak-clone .*--ref \S*\/([A-Za-z0-9_-]+)\.wav/)
+    if (m) return m[1]
+    m = ttsSetting.match(/\/piper -m \S*\/([A-Za-z0-9_.-]+)\.onnx/)
+    if (m) return m[1]
+    return "custom"
+  }
+  // What the picker offers: only the usable. Clones need the GPU they
+  // synthesize on; "custom" appears when a hand-set command is live or
+  // parked in ttsSaved, so it is never more than one tap away.
+  readonly property var voiceOptions: {
+    var opts = ["off", "robot"]
+    if (voiceInv.kokoro) opts.push("george")
+    var i
+    if (voiceInv.gpu) for (i = 0; i < (voiceInv.clones || []).length; i++) opts.push(voiceInv.clones[i])
+    for (i = 0; i < (voiceInv.piper || []).length; i++) opts.push(voiceInv.piper[i].name)
+    if (currentVoiceId === "custom" || String(setting("ttsSaved", "") || "") !== "") opts.push("custom")
+    return opts
+  }
+  // One resolver behind the menu picker and IPC `useVoice`: a name in, the
+  // right tts/ttsSaved write out, an agent-first reply either way. Leaving a
+  // hand-set command for a named voice parks it in ttsSaved — same
+  // no-eating rule as the on/off toggle (v1.16.0).
+  function applyVoice(id) {
+    id = String(id || "")
+    var cur = currentVoiceId
+    if (id === cur) return "already the voice in use"
+    var changes = {}
+    if (cur === "custom" && typeof ttsSetting === "string")
+      changes.ttsSaved = ttsSetting
+    if (id === "off") {
+      changes.tts = false
+      if (!setSettings(changes)) return "can't write shell.json"
+      return changes.ttsSaved ? "ok — voice off; the custom command is kept in ttsSaved (useVoice custom brings it back)" : "ok — voice off"
+    }
+    if (id === "robot" || id === "espeak") {
+      changes.tts = true
+      if (!setSettings(changes)) return "can't write shell.json"
+      return ttsEngineMissing ? "ok — but espeak-ng isn't installed, so the robot is silent until it is" : "ok — the espeak robot"
+    }
+    if (id === "custom") {
+      var saved = String(setting("ttsSaved", "") || "")
+      if (saved === "") return "no custom command saved — set tts <shell command handed each line on stdin>"
+      if (!setSettings({ tts: saved, ttsSaved: undefined })) return "can't write shell.json"
+      return "ok — restored the custom command: " + saved
+    }
+    if (id === "george") {
+      if (!voiceInv.kokoro) return "george isn't installed — run scripts/setup-voice --robot in " + pluginDir + " (~340 MB, no GPU needed)"
+      changes.tts = georgeCmd
+      if (!setSettings(changes)) return "can't write shell.json"
+      return "ok — robot george"
+    }
+    if ((voiceInv.clones || []).indexOf(id) !== -1) {
+      if (!voiceInv.gpu) return id + " is a clone, and clones synthesize on an NVIDIA GPU — none found here"
+      changes.tts = cloneCmd(id)
+      if (!setSettings(changes)) return "can't write shell.json"
+      return "ok — the " + id + " clone; if the book was never rendered for it, scripts/warm-voice (plugin dir) saves ~2 s of GPU per line"
+    }
+    var ps = voiceInv.piper || []
+    for (var i = 0; i < ps.length; i++) {
+      if (ps[i].name !== id) continue
+      changes.tts = piperCmd(id, ps[i].rate)
+      if (!setSettings(changes)) return "can't write shell.json"
+      return "ok — " + id + " (piper)"
+    }
+    return "unknown voice " + JSON.stringify(id) + " — `voices` lists what's installed; new ones: scripts/setup-voice in " + pluginDir + " (a kokoro/piper name, --robot, or --clone <sample.wav> <name> on an NVIDIA GPU)"
+  }
 
   // ---- bar geometry (same idiom as plugins/notifications/Service.qml) -----
   readonly property string barPosition: shell && shell.barConfig ? String(shell.barConfig.position || "top") : "top"
@@ -1148,7 +1256,8 @@ Item {
   // Opens the menu with its card under screen x `atX`, on `onScreen` (null
   // means the monitor Clippy is on). The bar icon calls this from any bar.
   function showMenuAt(atX, onScreen) {
-    ttsProbe.running = true // the Voice row's install hint, kept fresh
+    ttsProbe.running = true // the Voice row's espeak state, kept fresh
+    voiceScan.running = true // and the picker's inventory (fresh after a setup-voice run)
     menu.anchorScreen = onScreen || null
     menu.anchorPos = atX
     menu.open = true
@@ -1180,6 +1289,7 @@ Item {
         "showMenu / hideMenu — the right-click menu, no pointer needed",
         "state / stats — what he's doing, the lifetime tally",
         "ai / voice — the agent lines and the voice; each answers with what's wrong and the fix",
+        "voices / useVoice <name> — every voice installed on this machine, and switching to one",
         "set <key> <value> / get <key> / settings — the config; settings lists every key, unset restores a default",
         "README: " + root.pluginDir + "/README.md"
       ].join("\n")
@@ -1244,7 +1354,7 @@ Item {
       if (!root.ttsOn) {
         var saved = String(root.setting("ttsSaved", "") || "")
         if (saved !== "") return "off — set tts true restores the saved custom voice: " + saved
-        return "off — set tts true for the robot voice, or run scripts/setup-voice in the plugin dir for a real one (--clone <sample.wav> clones any voice, GPU required)"
+        return "off — `voices` lists what's installed (useVoice <name> switches), scripts/setup-voice in the plugin dir installs real ones (--clone <sample.wav> clones any voice, GPU required)"
       }
       var s = typeof root.ttsSetting === "string"
             ? "custom command: " + root.ttsSetting
@@ -1259,6 +1369,24 @@ Item {
       if (ttsProc.running) s += "; speaking"
       return s
     }
+    // The whole voice inventory, for agents: what's active, what's on disk
+    // (useVoice-able right now), and where new voices come from.
+    function voices(): string {
+      var inv = root.voiceInv
+      var lines = []
+      lines.push("active: " + root.currentVoiceId
+        + (typeof root.ttsSetting === "string" ? " — set tts holds: " + root.ttsSetting : ""))
+      lines.push("installed — switch with useVoice <name>: " + root.voiceOptions.join(", "))
+      if (!inv.espeak) lines.push("note: robot needs espeak-ng, which isn't installed")
+      if ((inv.clones || []).length > 0 && !inv.gpu) lines.push("note: clone wavs exist but there's no NVIDIA GPU to synthesize on — not offered")
+      lines.push("more voices: scripts/setup-voice in " + root.pluginDir
+        + " — bare ships a Rubick clone on an NVIDIA GPU (else robot george), a kokoro/piper name installs that voice, --clone <sample.wav> <name> clones anything (GPU)")
+      lines.push("raw: set tts <shell command handed each line on stdin> | true (espeak) | false")
+      return lines.join("\n")
+    }
+    // Switch to an installed voice by name. Answers with the fix when it
+    // can't (not installed, no GPU, unknown name).
+    function useVoice(name: string): string { return root.applyVoice(name) }
     function state(): string {
       if (!root.opened) return "hidden"
       if (root.asleep) return "asleep"
@@ -1344,9 +1472,12 @@ Item {
       else if (name === "revive") root.bringBack()
     }
     onChose: function (key, value) {
-      // The Voice row goes through the stash/restore path so toggling the
-      // voice off never throws away a custom command.
-      if (key === "tts" && (value === true || value === false)) root.setVoiceEnabled(value)
+      // "voice" is the menu picker, not a settings key: a name resolved by
+      // the same applyVoice behind IPC useVoice.
+      if (key === "voice") root.applyVoice(value)
+      // The old Voice toggle path, kept for IPC parity: toggling the voice
+      // off never throws away a custom command.
+      else if (key === "tts" && (value === true || value === false)) root.setVoiceEnabled(value)
       else root.setSetting(key, value)
     }
   }
