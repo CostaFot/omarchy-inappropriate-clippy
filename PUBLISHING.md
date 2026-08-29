@@ -50,15 +50,30 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 ## What Clippy already has
 
-- Manifest: all required fields, id `costafot.clippy`, version 1.20.0 at
+- Manifest: all required fields, id `costafot.clippy`, version 1.40.0 at
   the time of writing (check `manifest.json` — this file goes stale),
-  kinds `panel` + `bar-widget`. Validate passes (exit 0, silent).
+  kinds `panel` + `bar-widget`. Validate passes (exit 0, silent) with the
+  `docs/` folder in the tree.
 - LICENSE (MIT), README, `preview.png` (2400×260), `main` pushed and
   clean at the time of writing.
-- Nothing that trips the baseline's documented patterns: the only `curl`
-  is `scripts/fetch-assets`, which pipes into `sed | jq > file` (never a
-  shell); no install/setup-named files, no sudo, no binaries. Expect
-  `passed`.
+- Docs (v1.40.0): the README is the pitch — install, the mouse table, one
+  bullet per feature with its disclosure line — and the manual is `docs/`,
+  served by GitHub Pages at
+  https://costafot.github.io/omarchy-inappropriate-clippy/ (source `/docs`
+  on `main`, `jekyll-theme-primer`). The same folder ships in the plugin
+  clone, which is what `help` points agents at. Put the URL in the
+  submission's maintainer notes and in the marketplace listing's link
+  field if the form has one.
+- Network, for the security baseline (declare it, don't let the bot find
+  it): `curl` in `scripts/fetch-assets` (dev-time, pipes into `sed | jq >
+  file`, never a shell); the graveyard's `curl -X POST` from Clippy.qml
+  to clippy-leaderboard-production.up.railway.app (default-on, anonymous
+  alias + kill/slap deltas, `set leaderboard off` silences it — the
+  disclosure is the README's graveyard bullet and `docs/graveyard.md`);
+  and, only with `ai: true`, `scripts/clippy-ai` running the user's own
+  coding-agent CLI (`claude -p` etc.) with tools off. No install/
+  setup-named files at the root (`scripts/setup-voice` is opt-in and
+  downloads TTS models on demand — say so), no sudo, no binaries.
 
 ## Gaps — do these first
 
@@ -107,12 +122,15 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
    - Plays WAV sounds via QtMultimedia (stock quickshell); reads an
      optional user-supplied `quotesFile`; no external dependencies; install
      and remove via the standard `omarchy plugin add/remove` flow.
+   - Docs link: https://costafot.github.io/omarchy-inappropriate-clippy/
+     — the full manual (every setting, the agent/voice/graveyard pages,
+     what leaves the machine and when).
 5. **Category/tags.** Desktop (same as autoduck) or Other; tags Bar +
    Quickshell (Games is a stretch); suggest "Fun" as the missing tag.
 
 ## After it's listed
 
 - Add the marketplace URL to the README install section (autoduck's
-  README does not, but it's the obvious place).
+  README does not, but it's the obvious place) and to `docs/index.md`.
 - On each release: bump `manifest.json` version, tag, push, then the
   Verify issue with the full 40-char SHA. Record the issue numbers here.
