@@ -1,6 +1,6 @@
 # Inappropriate Clippy
 
-<img src="preview.png" width="700" alt="I've seen your dotfiles. I've seen things.">
+<img src="preview.png" width="700" alt="Reports of my death were, frankly, your fault.">
 
 Clippy as-a-plugin, on the [Omarchy](https://omarchy.org) bar. He walks, parks
 between your widgets, and mouths off every few minutes.

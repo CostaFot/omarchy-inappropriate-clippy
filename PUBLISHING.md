@@ -62,9 +62,10 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   the time of writing (check `manifest.json` — this file goes stale),
   kinds `panel` + `bar-widget`. Validate passes (exit 0, silent) with the
   `docs/` folder in the tree.
-- LICENSE (MIT), README, `preview.png` (4267×2400, 16:9 — the bar strip
-  on the gradient card, same treatment as the other two plugins; also the
-  README's hero image), `main` pushed and clean at the time of writing.
+- LICENSE (MIT), README, `preview.png` (4267×2400, 16:9 — since v1.40.11 an
+  AI-generated deckchair illustration with the comeback line in the
+  bubble, before that the bar strip on the gradient card like the other
+  two plugins; also the README's hero image), `main` pushed and clean at the time of writing.
 - Docs (v1.40.0): the README is the pitch — install + remove, the mouse
   table, a short section per feature with its **Leaves your machine**
   bullets and a screenshot, an uninstall section and a FAQ (v1.40.5;

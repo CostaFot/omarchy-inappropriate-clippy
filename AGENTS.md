@@ -13,8 +13,12 @@ rule here (a `HISTORY.md` used to duplicate them; removed in v1.40.3 after
 an audit folded every still-true fact into this file). Future work goes in
 `IDEAS.md`, never here. User docs are split
 (v1.40.0): `README.md` is the pitch — the 16:9 `preview.png` as hero
-(the marketplace card image, 4267×2400 like Costa's other plugins: a bar
-strip on a gradient card), install, the mouse table, a short section per
+(the marketplace card image, 4267×2400 like Costa's other plugins; since
+v1.40.11 an AI-generated illustration — Clippy on a deckchair on a thin
+bar, the `comeback` line "Reports of my death were, frankly, your fault."
+in the bubble, text rendered by the generator, Lanczos-scaled from a
+1376×768 Gemini output — replacing the bar-strip-on-a-gradient card;
+the prompt is in the v1.40.11 commit message), install, the mouse table, a short section per
 big feature (1-3 sentence paragraphs, a screenshot under
 `assets/screenshots/` with a `<!-- shot: … -->` comment saying how it
 was captured — 1400×260 bar-strip crops of a `grim` at monitor scale
