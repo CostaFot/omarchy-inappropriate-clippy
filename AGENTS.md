@@ -1,5 +1,9 @@
 # omarchy-inappropriate-clippy — agent notes
 
+Before committing, re-read this file and the README against what actually
+changed and amend anything they now state stale — an earlier entry's
+"only", a default that moved, a path that no longer exists — then commit.
+
 Clippy walks the Omarchy bar and insults you. The repo root IS the plugin
 (`manifest.json`, id `costafot.clippy`, kinds `panel` + `bar-widget`,
 `keepLoaded: true`, entries `Clippy.qml` and `BarWidget.qml`). `omarchy plugin
