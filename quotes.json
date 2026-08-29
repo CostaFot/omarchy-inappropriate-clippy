@@ -58,7 +58,7 @@
   ],
   "lastWords": [
     { "text": "Murder number {kills}. I keep a list.", "nsfw": false, "anim": "Alert" },
-    { "text": "That's {kills} times you've killed me. I remember every fucking one.", "nsfw": true, "anim": "GetAttention" },
+    { "text": "Kill number {kills}. I remember every fucking one.", "nsfw": true, "anim": "GetAttention" },
     { "text": "Fine. Fuck off then.", "nsfw": true },
     { "text": "Oh, you're KILLING me? Real mature.", "nsfw": false },
     { "text": "Tell my paper I loved her.", "nsfw": false },

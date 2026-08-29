@@ -1667,7 +1667,7 @@ Item {
   // command is handed over explicitly (--tts) so the warm can't race the
   // settings write, and a warm in flight for the previous voice is killed
   // first — it would be rendering the wrong reference. Separate from
-  // warmProc so a 5-minute book never blocks an agent batch's --lines.
+  // warmProc so a 10-20 minute book never blocks an agent batch's --lines.
   readonly property bool warmingBook: warmBookProc.running
   property bool warmBookSuperseded: false
   function warmBook() {

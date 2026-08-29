@@ -5,21 +5,29 @@ actually changed and amend anything they now state stale — an "only" that no l
 holds, a default that moved, a path that no longer exists — then commit.
 
 This file is the current-state reference: what the code does today and the
-rules for changing it safely. The session-by-session development journal —
-who asked for what, what was tried and dropped, how each change was
-verified — is `HISTORY.md`; grep it when you need the why behind a rule
-here. Future work goes in `IDEAS.md`, never here. User docs are split
+rules for changing it safely — the code, this file and `docs/` are the only
+source of truth. The session journal (who asked for what, what was tried
+and dropped, how it was verified) is the commit messages: `git log
+--grep=v1.36.0` or `git log -S<symbol>` when you need the why behind a
+rule here (a `HISTORY.md` used to duplicate them; removed in v1.40.3 after
+an audit folded every still-true fact into this file). Future work goes in
+`IDEAS.md`, never here. User docs are split
 (v1.40.0): `README.md` is the pitch — install + remove, the mouse table,
 a short section per big feature (1-3 sentence paragraphs, a screenshot
 placeholder under `assets/screenshots/` with a `<!-- shot: … -->` comment
 saying what to capture, and a bold **Leaves your machine:** line for
-anything that touches the network) and links — and
+anything that touches the network) and links; no key names in README
+prose, the configuration table owns them, `slap: false` the one exception
+because it explains where snooze went — and
 `docs/` is the manual, one page per feature (`configuration.md` holds the
 settings table, `ai.md`, `voice.md`, `graveyard.md`, `scripting.md`,
 `index.md` the contents). The same files are the GitHub Pages site
 (source: `/docs` on `main`, `_config.yml` picks `jekyll-theme-primer` — minimal was tried first and squeezed the settings table into a 250 px column;
 no front matter needed — the Pages gem's default plugins render bare
-markdown and rewrite `.md` relative links) AND ship in the plugin clone,
+markdown and rewrite `.md` relative links; a link from `docs/` to anything
+OUTSIDE `docs/` must be an absolute GitHub URL, since Pages serves only
+`/docs` and a relative `../quotes.json` 404s on the site) AND ship in the
+plugin clone,
 which is what keeps the agent connection: `help` ends with
 `<pluginDir>/docs/`, not a README path. Marketplace state is
 `PUBLISHING.md`.
@@ -41,6 +49,10 @@ Design rules that outrank any single feature:
   `docs/configuration.md` table row, and — only if a user would reach for it — a menu row.
   Free-text/free-number keys (`aiModel`, `leaderboard`, `cloneTempo`…) get
   no menu row or only preset chips; the menu takes no keyboard focus.
+  The table is one key per row (`intervalMin`/`intervalMax` were once one
+  row and an agent reading column 1 saw a non-key). Don't build a
+  `barWidget.schema` or any schema-driven settings UI unprompted — the
+  menu is the config surface, `shell.json` the fallback.
 - Agent-first replies: an IPC `set` that can't take effect answers
   "ok — but <why>" (tts keys, ai keys, clone knobs all do); status verbs
   (`voice`, `ai`, `leaderboard`) say what's wrong and how to fix it.
@@ -49,7 +61,10 @@ Design rules that outrank any single feature:
   posts anonymous kill/slap deltas by default — one shared alias for every
   install, so nothing identifies anyone — with the off switch one menu tap
   (`set leaderboard off` over IPC) and the README's graveyard bullet AND
-  `docs/graveyard.md` saying exactly what's sent; no cloud TTS, ever. The screen look (`look`) sends a screenshot
+  `docs/graveyard.md` saying exactly what's sent — and that IS the whole
+  disclosure: Costa's call was "no incharacter disclosure", so never a
+  spoken/bubble notice, the docs plus the IPC verbs carry it; no cloud
+  TTS, ever. The screen look (`look`) sends a screenshot
   to the user's agent ONLY on the explicit gesture — never on a timer,
   never from decide()/unprompted(); an unprompted screenshot would be
   surveillance, not a gag. The mic (`listen`) is under the same law:
@@ -60,7 +75,8 @@ Design rules that outrank any single feature:
 - Keep `help`, `docs/scripting.md`'s verb block, and the actual IPC verbs
   in sync; `help` is the blind agent's bootstrap and ends with a
   copy-pasteable Hyprland `bindd` example, the `docs/` path and the Pages
-  URL. `scripting.md` also states the reply vocabulary (`ok — but`, `not
+  URL. Keybinds are agent-help only ("no UI for this. only agent help") —
+  no menu row, no keys shipped; that `bindd` line is the whole feature. `scripting.md` also states the reply vocabulary (`ok — but`, `not
   now`, `busy — …`, `no — <rule>`…) and `set`'s value rules
   (`parseSettingValue`) — a new reply shape or a new refusal word goes
   there too; the verifier is "every reply string named in scripting.md
@@ -110,7 +126,9 @@ Design rules that outrank any single feature:
     binding: widget widths change without signals and `moduleSlots` is
     reassigned per register/unregister. Treks pick a width-weighted
     random gap; hops snap to the nearest clear position, uncapped — the
-    snap IS the hop aesthetic. Standing on a widget raises the next
+    snap IS the hop aesthetic (a first cut capped the snap at 120 px so a
+    hop would "stay a hop"; deep-in-cluster targets then stood dirty and he
+    parked on the workspaces within minutes). Standing on a widget raises the next
     beat's walk chance to 0.8. Boot/revive placement uses `randomSpot()`
     (also gap-preferring). Null `shell.bar`, no `moduleSlots`, or no gap
     he fits in fall back to raw targets.
@@ -289,7 +307,8 @@ an optional `hint` (dim second line,
   count, dirty repos and commit drought in `~/Work`, most-typed history
   command, workspace and browser-tab counts) and `shuf -n 3` of the
   survivors go in — so `--context` is one random draw and batches don't
-  converge on one stat. The folder-rummage facts (Downloads
+  converge on one stat (keep ≥7 candidates in the pool or the draw stops
+  varying). The folder-rummage facts (Downloads
   count+filenames, screenshot hoard, trash, loose `$HOME` files) were
   cut in v1.37.2 — batches kept converging on file jokes; don't re-add
   facts built by listing a directory's contents. A `--reply` call thins all of it
@@ -305,7 +324,9 @@ an optional `hint` (dim second line,
   `--clean`) go in the system prompt as register examples; the prompt
   asks for "jabs" under explicit rules (v1.36.0 — the spiral pass:
   exactly ONE fact per line as the launchpad, the joke is the
-  escalation built on it, a line that reports a fact is a failure;
+  escalation built on it, a line that reports a fact is a failure — and
+  not zero facts either: fact-free lines drift into generic slop, the
+  fact is the anchor;
   hunt the stupid little detail, one short sentence, no
   "champ"/Twitch-isms, the no-clock-jokes discard rule in every mode).
   The system prompt OPENS with the roleplay/consent frame ("installed
@@ -314,7 +335,9 @@ an optional `hint` (dim second line,
   frame, not the register), names escalation as the signature move (one
   small real thing blown wildly out of proportion until it is about
   their whole life — the Bill Burr school, still fenced: not an
-  impression, no catchphrases, no crowd work) and the character as a
+  impression, no catchphrases, no crowd work — the clause names the
+  delivery, not the man, because "write like Bill Burr" produces
+  freakin'-Boston cosplay) and the character as a
   petty gremlin, not an assistant. Swearing is prescriptive in EVERY
   non-clean mode (v1.36.0 — it was batch-only, and sonnet stayed
   swearless even under the batch "must"): batches must land at least
@@ -325,7 +348,9 @@ an optional `hint` (dim second line,
   `--prompt-file` (the `promptFile` key, v1.37.0 — expandHome'd, passed
   from all three call sites: AgentBrain batches, the look, sendReply)
   replaces the whole CHARACTER layer — the system prompt AND the
-  per-mode rule lists — leaving only the scaffold: the facts block, the
+  per-mode rule lists (rules like "mock them for asking" in the user
+  blocks would bleed through a gentle custom persona) — leaving only the
+  scaffold: the facts block, the
   mode framing (screenshot pointer / their words / line count) and the
   JSON output contract the parser depends on. Register examples then
   come from quotesFile ONLY, under a neutral "match this register"
@@ -388,7 +413,9 @@ an optional `hint` (dim second line,
   cap and the stop are the same signal path and INT is pw-record's
   designed stop (the WAV header gets finalized; verified). The take is
   transcribed by `voxtype transcribe` in a bash chain that `rm`s the wav
-  either way; voxtype's stdout is progress + ANSI log lines, one blank
+  either way (voxtype's daemon/push-to-talk mode was rejected: it types
+  the transcript into the focused window; the one-shot is the only usable
+  route); voxtype's stdout is progress + ANSI log lines, one blank
   line, then the transcript, so the parse takes everything after the
   last blank line, ANSI-stripped. A punctuation-only transcript (whisper
   hallucinates "." on silence) gets a `heardNothing` book line and no
@@ -424,7 +451,12 @@ an optional `hint` (dim second line,
   dragged, dropped, flung, crashed, welcomeBack, epitaph, firstRun,
   noBrain, heardNothing, dodged }` (the
   key list is `quoteKeys` in Clippy.qml; add there and here), entries
-  `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
+  `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. Content rules:
+  lines must be speakable — no elongation gags or repeated letters
+  ("NOOOO", "FUUUU"), clone voices read them as garbage (v1.29.1 rewrote
+  every `flung` line for this; nothing enforces it) — and a count
+  placeholder is phrased "kill number {kills}" / "{slaps} so far", never
+  "{kills} times", which reads "1 times". `quotesFile` is
   merged in (same shape, or a bare array): quotes are two books, `book` +
   `extraBook`, merged per key in `pool(key)` so FileView load order
   doesn't matter. Bad JSON or a missing path falls back to the built-in
@@ -432,7 +464,10 @@ an optional `hint` (dim second line,
 - `assets/clippy/{map.png,agent.json}` — from clippy.js via
   `scripts/fetch-assets` (dev-time only, results are committed). map.png
   is 3348×3162, 27×34 cells of 124×93; one 8-bit palette PNG → ~42 MB as
-  an RGBA texture. Fine for a joke. `assets/voices/rubick.wav` — the
+  an RGBA texture. Fine for a joke. `assets/sounds/*.wav` (two slaps, the
+  fall, the dodge whoosh) were supplied by Costa; no licence noted —
+  PUBLISHING.md's rights section covers only the artwork and the Rubick
+  audio. `assets/voices/rubick.wav` — the
   shipped default clone reference (940 KB, s16le mono 24 kHz, exactly
   20 s), byte-identical to the approved take in
   `~/.local/share/chatterbox-tts/voices/rubick.wav`. Dota 2 audio,
@@ -452,8 +487,10 @@ an optional `hint` (dim second line,
   `Item.Bottom`), then `say()` with a `slapped` line — silent while the
   crack plays (`bubble.silent`; any in-flight voice is cut), un-silenced
   by `slapSoundDone()` when the chosen SoundEffect's `playing` drops (or
-  `slapVoiceCap` gives up at 2 s), so the voice speaks the line right
-  after the SFX; identity-guarded via `slapWaitFx` (a re-slap supersedes,
+  `slapVoiceCap` gives up at 2 s — keep that cap under `say()`'s 4 s
+  bubble floor: nothing runs during the silent wait, so a longer cap would
+  hide the bubble before the voice starts), so the voice speaks the line
+  right after the SFX; identity-guarded via `slapWaitFx` (a re-slap supersedes,
   fling sounds never match) and state-guarded (a dismissed/replaced/dead
   bubble stays silent). No sound played (sounds off, fx not Ready) → the
   line is said non-silent and speaks at once. Slap timestamps in `slapTimes`;
@@ -541,7 +578,9 @@ is one opaque string and ignores all three (clones bend via
   are wrapped in `trap 'kill $! 2>/dev/null' TERM; <pipeline> & wait $!`
   (bash defers traps while a foreground job runs; backgrounded, `wait`
   processes the trap at once and `$!` IS aplay; the producer dies on
-  SIGPIPE). Keep the builders in Clippy.qml (`georgeCmd`/`piperCmd`/
+  SIGPIPE; the backgrounded pipeline still gets the line on stdin because
+  bash only nulls a background job's stdin when it is a terminal — from a
+  pipe it flows through). Keep the builders in Clippy.qml (`georgeCmd`/`piperCmd`/
   `cloneCmd`) byte-identical to what setup-voice writes — drift just
   makes the picker say "custom", nothing breaks. A hand-rolled pipeline
   without the wrap may finish its line; `docs/voice.md` documents the wrap.
@@ -596,12 +635,16 @@ is one opaque string and ignores all three (clones bend via
   read raw audio from a pipe). Bare = hardware-picked default: an NVIDIA
   GPU with ≥6 GB total VRAM (`gpu_ok()`, biggest card) gets the shipped
   Rubick clone (`cp` of `assets/voices/rubick.wav`, knobs 0.5/0.5),
-  anything less falls back to robot George with the "you're poor" line
-  (Costa's wording, deliberate); `--robot` bypasses the GPU pick. Robot
+  anything less falls back to robot George with the "you're poor. Get more
+  RAM" line (Costa's wording, deliberate — it's VRAM and the wrongness is
+  the joke; don't accuracy-fix it); `--robot` bypasses the GPU pick. Robot
   George is kokoro `bm_george` through an ffmpeg ring-mod chain
   (`asetrate` +15 %, `tremolo f=45`, `acrusher bits=6`, 250-3400 band);
   a named piper voice (name-with-dash) comes through unprocessed;
-  `say.py` phonemizes `b*` voices as en-gb. `--clone <sample> [name]
+  `say.py` phonemizes `b*` voices as en-gb. Kokoro and piper spawn
+  `say.py` per line and reload the model each time (~1.8 s/line, no daemon
+  unlike the clones) — that latency is why they were parked on Costa's
+  box. `--clone <sample> [name]
   [--from T] [--to T]` = chatterbox voice clone from a 10-20 s sample:
   ffmpeg converts anything to mono 24 kHz, `--from`/`--to` are input-side
   `-ss`/`-to` (positions in the source), the 20 s cap applies after the
@@ -614,7 +657,9 @@ is one opaque string and ignores all three (clones bend via
   triggered by the `set tts` it ends with; the script only says so.
 - Clones: chatterbox on CUDA in a uv venv (`--python 3.12` — system
   3.14 has no torch wheels; `setuptools<81` pinned or perth's
-  watermarker dies on missing pkg_resources). Per-line spawn would
+  watermarker dies on missing pkg_resources — the symptom is
+  `from_pretrained` throwing "'NoneType' object is not callable"; plain
+  pip on system 3.14 backtracks forever, hence uv). Per-line spawn would
   reload 2 GB onto the GPU, so `speak-clone` (stdlib client) talks to
   `daemon.py` (venv python) over `$XDG_RUNTIME_DIR/clippy-voice.sock`;
   the daemon self-starts on demand and exits after 15 idle minutes
@@ -645,7 +690,8 @@ is one opaque string and ignores all three (clones bend via
   existing cache files, self-starts the daemon. Rerun it after a `--ref`
   or exag/cfg change — those re-key the cache. The plugin runs the bare
   form itself: `warmBook()` (`warmBookProc`, separate from `warmProc` so
-  a 5-minute book never blocks an agent batch) fires on mount and in
+  a 10-20 minute book — ~2.5 s/line with the box busy — never blocks an
+  agent batch) fires on mount and in
   `onTtsSettingChanged`, kills a warm in flight (it would be rendering
   the previous reference), and only spawns when the live tts contains
   "speak-clone", handing it over as `--tts <cmd>` so the warm can't
@@ -681,7 +727,11 @@ is one opaque string and ignores all three (clones bend via
 ## Ducking
 
 On by default, configurable since v1.31.0 — every *other* audio stream
-drops to `duck` of its volume (default 0.8; the original hardwired 0.3
+drops to `duck` of its volume (pipewire-pulse never implemented
+PulseAudio's `module-role-ducking`, so per-stream `pactl` scaling is the
+only primitive, hence `scripts/duck`; pactl's percent is cubic, so 0.8 is
+a −5.8 dB cut and sounds bigger than "20 %" — noticed and accepted;
+default 0.8; the original hardwired 0.3
 was "kinda annoying", and "ALWAYS duck other audio" was Costa's own
 rule until he asked for the setting) while he speaks and is restored
 after. `duckFactor` derives from the key: false (or ≥1) means no duck
@@ -714,13 +764,18 @@ park in `duckNext`; a mount runs `duck stop` as crash healing. Known
 trade-off: PipeWire stream-restore memorizes a stream's volume, so an
 app whose stream ends mid-duck is remembered at 80 % and starts there
 next time, silently — the heal is playing a live stream of that app and
-`pactl set-sink-input-volume <id> 100%`, which rewrites the memory.
+`pactl set-sink-input-volume <id> 100%`, which rewrites the memory (no
+snapshot-side fix exists — a stream that has already ended can't be
+volume-set).
 Orthogonal to Costa's `costafot.autoduck` plugin (mutes browser streams
 only, never touches volumes); they compose.
 
 ## The graveyard (global leaderboard)
 
-Default-on death leaderboard (anonymous; opt-out). Server: repo `CostaFot/clippy-leaderboard`
+Default-on death leaderboard (anonymous; opt-out — it started opt-in;
+Costa: "the leaderboard/counts is half the fun and being opt in we would
+lack anything to show", and anonymous opt-out telemetry with a disclosure
+is ordinary OSS practice). Server: repo `CostaFot/clippy-leaderboard`
 (`~/Work/clippy-leaderboard`), Flask + psycopg2 + gunicorn on Railway
 (project `clippy-leaderboard`, Postgres internal-only — no public proxy,
 keep it that way; domain
@@ -792,6 +847,24 @@ stays free text — IPC and agent only.
   change. The cached-compile gotcha also bites a real clone when files
   are only copied in: the shell logs a plugin reload but serves the old
   compile — restart the shell.
+- `scripts/` (clippy-ai, voice-scan, duck, warm-voice…) are exec'd fresh
+  per call — an edit needs no shell restart, only the hand-copy into the
+  installed clone; the cached-compile gotcha is QML-only.
+- `set` accepts out-of-range numbers silently: `set restless 5` answers
+  plain `ok`, stores 5, `get` returns 5; the clamp happens only at the
+  property binding (`clamp()` on size/speed/restless, `Math.max` on the
+  intervals/respawn/slapsToKill). Known gap, stated in scripting.md.
+- Test harnesses that worked: widget avoidance = `set restless 1` and
+  screenshot pairs against `omarchy-shell shell debugBarGeometry` (same
+  coordinate space as stage x); engine-less TTS = `set tts "cat >>
+  /tmp/lines"` collects exactly the displayed lines, `set tts "sleep 30"`
+  proves every kill path (replacement line, `hide`, `set tts false`,
+  sleep) — it's what caught the `running = false` bug; setup-voice's
+  no-GPU and `--robot` branches = stub `nvidia-smi` and `omarchy-shell`
+  binaries on PATH; a subprocess that fails only from the shell = run the
+  identical command under `systemd-run --user` (how a "plugin curl fails,
+  terminal curl works" scare was proven to be the edge being down, and
+  why `lbProc` collects stderr).
 - Every layout-shaped write to `shell.json` (by anyone) rebuilds the
   panel Instantiator and remounts us — that's why dead/snooze/x live in
   `PersistentProperties`; keep mount cheap. An inline `set` on our own
@@ -828,7 +901,9 @@ stays free text — IPC and agent only.
   different: `~/.local/share/chatterbox-tts/voices/rubick.wav` (also in
   the repo at `assets/voices/rubick.wav`, byte-identical). Parked, not
   deleted (move back to re-offer in the picker): `voices-parked/` holds
-  the approved c3po + c3po-fast takes; `piper-voices-parked` and
+  the approved c3po + c3po-fast takes (c3po's approved knobs were `--exag
+  0.6 --cfg 0.7` — 0.5/0.5 read slow, the reference is 3PO at his
+  weariest; c3po-fast is the snappier alternate reference); `piper-voices-parked` and
   `kokoro-tts-parked` sit next to their original dirs (Costa: "less
   options. less to debug"). `voices/grossman.wav` is a second, unapproved
   clone reference (v1.28.0's test subject; source clip in `~/Downloads`).
@@ -837,13 +912,19 @@ stays free text — IPC and agent only.
 - codex and pi are installed but not logged in (401 / no key); only
   claude and opencode have actually been run through clippy-ai. The
   shell's env has the mise shims on PATH, so agent binaries resolve.
-- The leaderboard DB was cleaned of test rows; the board ships empty and
-  Costa picks his own handle.
+- The leaderboard DB was cleaned of test rows before launch. Costa's box
+  posts as `costafot` (#1, 36 kills / 343 slaps at 2026-08-29) — so every
+  IPC `slap`/`kill`/`fling` test on this machine posts REAL deltas to the
+  public board; `set leaderboard off` first, or accept the inflation. The
+  DB is reachable only via `railway ssh --service Postgres -- psql`.
+- The talk-back bind on Costa's box is double-tap Alt: `bindings.lua`
+  line ~123 binds `ALT + ALT_L`/`ALT_R` on release to
+  `~/.config/hypr/double-alt.sh`, which runs the `listen` verb.
 
 ## Status
 
-Feature-complete at v1.40.1 (2026-08-29): everything above is live and
+Feature-complete at v1.40.3 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
-the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.
+the gap list. Future work: `IDEAS.md`. How we got here: `git log`.

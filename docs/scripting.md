@@ -45,8 +45,11 @@ Every argument is required and is one string — quote anything with spaces
 (`set tts "piper ... | aplay ..."` is one argument). `set` reads the value
 by shape: `true`/`false` become booleans, a number becomes a number,
 `unset` (or `default`, or an empty string) removes the key so the default
-comes back, anything else is stored as a string. `get` prints the value in
-effect as JSON, so a string comes back quoted.
+comes back, anything else is stored as a string. A number outside a key's
+range is stored as given and answered `ok` — the clamp happens where the
+value is used, so `set restless 5` behaves as `1` while `get` still says
+`5`. `get` prints the value in effect as JSON, so a string comes back
+quoted.
 
 Every verb answers one line on stdout. `ok` means it happened; `ok — <note>`
 adds what happens next ("looking; the verdict lands in his bubble in ~10 s",

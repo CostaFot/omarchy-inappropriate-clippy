@@ -90,6 +90,10 @@ setup and it doubles his territory.
 
 ## Decided against
 
+- **Ask an oracle** — a free-text question to him, answered straight.
+  Scratched (2026-08-29): omarchy users already have an agent one keybind
+  away, and a tool-less, fact-limited call is strictly worse than it. Only
+  the bit survived — `reply` mocks questions instead of answering them.
 - **Pluggable clone models** — the other half of the drop-in-voices
   pitch (shipped v1.27.0: any *engine* is now first-class in the picker
   via `~/.local/share/clippy-voices/`). Swappable neural cloners stay
