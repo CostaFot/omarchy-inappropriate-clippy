@@ -620,7 +620,7 @@ no settings row (free text — IPC and agent only).
 
 ## Status
 
-Feature-complete at v1.29.0 (2026-08-29): everything above is live and
+Feature-complete at v1.29.1 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

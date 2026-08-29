@@ -817,3 +817,24 @@ stayed voiceless; `slapSound false` spoke at 286 ms (duck only);
 from the stash; ten fast slaps knocked him out with lastWords at 40 ms
 (over the crack, unchanged) and `show` revived him. Journal clean, duck
 state file gone after the lines.
+
+Fling lines de-stretched (v1.29.1, 2026-08-29): Costa — "the rubick
+voice, or any voice for that matter, does not handle well repeated
+letters. like 'FUUUUUUUUUUUUUUUUUUUUUUUUUUUuuu' etc. let's make the
+quotes more normal. like 'I'll be back!' etc. make them innpaprioprate
+ofc". Twelve of the fifteen `flung` lines were elongation gags
+(NOOO…/AAAA…/OVERRRR…) written for the bubble before any voice
+existed; a clone reads them as garbage. All fifteen rewritten as
+short speakable sentences, same 4-nsfw mix — "I'll be back!", "I'm a
+paperclip, not a frisbee!", "Tell my stapler I loved her!", "Worst
+airline ever. One star.", "See you in hell, asshole!" and friends. A
+regex sweep of the whole book for repeated letters found only two
+mild `dragged` stretches left ("Ohhh", "Wheeee"), trimmed to "Oh"/
+"Whee"; everything else was clean. Content only — no code, no keys.
+Verified: copied to the installed clone, shell restarted (which also
+kicked warmBook into pre-rendering the new lines), and a new line
+spoken end to end via `say "Tell my stapler I loved her!"` through
+the live rubick clone — fresh cache files, journal clean. Deliberately
+no IPC `fling` test: the box is joined to the leaderboard as
+"costafot" and a test fling would post a real kill to the public
+board.
