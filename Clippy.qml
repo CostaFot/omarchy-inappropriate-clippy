@@ -185,6 +185,7 @@ Item {
   // battery, the hour. The book stays the fallback. `aiAgent` overrides
   // which agent, else whatever `omarchy default agent` says.
   readonly property bool aiEnabled: setting("ai", false) === true
+  onAiEnabledChanged: if (!aiEnabled) abortListen() // a live mic dies with its context
   readonly property string aiAgent: String(setting("aiAgent", "") || "")
   readonly property string aiModel: String(setting("aiModel", "") || "")
   readonly property string aiAgentName: agentBrain.agent
@@ -280,7 +281,7 @@ Item {
   }
   // `hide` only flips `opened` — the bubble props stay put, and without this
   // he'd keep talking out of an invisible window.
-  onOpenedChanged: if (!opened) stopSpeaking()
+  onOpenedChanged: if (!opened) { stopSpeaking(); abortListen() }
 
   // ---- voice inventory ----------------------------------------------------
   // Every voice already on disk, so the menu can offer a picker and an agent
@@ -510,6 +511,7 @@ Item {
 
   function fallAsleep() {
     console.log("clippy: asleep, " + awayReason())
+    abortListen()
     asleepSince = Date.now()
     walkAnim.stop()
     shoveAnim.stop()
@@ -572,7 +574,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun", "noBrain", "heardNothing"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   function emptyBook() {
@@ -646,6 +648,7 @@ Item {
     if (asleep) return "asleep"
     if (mood === "dead" || mood === "dying" || mood === "reviving") return "dead — he judges nothing from the grave; respawn first"
     if (!aiEnabled) return "off — the look runs through your coding agent; set ai true first"
+    if (listening || replying) return "busy — he's mid-conversation; wait for the comeback"
     if (lookProc.running) return "busy — already looking; the verdict lands in his bubble"
     if (!targetScreen) return "not now"
     var file = Quickshell.env("XDG_RUNTIME_DIR") + "/clippy-look.png"
@@ -681,22 +684,198 @@ Item {
         var parsed = JSON.parse(String(lookOut.text))
         if (Array.isArray(parsed) && typeof parsed[0] === "string" && parsed[0].trim() !== "") line = parsed[0].trim()
       } catch (e) {}
-      // Back to the idle loop when there's no line to say — but never while
-      // asleep (fallAsleep stopped the sprite; wakeUp restarts it) and never
-      // over a drag or another mood's animation.
-      function backToIdle() {
-        if (root.mood === "idle" && !root.dragging && !root.asleep) { root.idleAnim(); root.schedule(root.rand(3000, 8000)) }
-      }
       if (code !== 0 || !line) {
         root.lookFailed = true
         console.warn("clippy: screen look failed (exit " + code + "): " + String(lookErr.text).trim())
-        backToIdle()
+        root.backToIdle()
         return
       }
       root.lookFailed = false
       agentBrain.remember("shoved their screen in his face for a verdict")
       // Asleep or dead by the time the verdict arrived: stale, drop it.
-      if (!root.say(line, null, true)) backToIdle()
+      if (!root.say(line, null, true)) root.backToIdle()
+    }
+  }
+
+  // ---- talk back ---------------------------------------------------------
+  // IPC `listen` (toggle) / `reply <text>` and the menu's "Say it to his
+  // face": the user answers his last line, voxtype transcribes it locally
+  // (the audio never leaves the machine — only the text goes to the user's
+  // agent), and clippy-ai --reply fires the comeback back through that
+  // agent, agent-dressed. Explicit gesture ONLY, the look's rule extended
+  // to audio: the mic never opens on his own schedule. The wav dies with
+  // the transcription stage, success or not. A live mic dies with its
+  // context (sleep, death, hide, ai off) via abortListen(); an in-flight
+  // transcription or agent call is never killed — its result is gated on
+  // arrival instead (the look's stale-verdict rule).
+  property bool listening: false
+  property bool replying: false
+  property bool replyFailed: false
+  property bool recordAborted: false
+  property string lastHeard: ""
+  readonly property string listenWav: Quickshell.env("XDG_RUNTIME_DIR") + "/clippy-listen.wav"
+  // He's mid-conversation: no idle walks, no unprompted lines, no crash
+  // heckles stepping on the exchange.
+  readonly property bool occupied: looking || listening || replying
+  // Whether voxtype exists — the menu row hides without it, the `listen`
+  // reply points at it. Probed like ttsProbe: mount and menu open.
+  property bool voxtypeMissing: true
+  Process {
+    id: voxProbe
+    command: ["bash", "-c", "command -v voxtype >/dev/null"]
+    onExited: function (code) { root.voxtypeMissing = code !== 0 }
+    Component.onCompleted: running = true
+  }
+
+  // Back to the idle loop when a stage ends with nothing to say — but never
+  // while asleep (fallAsleep stopped the sprite; wakeUp restarts it) and
+  // never over a drag or another mood's animation.
+  function backToIdle() {
+    if (mood === "idle" && !dragging && !asleep) { idleAnim(); schedule(rand(3000, 8000)) }
+  }
+
+  function toggleListen() {
+    if (listening) { recordProc.signal(2); return "ok — heard you; the comeback lands in his bubble" }
+    if (!opened) return "hidden"
+    if (asleep) return "asleep"
+    if (mood === "dead" || mood === "dying" || mood === "reviving") return "dead — he hears nothing from the grave; respawn first"
+    if (!aiEnabled) { sayNoBrain(); return "off — the comeback runs through your coding agent; set ai true first (he told you himself)" }
+    if (voxtypeMissing) return "no ears — voxtype isn't installed; `reply <text>` talks back without a mic"
+    if (looking) return "busy — he's judging the screen; wait for the verdict"
+    if (replying) return "busy — still cooking the last comeback"
+    hideBubble() // his own voice must not end up in the transcript
+    recordAborted = false
+    // The 15 s cap lives in the child, and `timeout` forwards a received
+    // INT — so the toggle-stop and the cap are the same signal path, and
+    // INT is pw-record's designed stop (the WAV header gets finalized).
+    recordProc.command = ["timeout", "-s", "INT", "15", "pw-record",
+      "--rate", "16000", "--channels", "1", listenWav]
+    recordProc.running = true
+    listening = true
+    walkAnim.stop()
+    brain.stop()
+    if (mood === "walking") { persisted.lastX = actor.x; mood = "idle" }
+    sprite.play(sprite.has("Hearing_1") ? "Hearing_1" : "Thinking", true)
+    return "ok — listening (15 s cap; `listen` again to stop); the comeback lands in his bubble"
+  }
+
+  function abortListen() {
+    if (!listening) return
+    recordAborted = true
+    recordProc.signal(2)
+  }
+
+  // The ai-off sass, shared by both verbs: he answers the attempt himself.
+  function sayNoBrain() {
+    var q = randomQuoteFrom("noBrain")
+    say(q ? q.text : "You want a reaction? I'm too dumb without an agent. set ai true.", q && q.anim)
+  }
+
+  Process {
+    id: recordProc
+    // A shell exit must not leave a live mic (the ttsProc rule, but INT:
+    // pw-record's designed stop).
+    Component.onDestruction: signal(2)
+    onExited: function (code) {
+      root.listening = false
+      // Aborted, or the world changed under the mic: swallow the take.
+      if (root.recordAborted || !root.aiEnabled || !root.opened || root.asleep
+          || root.mood === "dead" || root.mood === "dying" || root.mood === "reviving") {
+        wavCleanup.running = true
+        root.backToIdle()
+        return
+      }
+      root.replying = true
+      sprite.play(sprite.has("CheckingSomething") ? "CheckingSomething" : "Thinking", true)
+      transcribeProc.running = true
+    }
+  }
+  Process { id: wavCleanup; command: ["rm", "-f", root.listenWav] }
+
+  Process {
+    id: transcribeProc
+    command: ["bash", "-c",
+      'f=$1; voxtype transcribe "$f"; rc=$?; rm -f "$f"; exit $rc',
+      "clippy-listen", root.listenWav]
+    stdout: StdioCollector { id: transcribeOut }
+    stderr: StdioCollector { id: transcribeErr }
+    onExited: function (code) {
+      if (code !== 0) {
+        root.replying = false
+        root.replyFailed = true
+        console.warn("clippy: transcription failed (exit " + code + "): " + String(transcribeErr.text).trim().slice(-300))
+        root.backToIdle()
+        return
+      }
+      // voxtype's stdout is progress + ANSI-colored log lines, one blank
+      // line, then the transcript — take what follows the last blank line
+      // and strip any stray escape codes.
+      var chunks = String(transcribeOut.text).split(/\n\s*\n/)
+      var text = chunks[chunks.length - 1]
+        .replace(/\x1b\[[0-9;]*m/g, "").replace(/\s+/g, " ").trim()
+      // Whisper transcribes silence as "." — that's not talking back.
+      if (/^[\s.,!?;:\u2026\-\u2013\u2014'"]*$/.test(text)) {
+        root.replying = false
+        var q = root.randomQuoteFrom("heardNothing")
+        if (!root.say(q ? q.text : "Fifteen seconds of mic. You said nothing.", q && q.anim)) root.backToIdle()
+        return
+      }
+      // The world may have changed during the seconds of whisper.
+      if (!root.aiEnabled || !root.opened || root.asleep
+          || root.mood === "dead" || root.mood === "dying" || root.mood === "reviving") {
+        root.replying = false
+        root.backToIdle()
+        return
+      }
+      root.sendReply(text)
+    }
+  }
+
+  // The shared back half: voice lands here after transcription, IPC
+  // `reply <text>` lands here directly.
+  function sendReply(userText) {
+    replying = true
+    lastHeard = userText
+    var cmd = [pluginDir + "/scripts/clippy-ai", "--reply", userText]
+    // bubble.text survives the hide — his last line is what they answered.
+    var said = String(bubble.text || "").trim()
+    if (said !== "") cmd.push("--said", said)
+    if (clean) cmd.push("--clean")
+    if (aiAgent !== "") cmd.push("--agent", aiAgent)
+    if (aiModel !== "") cmd.push("--model", aiModel)
+    // Deliberately NO --recent, the look's reasoning: the exchange
+    // remember()s itself, and feeding the list back would make repeat
+    // rounds count each other instead of attacking the words.
+    if (quotesFile !== "") cmd.push("--quotes", quotesFile)
+    replyProc.command = cmd
+    replyProc.running = true
+    walkAnim.stop()
+    brain.stop()
+    if (mood === "walking") { persisted.lastX = actor.x; mood = "idle" }
+    sprite.play(sprite.has("CheckingSomething") ? "CheckingSomething" : "Thinking", true)
+  }
+
+  Process {
+    id: replyProc
+    stdout: StdioCollector { id: replyOut }
+    stderr: StdioCollector { id: replyErr }
+    onExited: function (code) {
+      root.replying = false
+      var line = null
+      try {
+        var parsed = JSON.parse(String(replyOut.text))
+        if (Array.isArray(parsed) && typeof parsed[0] === "string" && parsed[0].trim() !== "") line = parsed[0].trim()
+      } catch (e) {}
+      if (code !== 0 || !line) {
+        root.replyFailed = true
+        console.warn("clippy: comeback failed (exit " + code + "): " + String(replyErr.text).trim())
+        root.backToIdle()
+        return
+      }
+      root.replyFailed = false
+      agentBrain.remember("talked back to his face: \"" + root.lastHeard.slice(0, 80) + "\" — he answered")
+      // Asleep, dead or hidden by the time it landed: stale, drop it.
+      if (!root.say(line, null, true)) root.backToIdle()
     }
   }
 
@@ -734,7 +913,7 @@ Item {
     if (crashLastAt[name] && now - crashLastAt[name] < 60000) return
     crashLastAt[name] = now
     agentBrain.remember(name + " crashed on them")
-    if (isSnoozed() || dragging || looking) return
+    if (isSnoozed() || dragging || occupied) return
     var q = randomQuoteFrom("crashed")
     if (q) say(q.text.replace(/\{app\}/g, name), q.anim)
   }
@@ -838,7 +1017,7 @@ Item {
   }
 
   function decide() {
-    if (mood !== "idle" || dragging || asleep || looking) return
+    if (mood !== "idle" || dragging || asleep || occupied) return
     // Parked on a widget (drag-drop, or one appeared under him): itchier
     // feet, but still the normal walk on the normal beat — no new timers.
     var urge = onWidget() ? Math.max(restless, 0.8) : restless
@@ -995,6 +1174,7 @@ Item {
     text = String(text || "").trim()
     if (text === "") return false
     if (mood === "dead" || mood === "dying" || mood === "reviving" || asleep) return false
+    if (listening) return false // his own voice must never end up in the transcript
     walkAnim.stop()
     brain.stop()
     mood = "talking"
@@ -1025,7 +1205,7 @@ Item {
     if (asleep) return  // wakeUp() reschedules
     scheduleQuote()
     if (mood !== "idle" && mood !== "walking") return
-    if (isSnoozed() || dragging || looking) return
+    if (isSnoozed() || dragging || occupied) return
     var q = nextQuote()
     if (q) say(q.text, q.anim, q.ai)
   }
@@ -1044,6 +1224,7 @@ Item {
 
   function kill(lineKey) {
     if (mood === "dead" || mood === "dying") return
+    abortListen()
     walkAnim.stop()
     shoveAnim.stop()
     brain.stop()
@@ -1665,6 +1846,7 @@ Item {
   // icon work as usual.
   function flingOff(dir) {
     if (mood === "dead" || mood === "dying" || mood === "reviving") return false
+    abortListen()
     dir = Number(dir) < 0 ? -1 : 1
     dragging = false
     dragTalk.stop()
@@ -1755,6 +1937,7 @@ Item {
   // means the monitor Clippy is on). The bar icon calls this from any bar.
   function showMenuAt(atX, onScreen) {
     ttsProbe.running = true // the Voice row's espeak state, kept fresh
+    voxProbe.running = true // the "Say it to his face" row's ears, same idea
     voiceScan.running = true // and the picker's inventory (fresh after a setup-voice run)
     menu.anchorScreen = onScreen || null
     menu.anchorPos = atX
@@ -1780,6 +1963,8 @@ Item {
         "say <text> — a line in his bubble (spoken if the voice is on)",
         "talk — a line of his own choosing; shutUp drops the bubble",
         "look — he screenshots his screen and your agent delivers the verdict in his bubble ~10 s later (needs ai true)",
+        "listen — toggle the mic: he transcribes you locally (voxtype) and your agent fires the comeback back (needs ai true)",
+        "reply <text> — the typed version of listen; same comeback, no mic",
         "slap left|right — hit him; fling left|right — off the bar, fatal",
         "kill / respawn — the deliberate versions",
         "epitaph — poke the grave while he's dead",
@@ -1801,6 +1986,23 @@ Item {
     // Screenshot his screen, one jab from the agent about what's on it.
     // Async: the reply is immediate, the verdict lands in the bubble.
     function look(): string { return root.lookAtScreen() }
+    // Toggle the mic: voxtype transcribes the take locally, the agent fires
+    // back. Async like `look` — the comeback lands in the bubble.
+    function listen(): string { return root.toggleListen() }
+    // The typed version: same comeback plumbing, no mic.
+    function reply(text: string): string {
+      text = String(text || "").trim()
+      if (text === "") return "say something — reply needs words"
+      if (!root.opened) return "hidden"
+      if (root.asleep) return "asleep"
+      if (root.mood === "dead" || root.mood === "dying" || root.mood === "reviving") return "dead — he hears nothing from the grave; respawn first"
+      if (!root.aiEnabled) { root.sayNoBrain(); return "off — the comeback runs through your coding agent; set ai true first (he told you himself)" }
+      if (root.looking) return "busy — he's judging the screen; wait for the verdict"
+      if (root.listening) return "busy — the mic is live; he's listening, not reading"
+      if (root.replying) return "busy — still cooking the last comeback"
+      root.sendReply(text)
+      return "ok — thinking; the comeback lands in his bubble in ~10 s"
+    }
     function shutUp(): string { root.hideBubble(); return "ok" }
     // The grave's line, same as clicking the tombstone.
     function epitaph(): string {
@@ -1851,12 +2053,15 @@ Item {
     function hideMenu(): string { menu.open = false; return "ok" }
     function showMenu(): string { root.showMenu(); return "ok" }
     // What the agent side is doing: "off", or "<agent>: N cached[, busy]",
-    // plus what the last `look` is up to.
+    // plus what the last `look` or `listen`/`reply` is up to.
     function ai(): string {
       if (!root.aiEnabled) return "off"
       var s = agentBrain.status()
       if (root.looking) s += "; looking at the screen right now"
+      else if (root.listening) s += "; the mic is live — he's listening (15 s cap)"
+      else if (root.replying) s += "; heard them, cooking the comeback"
       else if (root.lookFailed) s += "; the last screen look failed (journalctl --user -o cat | grep clippy)"
+      else if (root.replyFailed) s += "; the last comeback failed (journalctl --user -o cat | grep clippy)"
       return s
     }
     // Agent-first status for the voice: what `tts` resolves to and whether
@@ -2070,6 +2275,7 @@ Item {
     onAct: function (name) {
       if (name === "say") { var q = root.nextQuote(); if (q) root.say(q.text, q.anim, q.ai) }
       else if (name === "look") root.lookAtScreen()
+      else if (name === "listen") root.toggleListen()
       else if (name === "shutUp") root.hideBubble()
       else if (name === "snooze") root.snooze(60)
       else if (name === "unsnooze") root.unsnooze()

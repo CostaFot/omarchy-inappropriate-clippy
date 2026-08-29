@@ -1107,3 +1107,65 @@ test loop, not the plugin); journal clean. README (table row, feature
 paragraph, quotesFile key list + {app}), AGENTS.md (key list, crash
 bullet, status v1.34.0), IDEAS.md (reactive-lines entry marked
 first-instance-shipped), manifest 1.34.0.
+
+## He takes it personally now (v1.35.0, 2026-08-29)
+
+The best unshipped feature, by Costa's own ranking: "an easy interactive
+way for the user to respond to the last thing Clippy said … just the user
+saying it directly to Clippy. That would be amazing." — the IDEAS.md
+"voxtype push-to-talk" pitch, aka the unbeatable demo. Scoping found
+everything already on the box: voxtype is an omarchy default (first-run
+install hook, whisper large-v3-turbo), and `voxtype transcribe <wav>` is
+one-shot scriptable — the daemon route was rejected because it types into
+the focused window. Three facts were verified before a line of QML:
+SIGINT finalizes pw-record's WAV header (RIFF size checked byte-exact),
+`timeout -s INT 15` forwards a received INT so the toggle-stop and the
+15 s cap are the same signal path, and voxtype's stdout mixes ANSI log
+lines with the transcript (parse = everything after the last blank line,
+ANSI-stripped; silence hallucinates "."). Costa picked toggle+cap over
+silence detection, both routes (voice + typed `reply`), and the
+listen/reply naming. Shipped mirroring the look: `listen` hides the
+bubble (his TTS must not transcribe itself — `say()` now refuses while
+`listening`), records to $XDG_RUNTIME_DIR, plays Hearing_1 (the sprite
+sheet had a literal listening animation all along), transcribes locally,
+and hands ONLY the text to `clippy-ai --reply <words> --said
+<bubble.text>` (which survives bubble hide — the "last thing he said"
+store was already there). One combative jab back, agent-dressed. A live
+mic dies with its context (sleep/kill/fling/hide/ai-off →
+`abortListen()`); in-flight calls are never killed, their results gated
+on arrival like the look's stale verdicts; `occupied` gates
+decide/unprompted/crashReact; look and listen refuse each other busy.
+Empty transcript → new `heardNothing` book key, no call spent; ai off →
+both verbs say a new `noBrain` line themselves ("Reactions cost extra.
+They're called an agent."). No new setting — the gesture is the opt-in,
+and the design rule now names the mic next to the screenshot. Ducking
+during recording was considered and skipped (a second duck holder
+re-invites the compounding-snapshot bug); deferral noted in IDEAS.md.
+Mid-plan Costa added two prompt notes: be EXPLICIT it's roleplay ("Claude
+really needs prompting to give you back swear words … the user wants
+this") — the shared `tone` now opens with the consent framing, pulling
+punches is breaking character — and Clippy picks fights ("the user says
+shut the fuck up, and Clippy would say back, what, you want some?") —
+the reply prompt's first rule, with a clean-mode cut of the example so
+--clean never quotes a swear at a model it just forbade swearing.
+Verified: prompt shapes for said/no-said/clean/quota (batch keeps the
+fuck-level mandate, one-jab modes drop it); real calls landed "Shut up?
+You built me, dickhead — six crashes today and I'm the only thing on
+this desktop still working." for "shut the fuck up" and a
+question-mocker for "why is my build broken", ~4 s each. Post-bind,
+Costa caught the drift the batch prompt knows well ("he is referencing
+bash crashing 7 times today… the thing he should be focusing on is the
+last thing clippy said and the user responding to it?"): the facts led
+the reply prompt and the model kept grabbing the shiniest stat (7 real
+dumps that day — 5 of them our own SEGV test gesture) over the exchange.
+Reordered on his call ("his words should be the star"): the said/reply
+pair now leads, the context trails as "for cross-reference only", and
+rule #1 became the star rule — a comeback that does not engage what they
+said is a failure. Verified live: "Useless and annoying, says the guy
+who crashed bash seven times and then put on a movie clip to get yelled
+at properly." — words first, the stat demoted to setup. A SUPER ALT C
+bindd for `listen` went into his bindings.lua for the mic demo. README (feature
+paragraph, scripting verbs, a SUPER SHIFT C V bindd + the press/release
+push-to-talk pair, key list), AGENTS.md (design rule, talk-back section,
+key list, status), IDEAS.md (marked shipped, remainder kept), manifest
+1.35.0.

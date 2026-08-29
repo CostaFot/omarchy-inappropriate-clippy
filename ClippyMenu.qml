@@ -215,6 +215,17 @@ PanelWindow {
         label: menu.clippy && menu.clippy.looking ? "Judging…" : "Judge my screen"
         onTapped: menu.pick("look")
       }
+      // Same gate plus working ears — without voxtype the row would do
+      // nothing (reply-by-text stays IPC-only: the menu takes no keyboard
+      // focus, by design rule). Tapping "Listening…" is the stop toggle.
+      Entry {
+        visible: !card.gone && menu.clippy && menu.clippy.aiEnabled === true
+                 && menu.clippy.voxtypeMissing === false
+        label: menu.clippy && menu.clippy.listening ? "Listening…"
+             : menu.clippy && menu.clippy.replying ? "Thinking…"
+             : "Say it to his face"
+        onTapped: menu.pick("listen")
+      }
       Entry {
         visible: !card.gone
         label: menu.open && menu.clippy && menu.clippy.isSnoozed() ? "Wake him up" : "Snooze for an hour"

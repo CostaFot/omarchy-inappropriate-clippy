@@ -109,7 +109,8 @@ into the bar himself, settings and all.
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
 `quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`,
-`flung`, `crashed`, `welcomeBack`, `epitaph` and `firstRun` arrays. `{away}` in a `welcomeBack` line
+`flung`, `crashed`, `welcomeBack`, `epitaph`, `firstRun`, `noBrain` and
+`heardNothing` arrays. `{away}` in a `welcomeBack` line
 becomes how long you were gone ("47 minutes", "3 hours"); `{back}` in an
 `epitaph` becomes how long until he's back ("4 minutes", "never"); `{app}` in
 a `crashed` line becomes the program that just dumped core.
@@ -158,6 +159,20 @@ above — but only when you ask: he never takes one on his own, not on a timer,
 not ever, and the file is deleted the moment the call returns. `claude` reads
 the image natively and `codex` gets it attached; any other agent gets the
 file path in the prompt and does what it can with it.
+
+And you can talk back. "Say it to his face" in the menu (or `omarchy-shell
+costafot.clippy listen`) opens the microphone — he visibly leans in — and
+whatever you say to him comes back as a comeback, through the same agent,
+spoken in whatever voice he has. Call `listen` again to stop, or he gives up
+after 15 seconds. He is combative about it: tell him to shut up and he
+squares up, ask him a question and he mocks you for asking a paperclip. The
+audio is transcribed **on your machine** by [voxtype](https://voxtype.io)
+(which ships with Omarchy) and the recording is deleted right after — only
+the transcribed text goes to your agent, and the mic only ever opens on your
+explicit gesture, same rule as the screenshot. Say nothing and he notices
+that too, without spending a call on it. No mic handy? `omarchy-shell
+costafot.clippy reply "your words"` is the same fight, typed. Without an
+agent set he answers both with the stock sass you deserve.
 
 Verified with `claude` and `opencode`; `codex` and `pi` are wired the same way
 but weren't run here, and the rest are best guesses from their docs. To see
@@ -382,6 +397,8 @@ omarchy-shell costafot.clippy help       # every verb, one per line — start he
 omarchy-shell costafot.clippy say "Another theme. That'll fix it."
 omarchy-shell costafot.clippy talk       # a line of his own, what a click does
 omarchy-shell costafot.clippy look       # screenshots his screen; the agent's verdict lands in his bubble (needs ai on)
+omarchy-shell costafot.clippy listen     # toggles the mic; he transcribes you locally and the agent's comeback lands in his bubble (needs ai on)
+omarchy-shell costafot.clippy reply "make me"  # the typed version of listen — same comeback, no mic
 omarchy-shell costafot.clippy shutUp
 omarchy-shell costafot.clippy snooze 30  # unsnooze wakes him early
 omarchy-shell costafot.clippy slap left   # or right: the way he flies
@@ -421,6 +438,15 @@ drops straight into a Hyprland bind:
 bindd = SUPER SHIFT C, C, Toggle Clippy, exec, omarchy-shell costafot.clippy toggle
 bindd = SUPER SHIFT C, T, Clippy talks, exec, omarchy-shell costafot.clippy talk
 bindd = SUPER SHIFT C, J, Clippy judges the screen, exec, omarchy-shell costafot.clippy look
+bindd = SUPER SHIFT C, V, Talk back to Clippy, exec, omarchy-shell costafot.clippy listen
+```
+
+Or push-to-talk — `listen` is a toggle, so a press bind and a release bind
+make hold-to-record:
+
+```conf
+bindd  = SUPER SHIFT C, V, Clippy listens, exec, omarchy-shell costafot.clippy listen
+bindrd = SUPER SHIFT C, V, Clippy stops listening, exec, omarchy-shell costafot.clippy listen
 ```
 
 `say` works from anywhere, so an Omarchy hook can feed him lines:

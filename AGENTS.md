@@ -39,7 +39,10 @@ Design rules that outrank any single feature:
   sent; no cloud TTS, ever. The screen look (`look`) sends a screenshot
   to the user's agent ONLY on the explicit gesture — never on a timer,
   never from decide()/unprompted(); an unprompted screenshot would be
-  surveillance, not a gag. Keep it that way.
+  surveillance, not a gag. The mic (`listen`) is under the same law:
+  opens only on the explicit gesture, the audio is transcribed locally
+  (voxtype) and deleted, and only the text reaches the user's own agent.
+  Keep it that way.
 - Keep him mostly still — tune, don't make him busier.
 - Keep `help`, the README's scripting section, and the actual IPC verbs in
   sync; `help` is the blind agent's bootstrap and ends with the README
@@ -190,7 +193,10 @@ Design rules that outrank any single feature:
   the action rows collapse to "Bring him back" → `act("revive")` →
   `root.bringBack()`. Rows: actions (including "Judge my screen" →
   `act("look")`, visible only while `ai` is on — without the agent the
-  row would do nothing); `Choice` chip rows for clean, sounds,
+  row would do nothing — and "Say it to his face" → `act("listen")`,
+  same gate plus `voxtypeMissing === false`; its label flips to
+  "Listening…"/"Thinking…" and tapping "Listening…" is the stop
+  toggle); `Choice` chip rows for clean, sounds,
   restless ("Walks"), size, the Voice picker, and Tempo/Pitch presets
   (Tempo slow 0.9 · normal 1 · brisk 1.1 · fast 1.25; Pitch deep 0.85 ·
   normal 1 · light 1.15 · squeaky 1.35 — shown ONLY while
@@ -304,9 +310,43 @@ an optional `hint` (dim second line,
   model, NOT settings.json's `model` — `--setting-sources ""` isolates
   it); shown in the "Lines from <agent>" row label when set, no picker
   (names differ per agent). `set aiAgent`/`set aiModel` while `ai` is
-  off answer "ok — but ai is off…".
+  off answer "ok — but ai is off…". Talk-back (v1.35.0): IPC `listen`
+  (toggle) / `reply <text>` and the menu's "Say it to his face" (shown
+  only while `ai` is on AND voxtype exists — `voxProbe` feeds
+  `voxtypeMissing`, probed on mount and menu open). `listen` records the
+  mic with `timeout -s INT 15 pw-record --rate 16000 --channels 1` into
+  `$XDG_RUNTIME_DIR/clippy-listen.wav` — the toggle-stop is
+  `recordProc.signal(2)` and `timeout` forwards a received INT, so the
+  cap and the stop are the same signal path and INT is pw-record's
+  designed stop (the WAV header gets finalized; verified). The take is
+  transcribed by `voxtype transcribe` in a bash chain that `rm`s the wav
+  either way; voxtype's stdout is progress + ANSI log lines, one blank
+  line, then the transcript, so the parse takes everything after the
+  last blank line, ANSI-stripped. A punctuation-only transcript (whisper
+  hallucinates "." on silence) gets a `heardNothing` book line and no
+  agent call; a real one goes to `clippy-ai --reply <text> --said
+  <bubble.text>` (his last line survives bubble hide) — one combative
+  comeback, image-mode-shaped prompt (fight rules, mocks questions
+  instead of answering — the heckler, never an oracle; no swear quota,
+  and the whole non-clean prompt carries the roleplay/consent framing in
+  `tone`), said agent-dressed. IPC `reply` enters the same back half
+  (`sendReply()`) without the mic. Rules of the machinery: he never
+  speaks while the mic is live (`say()` refuses on `listening` — his TTS
+  must not transcribe itself; starting a listen hides the bubble first);
+  a live mic dies with its context (`abortListen()` from `fallAsleep`,
+  `kill`, `flingOff`, hide, `set ai false`) while an in-flight
+  transcription/agent call is never killed — its result is gated on
+  arrival (state re-checks + the `say()` stale-drop, the look's rule);
+  `occupied` (looking || listening || replying) gates
+  `decide()`/`unprompted()`/`crashReact()`; `look` and `listen` refuse
+  each other as busy; failures set `replyFailed`, surfaced in `ai`. No
+  `--recent` in the call (the look's feedback-loop reasoning); the
+  exchange `remember()`s itself. Ai off → both verbs say a `noBrain`
+  book line themselves. No new settings key — the gesture is the opt-in.
+  Test without a mic: `reply "<text>"` over IPC.
 - `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut,
-  dragged, dropped, flung, crashed, welcomeBack, epitaph, firstRun }` (the
+  dragged, dropped, flung, crashed, welcomeBack, epitaph, firstRun,
+  noBrain, heardNothing }` (the
   key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
   merged in (same shape, or a bare array): quotes are two books, `book` +
@@ -710,7 +750,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.34.0 (2026-08-29): everything above is live and
+Feature-complete at v1.35.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

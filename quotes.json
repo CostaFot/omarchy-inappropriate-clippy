@@ -185,6 +185,20 @@
     { "text": "He died as he lived: in the way.", "nsfw": false },
     { "text": "Knock twice if you're sorry. ...Thought so.", "nsfw": false }
   ],
+  "noBrain": [
+    { "text": "You're talking to a paperclip with no brain plugged in. set ai true, then we'll dance.", "nsfw": false, "anim": "Explain" },
+    { "text": "I can't hear shit without an agent. set ai true and say that again to my face.", "nsfw": true, "anim": "GetAttention" },
+    { "text": "I'd love to destroy you, but you never gave me an agent. set ai true.", "nsfw": false },
+    { "text": "Reactions cost extra. They're called an agent. set ai true.", "nsfw": false },
+    { "text": "No agent, no comeback. Right now I'm decorative. Like your degree.", "nsfw": false, "anim": "Alert" }
+  ],
+  "heardNothing": [
+    { "text": "All that mic time and you said nothing. Riveting.", "nsfw": false, "anim": "Alert" },
+    { "text": "You opened the mic and said fuck-all. Story of your career.", "nsfw": true },
+    { "text": "I listened. You mumbled at your keyboard. We're both worse off now.", "nsfw": false },
+    { "text": "Silence. Bold material. Really killing it with the crowd.", "nsfw": false, "anim": "Explain" },
+    { "text": "Say words. Into the microphone. It's not a s\u00e9ance.", "nsfw": false, "anim": "GetAttention" }
+  ],
   "firstRun": [
     { "text": "Welcome, you fuck. Set me up in the options — right-click me. Or ask your agent, eh?", "nsfw": true, "anim": "Wave" },
     { "text": "Welcome. Set me up in the options — right-click me, or ask your agent.", "nsfw": false, "anim": "Wave" }
