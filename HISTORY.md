@@ -1225,3 +1225,23 @@ fucking QA gate made of nothing". README (talk-back disclosure now
 names the slim fact cut that rides along with the transcript), AGENTS.md
 (facts tiers, prompt-rules paragraph, talk-back section, status),
 manifest 1.36.0; hand-copied to the installed clone.
+
+## Free rein for the comebacks (v1.36.1, 2026-08-29)
+
+The predictable next step after the shame-draw cut: with the focused
+window as the only fact left in a reply call, "one fact may appear as
+the setup" made every comeback a window joke — a "Can't help myself"
+got answered with a jab at the Work window's title instead of the
+words. Costa: "I guess we can give more free rein to roleplay freely?
+he can reference the window if it would give back good material but
+can skip too." Two lines in scripts/clippy-ai: the context intro went
+from "For cross-reference only" to "In case it helps — you may ignore
+it entirely", and the facts rule now says they are optional and
+usually skippable — their words alone are a full target, roleplay
+freely off what they said, reach for a fact only when it genuinely
+beats their words as material, and then only as the setup. Verified
+with three live "hello"s: two pure roleplay off the word ("Hello.
+Fucking hello. You opened your mouth for the first time all day and
+that's what came out."), one using the window as a tail, none leading
+with it. AGENTS.md talk-back section, manifest 1.36.1; hand-copied to
+the installed clone.

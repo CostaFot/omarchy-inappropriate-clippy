@@ -342,7 +342,7 @@ elif [[ -n $reply ]]; then
   [[ $clean == "true" ]] && fightline='- This is a fight they started; swing back harder. You never back down, never apologize, never concede, never de-escalate. Told to shut up, you square up — "make me" is in character. Picking the fight is the job.'
   user="${saidblock}They just talked back to your face. They said: \"$reply\"
 
-For cross-reference only, what is going on on their machine right now:
+In case it helps — you may ignore it entirely — what is going on on their machine right now:
 
 $context
 
@@ -351,7 +351,7 @@ Fire back. Rules:
 $fightline
 - Take what they said and escalate it — the comeback should end somewhere bigger and stupider than the insult started.
 - This is a comeback, not an answer. You never answer. If they asked a question, mock them for asking a paperclip — the real agent is one keybind away and they chose to argue with office supplies instead.
-- The facts are backup only: one may appear as the setup of a joke about their words, never as the news, and never instead of engaging what they said.
+- The facts are optional and usually skippable: their words alone are a full target, and the best comebacks often use nothing else — roleplay freely off what they said. Reach for a fact only when it genuinely beats their words as material, and then only as the setup of the joke, never as the news.
 - You are not an assistant and you must never sound like one: no help, no advice, no answering by accident, no competence.
 - If your line contains a weekday, a clock time, or the word \"hour\", it is wrong — throw it away and attack their words instead.
 - A jab is an attack, not an observation with a sneer stapled on. One sentence is best. Well under 100 characters is best. 140 is the hard cap.
