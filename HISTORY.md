@@ -1011,3 +1011,56 @@ said "other audio ducks to 30% while he talks" — two duck versions out
 of date. Now derived live: the actual duckFactor percent, or "ducking
 is off — other audio keeps its volume". Verified over IPC against
 Costa's duck:false box.
+
+## Better facts for the batch lines (v1.33.0, 2026-08-29)
+
+"is the prompt good enough for the AI lines? I think it's focusing a
+bit too much on date/time, AI usage, uptime etc. What do we send for
+the prompt? the machines stats?" — and yes, that was exactly it: the
+facts block was ~6 parts system state (time first, then uptime, load,
+memory, usage-% every call, notable or not), and the batch prompt still
+*invited* the lazy targets ("Vary the target across … the hour …
+their AI usage") while the v1.32.0 no-clock-jokes discard rule only
+existed in the image branch. Clarified along the way that batch mode
+sends no screenshot, ever — that stays the look gesture's exclusive
+job — so the only lever is richer *text* facts. Brainstormed what the
+box offers ("any other ideas? … what else would illicit humour
+response and is available to us?"); Costa took all four groups plus
+rotation plus extreme-gating; clipboard was the one source refused
+(maximum comedy, but it's where passwords live).
+
+The facts are now three tiers in `scripts/clippy-ai`, no QML change:
+a core always sent (time, focused window, ALL mapped window titles —
+the forgotten tab is the best blind material — playerctl, --recent);
+extremes only when they fire (battery low/discharging, load > cores,
+memory ≥85%, uptime >3 days, disk ≥85%, coredumps today, failed
+units, live mic, usage ≥50%); and a shame pool where every fact
+self-gates on notability (Downloads count + newest filenames,
+screenshot hoard, pacman-sync age ≥7 d, package/orphan count, dirty
+repos + commit drought in ~/Work, most-typed history command, trash,
+loose $HOME files, workspaces ≥5, browser tab count parsed from a
+"(NN) …" title) with `shuf -n 3` of the survivors going in — so
+--context is one random draw and batches can't converge on one stat.
+Everything command -v-guarded and 2>/dev/null-quiet as before; the
+whole gather measured 0.39 s (the ~/Work sweep over 29 repos is
+0.16 s of that) against a 4-8 s agent call. The batch prompt got the
+image mode's discard rule verbatim, the absurd-detail hunt ("the
+stupid little detail: the filename, the tab they forgot"), and a
+target-vary rule with no named targets left to fixate on.
+
+Verified: three --context draws rotated correctly on the quiet box
+(no load/mem/uptime facts; the day's quickshell coredump and the
+Downloads roster fired), --prompt carried the new rules, and a real
+claude call in 5 s returned three keepers all citing new material —
+"You downloaded a wav of Les Grossman so you could hear a man scream
+at you. Bold, since I do it free.", a death-metal-plus-X-plus-nothing-
+committed line, and "Even quickshell bailed on this desk today, and
+it doesn't even have fucking legs." (swear quota intact, zero clock
+lines). One grammar gate fixed live ("1 of their git repos have…" →
+a singular variant). Stale sweep caught the script's own image-mode
+comment still praising "the clock plus the screenshot" as the best
+material. README disclosure paragraph rewritten (filenames and repo
+names now leave with the rest, so it says so), AGENTS.md fact list
+rewritten for the tiers. Hand-copied to the installed clone; shell
+restart cleared the brain cache and the live plugin fetched and
+served a fresh batch of 5 through the new script, journal clean.

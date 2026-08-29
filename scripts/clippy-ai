@@ -9,7 +9,7 @@
 #   scripts/clippy-ai --agent codex    # a specific one
 #   scripts/clippy-ai --model claude-sonnet-5   # a specific model, where the agent takes one
 #   scripts/clippy-ai --image shot.png # one jab about a screenshot (IPC `look`)
-#   scripts/clippy-ai --context        # just the facts it would send
+#   scripts/clippy-ai --context        # the facts it would send (one random draw)
 #   scripts/clippy-ai --prompt         # the whole prompt, examples and all
 #
 # The agent is picked the way `omarchy agent` picks it (omarchy-default-agent,
@@ -69,34 +69,30 @@ if ! command -v "$agent" >/dev/null 2>&1; then
 fi
 
 # ---- the facts ---------------------------------------------------------------
+#
+# Three tiers. The core is always sent. The extremes go in only when they
+# actually fire — a healthy stat is not material, and an always-present number
+# is an invitation to report it. The shame pool self-gates on notability and
+# then a random few survivors join, so every call carries different material
+# and the model can't fixate on any one stat (the old flat list had it doing
+# nothing but clock, uptime and usage-percent jokes).
 
 facts=()
 fact() { facts+=("- $1"); }
+pool=()
+shame() { pool+=("- $1"); }
 
+hyprjq=false
+command -v hyprctl >/dev/null && command -v jq >/dev/null && hyprjq=true
+
+# core: what they are looking at and listening to, right now
 fact "time: $(date '+%A %H:%M')"
 
-if command -v hyprctl >/dev/null && command -v jq >/dev/null; then
+if $hyprjq; then
   win=$(hyprctl activewindow -j 2>/dev/null | jq -r 'select(.class != null) | "\(.class): \(.title)"' 2>/dev/null)
   [[ -n $win ]] && fact "focused window: ${win:0:160}"
-  clients=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.mapped)] | length' 2>/dev/null)
-  [[ -n $clients ]] && fact "open windows: $clients"
-fi
-
-for bat in /sys/class/power_supply/BAT*; do
-  [[ -r $bat/capacity ]] || continue
-  fact "battery: $(<"$bat/capacity")% ($(tr 'A-Z' 'a-z' <"$bat/status" 2>/dev/null || echo unknown))"
-  break
-done
-
-if [[ -r /proc/loadavg ]]; then
-  read -r load1 _ <"/proc/loadavg"
-  fact "load: $load1 on $(nproc) cores"
-fi
-if command -v free >/dev/null; then
-  fact "memory: $(free -g | awk '/^Mem:/ { printf "%d of %d GB used", $3, $2 }')"
-fi
-if command -v uptime >/dev/null; then
-  fact "uptime: $(uptime -p 2>/dev/null | sed 's/^up //')"
+  titles=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.mapped) | .title | .[0:80]] | select(length > 0) | "(\(length)) " + join(" | ")' 2>/dev/null)
+  [[ -n $titles ]] && fact "open windows: ${titles:0:600}"
 fi
 
 if command -v playerctl >/dev/null; then
@@ -106,13 +102,135 @@ if command -v playerctl >/dev/null; then
   fi
 fi
 
+# extremes: only when the number is the story
+for bat in /sys/class/power_supply/BAT*; do
+  [[ -r $bat/capacity ]] || continue
+  cap=$(<"$bat/capacity")
+  bstat=$(tr 'A-Z' 'a-z' <"$bat/status" 2>/dev/null || echo unknown)
+  if ((cap <= 30)) || [[ $bstat == "discharging" ]]; then
+    fact "battery: ${cap}% ($bstat)"
+  fi
+  break
+done
+
+if [[ -r /proc/loadavg ]]; then
+  read -r load1 _ <"/proc/loadavg"
+  cores=$(nproc 2>/dev/null || echo 1)
+  if awk -v l="$load1" -v c="$cores" 'BEGIN { exit !(l > c) }'; then
+    fact "load: $load1 on $cores cores"
+  fi
+fi
+if command -v free >/dev/null; then
+  mem=$(free -g | awk '/^Mem:/ { if ($2 > 0 && $3 / $2 >= 0.85) printf "%d of %d GB used", $3, $2 }')
+  [[ -n $mem ]] && fact "memory: $mem"
+fi
+if [[ -r /proc/uptime ]]; then
+  read -r up _ <"/proc/uptime"
+  if ((${up%.*} > 3 * 86400)); then
+    fact "uptime: $(uptime -p 2>/dev/null | sed 's/^up //')"
+  fi
+fi
+if command -v df >/dev/null; then
+  full=$(df --output=target,pcent "$HOME" / 2>/dev/null | awk 'NR > 1 && !seen[$1]++ { gsub(/%/, "", $2); if ($2 >= 85) { printf "%s%s at %s%%", sep, $1, $2; sep=", " } }')
+  [[ -n $full ]] && fact "disk almost full: $full"
+fi
+if command -v coredumpctl >/dev/null; then
+  crash=$(coredumpctl -S today --no-pager 2>/dev/null | awk '/^[A-Z][a-z][a-z] / { n++; exe=$(NF-1) } END { if (n) printf "%d today (last: %s)", n, exe }')
+  [[ -n $crash ]] && fact "programs crashed: $crash"
+fi
+if command -v systemctl >/dev/null; then
+  failed=$(systemctl --failed --no-legend 2>/dev/null | grep -c .)
+  ((failed > 0)) && fact "failed systemd units: $failed"
+fi
+if command -v pactl >/dev/null; then
+  [[ -n $(pactl list source-outputs short 2>/dev/null) ]] && fact "the microphone is live right now"
+fi
+
 usage="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/agents/usage/$agent.json"
 if [[ -r $usage ]] && command -v jq >/dev/null; then
-  limits=$(jq -r '[.limits[]? | "\(.label) \((.percent * 100) | floor)%"] | join(", ")' "$usage" 2>/dev/null)
+  limits=$(jq -r '[.limits[]? | select(.percent >= 0.5) | "\(.label) \((.percent * 100) | floor)%"] | join(", ")' "$usage" 2>/dev/null)
   [[ -n $limits ]] && fact "the user's $agent usage this period: $limits"
 fi
 
 [[ -n $recent ]] && fact "what they did to Clippy lately: $recent"
+
+# the shame pool: files, Arch neglect, work habits
+if [[ -d $HOME/Downloads ]]; then
+  dlcount=$(ls -A "$HOME/Downloads" 2>/dev/null | grep -c .)
+  if ((dlcount >= 15)); then
+    dlnames=$(ls -At "$HOME/Downloads" 2>/dev/null | head -3 | cut -c1-60 | paste -sd ',' - | sed 's/,/, /g')
+    shame "$dlcount files in Downloads, newest: $dlnames"
+  fi
+fi
+
+shots=$(ls "$HOME/Pictures"/screenshot-* 2>/dev/null | grep -c .)
+((shots >= 10)) && shame "$shots screenshots hoarded in ~/Pictures"
+
+if [[ -r /var/log/pacman.log ]]; then
+  lastup=$(grep -a 'starting full system upgrade' /var/log/pacman.log | tail -1 | cut -c2-11)
+  lastsec=$(date -d "$lastup" +%s 2>/dev/null)
+  if [[ -n $lastsec ]]; then
+    updays=$(( ($(date +%s) - lastsec) / 86400 ))
+    ((updays >= 7)) && shame "this Arch install was last updated $updays days ago"
+  fi
+fi
+
+if command -v pacman >/dev/null; then
+  pkgs=$(pacman -Qq 2>/dev/null | wc -l)
+  if ((pkgs >= 800)); then
+    orph=$(pacman -Qtdq 2>/dev/null | grep -c .)
+    pkgline="$pkgs packages installed"
+    ((orph > 0)) && pkgline="$pkgline, $orph of them orphaned"
+    shame "$pkgline"
+  fi
+fi
+
+if command -v git >/dev/null && [[ -d $HOME/Work ]]; then
+  dirty=0 dirtyname="" newest=0
+  for g in "$HOME/Work"/*/.git; do
+    [[ -e $g ]] || continue
+    r=${g%/.git}
+    if [[ -n $(git -C "$r" status --porcelain 2>/dev/null | head -1) ]]; then
+      ((dirty += 1))
+      dirtyname=${r##*/}
+    fi
+    ct=$(git -C "$r" log -1 --format=%ct 2>/dev/null)
+    [[ -n $ct ]] && ((ct > newest)) && newest=$ct
+  done
+  ((dirty == 1)) && shame "their $dirtyname repo has uncommitted changes"
+  ((dirty > 1)) && shame "$dirty of their git repos have uncommitted changes ($dirtyname, for one)"
+  if ((newest > 0)); then
+    cdays=$(( ($(date +%s) - newest) / 86400 ))
+    ((cdays >= 3)) && shame "last git commit anywhere: $cdays days ago"
+  fi
+fi
+
+hist=${HISTFILE:-$HOME/.bash_history}
+if [[ -r $hist ]]; then
+  if (($(wc -l <"$hist") >= 20)); then
+    tophist=$(awk 'NF { print $1 }' "$hist" | sort | uniq -c | sort -rn | head -1 | awk '{ print $2 " (" $1 " times)" }')
+    [[ -n $tophist ]] && shame "most-typed shell command: $tophist"
+  fi
+fi
+
+trash=$(ls -A "$HOME/.local/share/Trash/files" 2>/dev/null | grep -c .)
+((trash >= 10)) && shame "$trash items sitting in the trash"
+
+loose=$(find "$HOME" -maxdepth 1 -type f ! -name '.*' 2>/dev/null | grep -c .)
+((loose >= 5)) && shame "$loose loose files dumped in the home directory"
+
+if $hyprjq; then
+  ws=$(hyprctl workspaces -j 2>/dev/null | jq length 2>/dev/null)
+  [[ -n $ws ]] && ((ws >= 5)) && shame "$ws workspaces open"
+  tabs=$(hyprctl clients -j 2>/dev/null | jq -r '[.[] | select(.mapped) | (.title | try capture("^\\((?<n>[0-9]+)\\)") | .n | tonumber)] | max // empty' 2>/dev/null)
+  [[ -n $tabs ]] && ((tabs >= 15)) && shame "a browser window with $tabs tabs"
+fi
+
+if ((${#pool[@]})); then
+  while IFS= read -r line; do
+    [[ -n $line ]] && facts+=("$line")
+  done < <(printf '%s\n' "${pool[@]}" | shuf -n 3)
+fi
 
 context=$(printf '%s\n' "${facts[@]}")
 
@@ -156,8 +274,8 @@ fi
 
 # The screenshot mode swaps the task: one jab about what is visibly on the
 # screen, specificity mandatory — a jab that could have been made blind is
-# a failed call. The facts stay in for cross-referencing (the clock plus
-# the screenshot is where the best material is). The phrasing covers both
+# a failed call. The facts stay in as backup for cross-referencing, never
+# as the star. The phrasing covers both
 # deliveries: agents that attach the image natively (codex --image) and
 # agents that read the file themselves (claude, whose Read tool is switched
 # on for this mode only).
@@ -184,10 +302,12 @@ $context
 
 Write $count jabs Clippy would make. Rules:
 - The best jab is an accusation of something you have watched them do, not a description of system state. A fact is evidence for the attack, never the news.
-- A number or a name from the facts may appear only as the setup of a joke, never read out as a report. Never state the time.
+- Hunt the stupid little detail: the filename, the tab they forgot was open, the thing that does not belong next to the thing it is next to. The obvious main activity is the boring target.
+- A number or a name from the facts may appear only as the setup of a joke, never read out as a report.
+- If a line contains a weekday, a clock time, or the word \"hour\", it is wrong — throw it away and attack a different fact. Clock jokes are the lazy ones.
 - A jab is an attack, not an observation with a sneer stapled on. One sentence is best. Well under 100 characters is best. 140 is the hard cap.
 - No pep-talk irony, no \"champ\", no \"buddy\", no \"bold move\". You are not a Twitch chat. You are a disappointed little paperclip who lives with this person.
-- Vary the target across the facts (the window, the battery, the hour, the music, their AI usage, what they did to you). Address the user as \"you\". No emoji, no quotes around the lines.
+- Vary the target across the facts — never spend two lines on the same one. Address the user as \"you\". No emoji, no quotes around the lines.
 Reply with only a valid JSON array of $count strings, comma-separated, on one line, and nothing else."
 fi
 

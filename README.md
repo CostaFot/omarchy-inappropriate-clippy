@@ -109,12 +109,17 @@ becomes how long you were gone ("47 minutes", "3 hours"); `{back}` in an
 
 Turn on "Lines from claude" in the menu (or `"ai": true`) and the random book
 is replaced with remarks about what you are actually doing. Every so often he
-looks at the focused window, how many windows are open, the battery, the load,
-the uptime, what's playing, the hour, how much of your agent plan you've burned
-this week, and what you've done to him lately (slaps, drags, the odd murder),
-and asks your coding agent for five lines in his voice, with a handful of
-lines from the book (and your `quotesFile`) as examples of how far to go.
-They're cached and handed out one at a time, so a click never waits on a model.
+gathers the evidence: your open window titles, what's playing, what you've
+done to him lately (slaps, drags, the odd murder), and anything currently
+embarrassing — a dying battery, an uptime or a pacman sync measured in weeks,
+a program that dumped core today, a live microphone, more than half your
+agent plan gone. Plus a random few draws from the shame pool: what's rotting
+in `~/Downloads` (filenames included), the screenshot hoard, repos in
+`~/Work` with uncommitted changes (names included), your most-typed shell
+command, the trash, the browser tab count. He hands all of it to your coding
+agent as text and asks for five lines in his voice, with a handful of lines
+from the book (and your `quotesFile`) as examples of how far to go. They're
+cached and handed out one at a time, so a click never waits on a model.
 
 The agent is whichever `omarchy default agent` picked, run the way `omarchy
 agent prompt` runs it but in its one-shot mode with tools off: it gets the

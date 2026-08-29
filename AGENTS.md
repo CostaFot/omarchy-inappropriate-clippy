@@ -226,14 +226,26 @@ an optional `hint` (dim second line,
   one-shot table mirroring `omarchy-agent`'s `case` (`claude -p --tools
   "" --setting-sources "" --system-prompt`, `codex exec -o`, `pi -p
   --no-tools`, `opencode run --pure`; `--model` mapped per agent). It
-  gathers the facts itself (hyprctl window/clients, battery, load, mem,
-  uptime, playerctl, the hour, agent usage limits, a `--recent` note of
-  slaps/drags/kills the QML side collects) and hands them over as text,
+  gathers the facts itself in three tiers (v1.33.0 — the flat always-on
+  list had the model doing nothing but clock/uptime/usage jokes): a core
+  always sent (time, focused window, all mapped window titles, playerctl,
+  the `--recent` note of slaps/drags/kills the QML side collects);
+  extremes only when they fire (battery low/discharging, load > cores,
+  memory ≥85%, uptime >3 days, disk ≥85%, coredumps today, failed units,
+  live mic, agent usage only ≥50%); and a shame pool where each fact
+  self-gates on notability (Downloads count+newest filenames, screenshot
+  hoard, days since pacman -Syu, package/orphan count, dirty repos and
+  commit drought in `~/Work`, most-typed history command, trash, loose
+  `$HOME` files, workspace and browser-tab counts) and `shuf -n 3` of
+  the survivors go in — so `--context` is one random draw and batches
+  don't converge on one stat. All handed over as text,
   tool-less, from `$TMPDIR` so no CLAUDE.md is picked up. Twelve random
   lines from `quotes.json` (+ `--quotes <quotesFile>`, nsfw dropped under
   `--clean`) go in the system prompt as register examples; the prompt
-  asks for "jabs" under explicit rules (accusation not description, one
-  short sentence, numbers only as setups, no "champ"/Twitch-isms). The
+  asks for "jabs" under explicit rules (accusation not description, hunt
+  the stupid little detail, one short sentence, numbers only as setups,
+  no "champ"/Twitch-isms, and the image mode's no-clock-jokes discard
+  rule now in the batch prompt too). The
   delivery is named as "the Bill Burr school" — exasperated, escalating —
   with an explicit not-an-impression fence (no catchphrases, no crowd
   work), and swearing is prescriptive, not just permitted: batches must
@@ -680,7 +692,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.32.0 (2026-08-29): everything above is live and
+Feature-complete at v1.33.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.
