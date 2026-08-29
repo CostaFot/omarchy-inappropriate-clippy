@@ -267,17 +267,20 @@ Item {
   // script. Keep in lockstep with setup-voice — drift just means the picker
   // calls that voice "custom", nothing breaks.
   readonly property string homeDir: Quickshell.env("HOME")
-  readonly property string georgeCmd: "KOKORO_VOICE=bm_george " + homeDir + "/.local/share/kokoro-tts/say.py"
+  // The trap/&/wait wrapper on the pipeline commands mirrors setup-voice:
+  // TERM on bash must kill aplay promptly (a foreground pipeline defers the
+  // trap and a replaced line would play out over the next one).
+  readonly property string georgeCmd: "trap 'kill $! 2>/dev/null' TERM; KOKORO_VOICE=bm_george " + homeDir + "/.local/share/kokoro-tts/say.py"
     + " | ffmpeg -hide_banner -loglevel quiet -f s16le -ar 24000 -ac 1 -i -"
     + " -af 'asetrate=24000*1.15,aresample=24000,atempo=0.870,tremolo=f=45:d=0.8,acrusher=bits=6:mode=log:aa=1,highpass=f=250,lowpass=f=3400'"
-    + " -f s16le - | aplay -q -t raw -r 24000 -f S16_LE -c 1 -"
+    + " -f s16le - | aplay -q -t raw -r 24000 -f S16_LE -c 1 - & wait $!"
   function cloneCmd(name) {
     var cb = homeDir + "/.local/share/chatterbox-tts"
     return "exec " + cb + "/speak-clone --ref " + cb + "/voices/" + name + ".wav --exag 0.5 --cfg 0.5"
   }
   function piperCmd(name, rate) {
-    return homeDir + "/.local/share/piper-tts/venv/bin/piper -m " + homeDir + "/.local/share/piper-voices/" + name
-      + ".onnx --output-raw 2>/dev/null | aplay -q -t raw -r " + rate + " -f S16_LE -c 1 -"
+    return "trap 'kill $! 2>/dev/null' TERM; " + homeDir + "/.local/share/piper-tts/venv/bin/piper -m " + homeDir + "/.local/share/piper-voices/" + name
+      + ".onnx --output-raw 2>/dev/null | aplay -q -t raw -r " + rate + " -f S16_LE -c 1 - & wait $!"
   }
   // The tts value, as a name: "off", "robot" (espeak), "george", a clone or
   // piper name, or "custom" for any other command string. A clone keeps its

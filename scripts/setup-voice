@@ -93,6 +93,10 @@ PY
   CMD="KOKORO_VOICE=$VOICE $base/say.py"
   [ -n "$BLESSED" ] && CMD="$CMD | ffmpeg -hide_banner -loglevel quiet -f s16le -ar 24000 -ac 1 -i - -af '$ROBOT_FX' -f s16le -"
   CMD="$CMD | aplay -q -t raw -r 24000 -f S16_LE -c 1 -"
+  # Background + wait, so bash's TERM trap runs promptly and kills aplay —
+  # a foreground pipeline defers the trap until the job ends, and a replaced
+  # line would keep playing over the next one (the clone had the same bug).
+  CMD="trap 'kill \$! 2>/dev/null' TERM; $CMD & wait \$!"
 }
 
 setup_piper() {
@@ -116,6 +120,10 @@ setup_piper() {
   done
   local rate; rate="$(jq -r .audio.sample_rate "$voices/$VOICE.onnx.json")"
   CMD="$venv/bin/piper -m $voices/$VOICE.onnx --output-raw 2>/dev/null | aplay -q -t raw -r $rate -f S16_LE -c 1 -"
+  # Background + wait, so bash's TERM trap runs promptly and kills aplay —
+  # a foreground pipeline defers the trap until the job ends, and a replaced
+  # line would keep playing over the next one (the clone had the same bug).
+  CMD="trap 'kill \$! 2>/dev/null' TERM; $CMD & wait \$!"
 }
 
 setup_clone() {

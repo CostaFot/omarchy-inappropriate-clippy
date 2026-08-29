@@ -183,8 +183,11 @@ loader, like omarchy.menu — not to the bar widget.
   fires `exited`; `exec` prepended to the built-in so the kill lands on
   espeak itself; speak-clone execvps into aplay at play time for the same
   reason — v1.21.1, a child aplay survived the kill and stacked voices
-  during drags; a custom *pipeline* keeps its bash and may finish the
-  line). One `ttsProc`. **Kills are `signal(15)`, never `running = false`
+  during drags; the generated kokoro/piper commands wrap their pipeline
+  in `trap 'kill $! 2>/dev/null' TERM; … & wait $!` — v1.21.2, bash defers
+  traps while a foreground job runs, so only backgrounding + `wait` lets
+  the TERM reach aplay promptly; a hand-rolled custom pipeline without
+  the wrap keeps its bash and may finish the line). One `ttsProc`. **Kills are `signal(15)`, never `running = false`
   — that quietly leaves the child alive** (verified with a sleep-30
   stand-in; same reason there's `Component.onDestruction: signal(15)`).
   A replacement line parks in `ttsQueued` until the old process's
@@ -830,11 +833,26 @@ setup-voice heredoc, the installed plugin's copy, and the live
 time between them?" also honored: dragTalk is 5-9 s (was 3-6). Verified:
 terminal TERM mid-line leaves no aplay, and back-to-back `talk`s over the
 plugin never showed 2 concurrent aplays, journal and duck state clean.
-Same-class papercut NOT fixed (offered): the kokoro and piper pipelines
-(`say.py | aplay`, `piper | aplay`) keep their bash, so a replaced line
-there still orphans the pipeline and may finish — fixing it means changing
-the generated command strings, which also means teaching applyVoice's
-georgeCmd/piperCmd the new shape or the picker calls them "custom".
+The kokoro/piper half of the papercut was fixed right after (v1.21.2,
+below).
+
+Pipeline voices cut too (2026-08-29, v1.21.2): the kokoro and piper
+command strings — setup-voice's generated CMDs and the matching
+georgeCmd/piperCmd builders in Clippy.qml, kept byte-identical — now wrap
+the pipeline in `trap 'kill $! 2>/dev/null' TERM; <pipeline> & wait $!`.
+Why that shape: bash defers trap handling while a foreground job runs, so
+a TERM on a bare pipeline waited out the whole line; backgrounded, `wait`
+processes the trap at once and `$!` (the pipeline's last element) IS
+aplay, so the kill stops the audio and the producer dies on its next
+write via SIGPIPE. Stdin still reaches a backgrounded pipeline when it is
+a pipe (verified — bash only nulls async stdin for terminals). Verified
+live with the real piper venv against the parked ryan model: cut mid-line
+kills aplay instantly, a clean run exits 0, no survivors; george/piper
+strings byte-compared against setup-voice's build. A user whose
+shell.json still carries an OLD unwrapped string just sees the picker
+call it "custom" until they re-tap the chip — documented drift, nothing
+breaks. README's mid-word paragraph now covers all three engine shapes
+and hands hand-rolled pipelines the same wrap.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

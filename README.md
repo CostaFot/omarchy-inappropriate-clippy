@@ -224,10 +224,13 @@ voice off (menu row or `set tts false`) parks the command in `ttsSaved`,
 and toggling back on restores it — you only get the espeak robot from
 `tts true` when there's nothing parked (`set ttsSaved unset` to force
 that). Whatever hides the bubble — a slap, a lock, his
-death — kills the voice mid-word. The espeak robot and the clones cut off
-cleanly (speak-clone becomes aplay by play time, so the kill lands on the
-audio); a pipeline like the piper one may finish its sentence anyway —
-that's between bash and its children.
+death — kills the voice mid-word, whichever voice is set: the espeak robot
+and the clones die with their process (speak-clone becomes aplay by play
+time), and the commands `setup-voice` writes for kokoro and piper wrap the
+pipeline in a trap so the kill reaches their aplay too. A hand-rolled
+command like the example above may finish its sentence anyway — bash sits
+on signals while a foreground pipeline runs. Borrow the wrap if that
+bothers you: `trap 'kill $! 2>/dev/null' TERM; <your pipeline> & wait $!`.
 
 When he talks, everything else shuts up. The moment a line starts, every
 other audio stream drops to 30% — Spotify, a browser tab, a game,
