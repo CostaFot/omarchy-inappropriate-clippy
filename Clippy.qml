@@ -107,7 +107,7 @@ Item {
     return v === undefined || v === null ? fallback : v
   }
   // Every key a user (or their agent, over IPC `set`/`get`) may touch, with
-  // its default. The README table and this list say the same thing.
+  // its default. The docs/configuration.md table and this list say the same thing.
   // `flingSound`/`dodgeSound` are null here because their default is whatever
   // `slapSound` is.
   readonly property var settingDefaults: ({
@@ -321,7 +321,7 @@ Item {
   // ---- voice inventory ----------------------------------------------------
   // Every voice already on disk, so the menu can offer a picker and an agent
   // can enumerate (`voices`) and switch (`useVoice`) without reading the
-  // README. scripts/voice-scan fills it: espeak/GPU/kokoro presence, clone
+  // docs. scripts/voice-scan fills it: espeak/GPU/kokoro presence, clone
   // wavs, piper models, drop-in command files (~/.local/share/clippy-voices).
   // Installing NEW voices stays with scripts/setup-voice —
   // switching here is only ever a `set tts` write, never a download.
@@ -2061,7 +2061,8 @@ Item {
         "leaderboard — the public graveyard: posting state, rank and the page (default: the shared anonymous stone; set leaderboard <handle> claims yours, off stops posting)",
         "set <key> <value> / get <key> / settings — the config; settings lists every key, unset restores a default",
         "any verb drops into a Hyprland bind: bindd = SUPER SHIFT C, T, Clippy talks, exec, omarchy-shell costafot.clippy talk",
-        "README: " + root.pluginDir + "/README.md"
+        "docs: " + root.pluginDir + "/docs/ — scripting.md is every verb with examples, configuration.md every key with its default",
+        "online: https://costafot.github.io/omarchy-inappropriate-clippy/"
       ].join("\n")
     }
     function say(text: string): string { return !root.opened ? "hidden" : root.asleep ? "asleep" : (root.say(text) ? root.ipcOkVoice() : "not now") }

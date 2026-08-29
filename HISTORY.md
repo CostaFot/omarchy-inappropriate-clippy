@@ -1429,3 +1429,42 @@ him in `talking`, the whoosh audible; `set dodge 0` → `ok` and 1 slap;
 `set dodge unset` → `get` back to 0.1; no QML warnings. README (table row, the slap
 paragraph, the quotesFile key list), AGENTS.md (slap bullet, key list,
 status), manifest 1.39.0; hand-copied to the installed clone.
+
+## The docs split (v1.40.0, 2026-08-29)
+
+"ok the README is crazy now. it is also the guide for agents to control
+clippy mostly. normally I would make some github pages thing for
+docs/instruction and not put this stuff in the README. but then we would
+break the agent connection. any idea?" The README was 494 lines / 5.1k
+words, a third of it the voice section. The connection turned out to be
+narrower than it looked: `help` ends with `root.pluginDir + "/README.md"`,
+and `pluginDir` is a git clone of the whole repo — the agent depends on a
+file in the clone, not on the README specifically. So a `docs/` folder
+serves both: GitHub Pages renders it (source `/docs` on `main`) and
+`omarchy plugin add` ships it. "do the split." Five pages cut out of the
+README verbatim with `sed -n`, headings promoted to H1
+(`configuration.md` with the table and the quotesFile paragraph, `ai.md`,
+`voice.md`, `graveyard.md`, `scripting.md`), plus `index.md` as the
+contents and a three-line `_config.yml` (`jekyll-theme-minimal`; the
+Pages gem's default plugins render front-matter-less markdown and rewrite
+`.md` links, so the same links work on GitHub and on the site). Cross-refs
+patched: the table's four "See below" cells link across files, the
+`quotes.json` link is the GitHub blob URL (a relative `../quotes.json`
+would 404 on Pages), the scripting page's agent paragraph points at the
+folder. The README is now 112 lines: pitch + install, the mouse table and
+its three paragraphs, a Settings stub with three `set` examples and the
+link, a "The rest of him" list — one bullet per page, each carrying its
+disclosure sentence (the ai facts go to the agent and nowhere else, no
+screenshot unprompted; no cloud TTS; the graveyard's alias-or-handle +
+counts, `set leaderboard off`) because that disclosure is a design rule,
+not manual content — the Pages URL, and the notes, which gained the Valve
+credit the voice section used to carry. `help` ends with two lines now:
+`docs: <pluginDir>/docs/ — scripting.md is every verb…, configuration.md
+every key…` and `online: <Pages URL>`. Comments in Clippy.qml and
+voice-scan that said "the README" say the doc. Pages itself is a repo
+setting that needs `/docs` on `main` first, so it's the step after the
+push (command in AGENTS.md's status). Verified on the installed clone
+after a shell restart: `help` ends with the docs path and the URL, no QML
+warnings, `omarchy plugin validate` clean with `docs/` in the tree. AGENTS.md
+(intro, the settings/disclosure/help rules, status), manifest 1.40.0;
+hand-copied to the installed clone.

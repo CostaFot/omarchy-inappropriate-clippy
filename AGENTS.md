@@ -1,15 +1,25 @@
 # omarchy-inappropriate-clippy — agent notes
 
-Before committing, re-read this file and the README against what actually
-changed and amend anything they now state stale — an "only" that no longer
+Before committing, re-read this file, the README and `docs/` against what
+actually changed and amend anything they now state stale — an "only" that no longer
 holds, a default that moved, a path that no longer exists — then commit.
 
 This file is the current-state reference: what the code does today and the
 rules for changing it safely. The session-by-session development journal —
 who asked for what, what was tried and dropped, how each change was
 verified — is `HISTORY.md`; grep it when you need the why behind a rule
-here. Future work goes in `IDEAS.md`, never here. User docs and the
-settings table are `README.md`; marketplace state is `PUBLISHING.md`.
+here. Future work goes in `IDEAS.md`, never here. User docs are split
+(v1.40.0): `README.md` is the pitch — install, the mouse table, one
+paragraph per big feature with its disclosure sentence, and links — and
+`docs/` is the manual, one page per feature (`configuration.md` holds the
+settings table, `ai.md`, `voice.md`, `graveyard.md`, `scripting.md`,
+`index.md` the contents). The same files are the GitHub Pages site
+(source: `/docs` on `main`, `_config.yml` picks `jekyll-theme-minimal`;
+no front matter needed — the Pages gem's default plugins render bare
+markdown and rewrite `.md` relative links) AND ship in the plugin clone,
+which is what keeps the agent connection: `help` ends with
+`<pluginDir>/docs/`, not a README path. Marketplace state is
+`PUBLISHING.md`.
 
 Clippy walks the Omarchy bar and insults you. The repo root IS the plugin
 (`manifest.json`, id `costafot.clippy`, kinds `panel` + `bar-widget`,
@@ -25,7 +35,7 @@ loader, like omarchy.menu — not to the bar widget.
 Design rules that outrank any single feature:
 
 - Every setting is a flat scalar key with a default in `settingDefaults`, a
-  README table row, and — only if a user would reach for it — a menu row.
+  `docs/configuration.md` table row, and — only if a user would reach for it — a menu row.
   Free-text/free-number keys (`aiModel`, `leaderboard`, `cloneTempo`…) get
   no menu row or only preset chips; the menu takes no keyboard focus.
 - Agent-first replies: an IPC `set` that can't take effect answers
@@ -35,8 +45,8 @@ Design rules that outrank any single feature:
 - Nothing leaves the machine undisclosed: `ai` is opt-in; the graveyard
   posts anonymous kill/slap deltas by default — one shared alias for every
   install, so nothing identifies anyone — with the off switch one menu tap
-  (`set leaderboard off` over IPC) and the README saying exactly what's
-  sent; no cloud TTS, ever. The screen look (`look`) sends a screenshot
+  (`set leaderboard off` over IPC) and the README's graveyard bullet AND
+  `docs/graveyard.md` saying exactly what's sent; no cloud TTS, ever. The screen look (`look`) sends a screenshot
   to the user's agent ONLY on the explicit gesture — never on a timer,
   never from decide()/unprompted(); an unprompted screenshot would be
   surveillance, not a gag. The mic (`listen`) is under the same law:
@@ -44,9 +54,10 @@ Design rules that outrank any single feature:
   (voxtype) and deleted, and only the text reaches the user's own agent.
   Keep it that way.
 - Keep him mostly still — tune, don't make him busier.
-- Keep `help`, the README's scripting section, and the actual IPC verbs in
-  sync; `help` is the blind agent's bootstrap and ends with the README
-  path and a copy-pasteable Hyprland `bindd` example.
+- Keep `help`, `docs/scripting.md`'s verb block, and the actual IPC verbs
+  in sync; `help` is the blind agent's bootstrap and ends with a
+  copy-pasteable Hyprland `bindd` example, the `docs/` path and the Pages
+  URL.
 
 ## Architecture
 
@@ -98,7 +109,7 @@ Design rules that outrank any single feature:
   - `IpcHandler { target: "costafot.clippy" }` — string args only, no
     optional params. `set key value` / `get key` / `settings` are the
     config surface (keys from `settingDefaults` — keep it equal to the
-    README table; values through `parseSettingValue`:
+    `docs/configuration.md` table; values through `parseSettingValue`:
     true/false/number/"unset"→remove/else string, written via the same
     `setSetting()` the menu uses). `show`/`hide` are the idempotent pair
     next to `toggle` (`show` = `bringBack()`, so it also revives),
@@ -106,7 +117,8 @@ Design rules that outrank any single feature:
     false rather than talking into an invisible window; `showMenu`/
     `hideMenu` drive the menu without a pointer (no ydotool on the box —
     it's how menu states are screenshotted). `help` lists every verb one
-    per line and ends with the bindd example + README path. Note `get`
+    per line and ends with the bindd example + `docs/` path + Pages URL.
+    Note `get`
     prints string values JSON-quoted — scripts parsing it must strip the
     quotes (warm-voice does).
   - `PersistentProperties { reloadableId: "costafotClippy" }` for
@@ -116,7 +128,8 @@ Design rules that outrank any single feature:
     path lands, so a fling is one kill and a knockout is ten slaps plus
     one kill), shown dim at the foot of the menu and by IPC `stats`.
     PersistentProperties survive remounts but not a shell restart, so
-    tallies reset on reboot — a documented trade the README owns up to.
+    tallies reset on reboot — a documented trade the README owns up to
+    ("the shell forgets").
     `{kills}`/`{slaps}` placeholders (v1.38.0) work in ANY line via
     `fill(text)`, applied in `say()` and in the three direct
     `bubble.text` writes (`kill`, `epitaph`, `flingOff`); while `mood
@@ -415,7 +428,8 @@ an optional `hint` (dim second line,
   shipped default clone reference (940 KB, s16le mono 24 kHz, exactly
   20 s), byte-identical to the approved take in
   `~/.local/share/chatterbox-tts/voices/rubick.wav`. Dota 2 audio,
-  © Valve, credited in the README. Never regenerate or re-encode it — a
+  © Valve, credited in the README's notes and `docs/voice.md`. Never
+  regenerate or re-encode it — a
   re-cut sounds subtly different; setup-voice `cp`s it verbatim.
 
 ## Slap, drag, fling (in Clippy.qml)
@@ -522,7 +536,7 @@ is one opaque string and ignores all three (clones bend via
   SIGPIPE). Keep the builders in Clippy.qml (`georgeCmd`/`piperCmd`/
   `cloneCmd`) byte-identical to what setup-voice writes — drift just
   makes the picker say "custom", nothing breaks. A hand-rolled pipeline
-  without the wrap may finish its line; the README documents the wrap.
+  without the wrap may finish its line; `docs/voice.md` documents the wrap.
 - Missing engine is surfaced, not just journaled: `ttsProbe` (`command
   -v espeak-ng`) runs at mount, on `tts` changes and on menu open,
   feeding `ttsEngineMissing`; `ttsNeedsEngine` (false when a custom
@@ -719,8 +733,8 @@ shared `anonymous-clippy-abuser` stone (`lbAnonHandle`; one alias for
 every install — a per-install suffix would be a pseudonymous identifier
 and change the privacy story, don't add one), a handle claims a stone,
 "off" is the only silence (`leaderboardOff/Named/On` derive from
-`lbSetting`); the README disclosure says exactly what leaves the
-machine (alias-or-handle + two small deltas).
+`lbSetting`); the README's graveyard bullet and `docs/graveyard.md`
+say exactly what leaves the machine (alias-or-handle + two small deltas).
 `setLeaderboardEnabled(on)` is the toggle behind the menu row and `set
 leaderboard true|false|off` — the ttsSaved idiom: off parks a named
 handle in `leaderboardSaved`, on restores it (else anonymous), one
@@ -820,7 +834,10 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.39.0 (2026-08-29): everything above is live and
-verified on Costa's machine. On GitHub at the README install URL; not on
+Feature-complete at v1.40.0 (2026-08-29): everything above is live and
+verified on Costa's machine. On GitHub at the README install URL (Pages
+for `docs/` still to be switched on in the repo settings once the split is
+pushed — `gh api -X POST repos/CostaFot/omarchy-inappropriate-clippy/pages
+-f 'source[branch]=main' -f 'source[path]=/docs'`); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

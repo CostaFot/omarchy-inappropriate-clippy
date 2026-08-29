@@ -27,7 +27,7 @@ fi
 # drop-ins: ~/.local/share/clippy-voices/<name>, one file per voice. The
 # filename is the picker name; the first non-comment non-blank line is the
 # shell command handed each line on stdin (the raw `set tts` contract —
-# including the trap wrap if the command is a pipeline, see the README).
+# including the trap wrap if the command is a pipeline, see docs/voice.md).
 dv="$HOME/.local/share/clippy-voices"; d=""
 if [ -d "$dv" ] && command -v jq >/dev/null; then
   for f in "$dv"/*; do
