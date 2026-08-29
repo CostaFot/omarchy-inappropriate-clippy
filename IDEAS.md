@@ -18,6 +18,36 @@ The tally exists (v1.10.0); the grudge half remains: expose
 `{kills}`/`{slaps}` placeholders to both books, same as `{away}`. "That's
 the ninth time you've murdered me. I keep a list."
 
+## The warm, observable
+
+v1.28.0 made book warming invisible and automatic — which works, but
+left it *too* invisible: when Costa asked "is it still running?" mid-warm
+(2026-08-29, rubick's one-off re-key warm), the agent's only honest
+answers came from counting cache files by hand and grepping the journal.
+Three gaps, all cheap because warm-voice already computes everything:
+
+- **Progress and a real ETA.** `voice` says a warm is running but not
+  how far along; the "10-20 min" claim is wrong whenever most of the
+  book is cached. warm-voice counts renders and skips as it goes — print
+  a progress line per render, stream it into the plugin (SplitParser on
+  warmBookProc instead of collecting at exit) and `voice` can say
+  "pre-rendering the book: 76/150, ~3 min left".
+- **The outcome, after.** Once the warm exits, `voice` goes silent about
+  it — an agent can't tell "fully cached" from "never ran" from "failed
+  halfway" without journalctl. The done line ("30 rendered, 126 cached,
+  0 failed of 156") already exists; park it in a property and append it
+  to `voice`.
+- **Journal noise.** A shell restart mid-warm logs "book warm failed
+  (exit 15)" with empty stderr — the superseded flag only covers
+  voice-change kills, not teardown. That's exactly the line an
+  investigating agent greps to. Gate the WARN on code 15 (or handle
+  teardown), so the journal only warns on real failures.
+
+Smaller, same neighborhood: while a warm runs, a live uncached line
+queues behind the in-flight render, so "~2 s" is really ~2-5 s — one
+clause in the `voice` reply. Deliberately not: him announcing warm
+completion out loud — background plumbing shouldn't speak.
+
 ## Reactive lines without the agent
 
 Battery, CPU, hour of the day: `shell.serviceFor("omarchy.notifications")`
