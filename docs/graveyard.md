@@ -1,6 +1,6 @@
 # The graveyard
 
-There is a [public leaderboard](https://clippy-leaderboard-production.up.railway.app)
+There is a [public leaderboard](https://graveyard.costafotiadis.com)
 — a graveyard, one headstone per handle, sized by how many times its owner
 has killed him. Slaps are the tiebreak. By default every install posts to
 one shared stone, `anonymous-clippy-abuser` — the whole nameless world

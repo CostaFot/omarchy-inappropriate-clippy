@@ -50,16 +50,18 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 
 ## What Clippy already has
 
-- Manifest: all required fields, id `costafot.clippy`, version 1.40.0 at
+- Manifest: all required fields, id `costafot.clippy`, version 1.40.5 at
   the time of writing (check `manifest.json` — this file goes stale),
   kinds `panel` + `bar-widget`. Validate passes (exit 0, silent) with the
   `docs/` folder in the tree.
-- LICENSE (MIT), README, `preview.png` (2400×260), `main` pushed and
-  clean at the time of writing.
+- LICENSE (MIT), README, `preview.png` (4267×2400, 16:9 — the bar strip
+  on the gradient card, same treatment as the other two plugins; also the
+  README's hero image), `main` pushed and clean at the time of writing.
 - Docs (v1.40.0): the README is the pitch — install + remove, the mouse
-  table, a short section per feature with its **Leaves your machine** line
-  and a screenshot (v1.40.4; `crash.png` and the slap gif are still to
-  take, see the `<!-- shot -->` comments) — and the manual is `docs/`,
+  table, a short section per feature with its **Leaves your machine**
+  bullets and a screenshot, an uninstall section and a FAQ (v1.40.5; only
+  the slap gif is still to take, see its `<!-- shot -->` comment) — and
+  the manual is `docs/`,
   served by GitHub Pages at
   https://costafot.github.io/omarchy-inappropriate-clippy/ (source `/docs`
   on `main`, `jekyll-theme-primer`). The same folder ships in the plugin
@@ -69,7 +71,7 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 - Network, for the security baseline (declare it, don't let the bot find
   it): `curl` in `scripts/fetch-assets` (dev-time, pipes into `sed | jq >
   file`, never a shell); the graveyard's `curl -X POST` from Clippy.qml
-  to clippy-leaderboard-production.up.railway.app (default-on, anonymous
+  to graveyard.costafotiadis.com (default-on, anonymous
   alias + kill/slap deltas, `set leaderboard off` silences it — the
   disclosure is the README's graveyard bullet and `docs/graveyard.md`);
   and, only with `ai: true`, `scripts/clippy-ai` running the user's own
@@ -86,12 +88,8 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
    submission. Tag the submitted commit (`git tag v1.4.0` or whatever the
    manifest says then; `gh release create`). Pushing/tagging is Costa's
    call — prepare, don't push, unless asked.
-3. **Preview aspect.** 2400×260 is a bar strip; the marketplace card will
-   crop or letterbox it. Take a ~16:9 screenshot of him mid-insult on the
-   bar with some desktop under it and put that at `preview.png`; the strip
-   can move to `assets/` and stay as the README banner. Costa takes the
-   shot (the menu can be driven via `omarchy-shell costafot.clippy
-   showMenu`, `say "..."` for a chosen line).
+3. **Preview aspect.** Done (2026-08-29): `preview.png` is 4267×2400 like the
+   other two; the 2400×260 strip is gone.
 4. **Maintainer notes** (the form's free text) — say all of this:
    - Profane by default; `clean: true` (menu row "Clean") drops every line
      tagged `nsfw`. The marketplace has no content policy, but disclose it.

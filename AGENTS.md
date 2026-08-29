@@ -12,17 +12,22 @@ and dropped, how it was verified) is the commit messages: `git log
 rule here (a `HISTORY.md` used to duplicate them; removed in v1.40.3 after
 an audit folded every still-true fact into this file). Future work goes in
 `IDEAS.md`, never here. User docs are split
-(v1.40.0): `README.md` is the pitch — install + remove, the mouse table,
-a short section per big feature (1-3 sentence paragraphs, a screenshot
-under `assets/screenshots/` with a `<!-- shot: … -->` comment saying how
-it was captured — 1400×260 bar-strip crops of a `grim` at monitor scale
+(v1.40.0): `README.md` is the pitch — the 16:9 `preview.png` as hero
+(the marketplace card image, 4267×2400 like Costa's other plugins: a bar
+strip on a gradient card), install, the mouse table, a short section per
+big feature (1-3 sentence paragraphs, a screenshot under
+`assets/screenshots/` with a `<!-- shot: … -->` comment saying how it
+was captured — 1400×260 bar-strip crops of a `grim` at monitor scale
 1.6, every state driven over IPC, `omarchy-toggle-idle stay-awake` first
 or he falls asleep mid-shoot, `set leaderboard off` first or the kills
-post; the alt text is the line in the bubble; `crash.png` and `slap.gif`
-are still to take — and a bold **Leaves your machine:** line for
-anything that touches the network) and links; no key names in README
-prose, the configuration table owns them, `slap: false` the one exception
-because it explains where snooze went — and
+post; the alt text is the line in the bubble; `slap.gif` is still to
+take — and a bold **Leaves your machine:** label with bullets under it
+for anything that touches the network: ai and the graveyard), an
+Uninstall section, a FAQ in the shape of Costa's other extension READMEs
+(bold question, one blunt answer, telemetry first) and links; key names
+in README prose only where the README is handing you the command
+(`set clean true`, `tts: true`, `promptFile`), the configuration table
+owns the full list — and
 `docs/` is the manual, one page per feature (`configuration.md` holds the
 settings table, `ai.md`, `voice.md`, `graveyard.md`, `scripting.md`,
 `index.md` the contents). The same files are the GitHub Pages site
@@ -782,8 +787,9 @@ lack anything to show", and anonymous opt-out telemetry with a disclosure
 is ordinary OSS practice). Server: repo `CostaFot/clippy-leaderboard`
 (`~/Work/clippy-leaderboard`), Flask + psycopg2 + gunicorn on Railway
 (project `clippy-leaderboard`, Postgres internal-only — no public proxy,
-keep it that way; domain
-clippy-leaderboard-production.up.railway.app). `POST /bump` takes
+keep it that way; domain graveyard.costafotiadis.com, a CNAME onto the
+generated clippy-leaderboard-production.up.railway.app — never delete the
+generated domain, installs from before the swap (manifest ≤1.40.4) post to it). `POST /bump` takes
 `{handle, kills, slaps}` DELTAS: handles are claim-free (no accounts;
 collisions merge — anti-cheat is an explicit non-goal), lowercased,
 `[a-z0-9_.-]{1,24}`, deltas clamped 0-50 (hygiene), reply carries new
@@ -927,7 +933,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.40.3 (2026-08-29): everything above is live and
+Feature-complete at v1.40.5 (2026-08-30): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and

@@ -1718,7 +1718,7 @@ Item {
   // is in flight, so a beating coalesces), a failure puts the sent deltas
   // back and backs off like AgentBrain's topUp. Pending deltas die with the
   // shell — the same trade the tally itself makes.
-  readonly property string leaderboardUrl: "https://clippy-leaderboard-production.up.railway.app"
+  readonly property string leaderboardUrl: "https://graveyard.costafotiadis.com"
   readonly property string lbAnonHandle: "anonymous-clippy-abuser"
   readonly property string lbSetting: String(setting("leaderboard", "") || "").trim().toLowerCase()
   readonly property bool leaderboardOff: lbSetting === "off"

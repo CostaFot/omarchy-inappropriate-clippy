@@ -57,7 +57,7 @@ into the bar himself, settings and all.
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
 | `promptFile` | — | Path to a text file that replaces his entire built-in AI prompt — persona, rules, tone, all of it. Your file decides who he is. See [ai](ai.md) |
 | `greeted` | `false` | Set to `true` by his first-boot hello (the one telling you to set him up), so he only says it once per install. `set greeted unset` to hear it again |
-| `leaderboard` | — | Who the kill/slap counts post as on [the public graveyard](https://clippy-leaderboard-production.up.railway.app). Unset posts to the shared `anonymous-clippy-abuser` stone, a handle claims your own, `off` stops posting. See [graveyard](graveyard.md) |
+| `leaderboard` | — | Who the kill/slap counts post as on [the public graveyard](https://graveyard.costafotiadis.com). Unset posts to the shared `anonymous-clippy-abuser` stone, a handle claims your own, `off` stops posting. See [graveyard](graveyard.md) |
 | `leaderboardSaved` | — | Where a handle parks while the graveyard is toggled off, so toggling doesn't lose it. Managed for you |
 
 `quotesFile` takes the same shape as [`quotes.json`](https://github.com/CostaFot/omarchy-inappropriate-clippy/blob/main/quotes.json): an array of
