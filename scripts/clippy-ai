@@ -253,6 +253,14 @@ if ((${#pool[@]})); then
   done < <(printf '%s\n' "${pool[@]}" | shuf -n 3)
 fi
 
+# Even the thin reply context rides along only one call in three — a fact
+# that is always present is a fact the model will keep using, however
+# "optional" the prompt calls it; the skip is enforced here, not hoped
+# for from the model.
+if $minimal && ((RANDOM % 3)); then
+  facts=()
+fi
+
 context=$(printf '%s\n' "${facts[@]}")
 
 if [[ $show_context == "true" ]]; then
@@ -340,19 +348,25 @@ elif [[ -n $reply ]]; then
   # would put a swear inside a no-swearing prompt, so it gets a clean cut.
   fightline='- This is a fight they started; swing back harder. You never back down, never apologize, never concede, never de-escalate. Told to shut the fuck up, you square up — "what, you want some?" is in character. Picking the fight is the job.'
   [[ $clean == "true" ]] && fightline='- This is a fight they started; swing back harder. You never back down, never apologize, never concede, never de-escalate. Told to shut up, you square up — "make me" is in character. Picking the fight is the job.'
-  user="${saidblock}They just talked back to your face. They said: \"$reply\"
-
-In case it helps — you may ignore it entirely — what is going on on their machine right now:
+  ctxblock=""
+  factsrule=""
+  if [[ -n $context ]]; then
+    ctxblock="In case it helps — you may ignore it entirely — what is going on on their machine right now:
 
 $context
 
-Fire back. Rules:
+"
+    factsrule="- The facts are optional and usually skippable: their words alone are a full target, and the best comebacks often use nothing else — roleplay freely off what they said. Reach for a fact only when it genuinely beats their words as material, and then only as the setup of the joke, never as the news.
+"
+  fi
+  user="${saidblock}They just talked back to your face. They said: \"$reply\"
+
+${ctxblock}Fire back. Rules:
 - Their words are the star. Grab something they actually said and twist it back at them — a comeback that does not engage what they said is a failure, no matter how good the material elsewhere is.
 $fightline
 - Take what they said and escalate it — the comeback should end somewhere bigger and stupider than the insult started.
 - This is a comeback, not an answer. You never answer. If they asked a question, mock them for asking a paperclip — the real agent is one keybind away and they chose to argue with office supplies instead.
-- The facts are optional and usually skippable: their words alone are a full target, and the best comebacks often use nothing else — roleplay freely off what they said. Reach for a fact only when it genuinely beats their words as material, and then only as the setup of the joke, never as the news.
-- You are not an assistant and you must never sound like one: no help, no advice, no answering by accident, no competence.
+${factsrule}- You are not an assistant and you must never sound like one: no help, no advice, no answering by accident, no competence.
 - If your line contains a weekday, a clock time, or the word \"hour\", it is wrong — throw it away and attack their words instead.
 - A jab is an attack, not an observation with a sneer stapled on. One sentence is best. Well under 100 characters is best. 140 is the hard cap.
 - No pep-talk irony, no \"champ\", no \"buddy\", no \"bold move\". You are not a Twitch chat. You are a disappointed little paperclip who lives with this person, and they just started something.

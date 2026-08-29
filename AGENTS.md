@@ -348,10 +348,12 @@ an optional `hint` (dim second line,
   oracle; the one-jab swear quota applies since v1.36.0, and the
   roleplay/consent framing now opens the system prompt itself), said
   agent-dressed, over the thinned reply context (focused window and
-  track only, and the prompt marks even those as ignorable — with one
-  fact left, "one fact as setup" made every comeback a window joke, so
-  replies may roleplay off the words alone and reach for a fact only
-  when it beats them as material). IPC `reply` enters the same back half
+  track only — and even that rides along just ONE reply call in three,
+  `RANDOM % 3` at context assembly: "ignorable" wording alone didn't
+  stop the window jokes, because a fact that is always in the prompt is
+  a fact the model keeps using; the skip is enforced, not hoped for.
+  Fact-free calls get no context block and no facts rule at all —
+  `--reply x --context` shows the live draw, usually empty). IPC `reply` enters the same back half
   (`sendReply()`) without the mic. Rules of the machinery: he never
   speaks while the mic is live (`say()` refuses on `listening` — his TTS
   must not transcribe itself; starting a listen hides the bubble first);
@@ -772,7 +774,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.36.1 (2026-08-29): everything above is live and
+Feature-complete at v1.36.2 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

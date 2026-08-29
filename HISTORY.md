@@ -1245,3 +1245,23 @@ Fucking hello. You opened your mouth for the first time all day and
 that's what came out."), one using the window as a tail, none leading
 with it. AGENTS.md talk-back section, manifest 1.36.1; hand-copied to
 the installed clone.
+
+## The skip made mechanical (v1.36.2, 2026-08-29)
+
+"does it need a refresh or something? it is still focusing" — no
+refresh (the script is exec'd fresh per call and the installed copy
+diffed identical), just the limit of soft prompting: four test replies
+skipped the window fine, but on Costa's live inputs the model kept
+grabbing it, because a fact that is always in the prompt is a fact the
+model keeps using, however "optional" the wording. Same lesson as the
+shame pool's shuf: enforce, don't hope. Reply context now rides along
+only one call in three (`RANDOM % 3` empties `facts` at assembly for
+minimal mode); a fact-free call gets no context block and no facts rule
+at all — the words go straight to "Fire back." — so two comebacks in
+three physically cannot cite the window, and the third still can when
+it is good material. Verified: 2/6 context draws non-empty, both prompt
+shapes render clean, and the original trigger ("cant help myself")
+twice got its words twisted back with no window in sight ("\"Can't
+help yourself\" is the whole fucking resume — nobody's helped you yet
+either."). AGENTS.md talk-back section, manifest 1.36.2; hand-copied to
+the installed clone.
