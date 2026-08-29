@@ -637,9 +637,10 @@ Item {
   // The word-count interval can lose the race with the voice — a clone pays
   // ~2 s of synthesis on a novel line and speaks slower than 450 ms/word —
   // and hiding the bubble cuts the engine mid-word (every deliberate hide
-  // relies on exactly that). So the timeout, and only the timeout, waits:
-  // while the voice is still on this line it re-arms in half-second beats,
-  // capped so a hung engine can't pin him in `talking` forever.
+  // relies on exactly that). So the timeouts — this one, dieTimer for last
+  // words, flingHold for the flung line — wait: while the voice is still on
+  // the line they re-arm in half-second beats, capped so a hung engine
+  // can't pin a mood forever.
   Timer {
     id: bubbleTimer
     repeat: false
@@ -653,7 +654,9 @@ Item {
   Timer {
     id: dieTimer
     repeat: false
+    property int holds: 0
     onTriggered: {
+      if (root.speakingThisBubble() && holds < 60) { holds++; interval = 500; restart(); return }
       bubble.shown = false
       sprite.play("GoodBye", false, root.finishDeath)
     }
@@ -884,6 +887,7 @@ Item {
     bubble.silent = false
     bubble.text = words
     bubble.shown = true
+    dieTimer.holds = 0
     dieTimer.interval = 2500
     dieTimer.start()
   }
@@ -1414,6 +1418,8 @@ Item {
     bubble.text = randomLine("flung", "Noooooooooooooooooooooooooooo")
     bubble.shown = true
     var to = dir > 0 ? stage.width + actor.width : -actor.width * 2
+    flingHold.holds = 0
+    flingHold.interval = root.flingHoldMs // the wait-for-voice re-arm overwrote the binding
     flingAnim.stop()
     flingX.to = to
     flingSpin.to = dir * 540
@@ -1427,8 +1433,10 @@ Item {
   Timer {
     id: flingHold
     interval: root.flingHoldMs
+    property int holds: 0
     onTriggered: {
       if (root.mood !== "dying") return
+      if (root.speakingThisBubble() && holds < 60) { holds++; interval = 500; restart(); return }
       bubble.fadeMs = root.flingEchoMs
       bubble.shown = false
       flingEcho.start()

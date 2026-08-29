@@ -1010,6 +1010,28 @@ hint under the tally — "graveyard: he can die publicly — set leaderboard
 Voice-hint stranded-audience rule; the menu can't take free text, so it
 points at the agent/terminal. Verified by screenshot.
 
+Last words finish too (2026-08-29, v1.24.1): "killing clippy the voice is
+cut of a bit before clippy goes away" — the v1.22.1 wait-for-voice hold
+covered `bubbleTimer` only; the two death timers still hid the bubble on
+fixed clocks, and hiding the bubble is the deliberate-cut contract. So a
+kill's lastWords died at `dieTimer`'s 2500 ms (the Rubick clone hadn't
+finished a cached line by then, let alone a ~2 s novel-line synthesis)
+and the flung line at `flingAnim`+`flingHold`'s ~2.1-3.1 s. Fix: both
+timers grew the same `speakingThisBubble()` re-arm — 500 ms beats, 60-hold
+cap so a hung engine can't make him unkillable — before their hide;
+`kill()` zeroes `dieTimer.holds`, `flingOff()` zeroes `flingHold.holds`
+AND restores `flingHold.interval = flingHoldMs`, because the imperative
+re-arm overwrites that declarative binding and the next fling would have
+lingered 500 ms instead of 1500. Every deliberate hide still cuts
+mid-word; the fling's linger/echo run after the line ends, unchanged.
+IDEAS.md was also pruned of shipped entries the same session (c914230).
+Verified live over IPC with the Rubick clone: kill held `dying` ~3.5 s
+until aplay exited on its own then went dead via GoodBye; fling held
+through the line then ran hold+echo to `dead`; journal clean; Costa
+confirmed by ear ("worked"). README: the mid-word paragraph's hide list
+drops "his death" and the waits-its-turn sentence now covers last words.
+Hand-copied to the installed clone.
+
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
   day (`shell.serviceFor("omarchy.notifications")` and the agents plugin

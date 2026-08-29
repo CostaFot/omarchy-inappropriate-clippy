@@ -225,16 +225,17 @@ stdin, you own everything. And it survives the on/off switch: toggling the
 voice off (menu row or `set tts false`) parks the command in `ttsSaved`,
 and toggling back on restores it — you only get the espeak robot from
 `tts true` when there's nothing parked (`set ttsSaved unset` to force
-that). Whatever hides the bubble — a slap, a lock, his
-death — kills the voice mid-word, whichever voice is set: the espeak robot
+that). Whatever hides the bubble — a slap, a click, a
+lock — kills the voice mid-word, whichever voice is set: the espeak robot
 and the clones die with their process (speak-clone becomes aplay by play
 time), and the commands `setup-voice` writes for kokoro and piper wrap the
 pipeline in a trap so the kill reaches their aplay too. A hand-rolled
 command like the example above may finish its sentence anyway — bash sits
 on signals while a foreground pipeline runs. Borrow the wrap if that
 bothers you: `trap 'kill $! 2>/dev/null' TERM; <your pipeline> & wait $!`.
-The bubble's own timer is the one thing that waits its turn: a long line
-stays on screen until he's actually finished saying it, instead of
+The bubble's own timers wait their turn, though: a long line stays on
+screen until he's actually finished saying it, and his last words — a
+kill, a knockout, a fling — get said in full before he goes, instead of
 cutting him off mid-rant.
 
 When he talks, everything else shuts up. The moment a line starts, every
