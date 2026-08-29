@@ -208,6 +208,13 @@ PanelWindow {
         label: menu.open && menu.clippy && menu.clippy.talking ? "Shut up" : "Say something"
         onTapped: menu.pick(menu.clippy && menu.clippy.talking ? "shutUp" : "say")
       }
+      // Only while the agent lines are on — the look runs through the
+      // agent, so without it the row would do nothing.
+      Entry {
+        visible: !card.gone && menu.clippy && menu.clippy.aiEnabled === true
+        label: menu.clippy && menu.clippy.looking ? "Judging…" : "Judge my screen"
+        onTapped: menu.pick("look")
+      }
       Entry {
         visible: !card.gone
         label: menu.open && menu.clippy && menu.clippy.isSnoozed() ? "Wake him up" : "Snooze for an hour"

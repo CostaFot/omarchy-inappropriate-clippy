@@ -5,12 +5,20 @@ that used to live in AGENTS.md was merged in here 2026-08-29.)
 
 ## Talk back to him
 
-IPC `ask "why is my build broken"` → one-shot through `scripts/clippy-ai`
-with the question appended to the facts, answer lands in the bubble
-(agent-dressed, sparkle and all). The prompt plumbing, the parser and
-`say()` all exist — mostly a new flag on the script plus a busy-guard so it
-doesn't race the cache top-up. Turns him from a heckler into an oracle who
-is also a heckler. The feature people would screenshot.
+The zero-input version shipped as v1.32.0's `look` (screenshot → one jab
+from the agent). What remains is free-text: IPC `ask "..."` through the
+same `clippy-ai` plumbing. Reframed (2026-08-29) after Costa's "omarchy
+users already got an agent" objection killed the oracle pitch: the call is
+tool-less and fact-limited, so as a *utility* it is strictly worse than
+the real agent one keybind away — if it ever ships, sell it as provoking
+the heckler, not asking an oracle, and let the prompt mock questions he
+can't answer. Entrypoints when wanted (the menu takes no keyboard focus
+by design rule, so input must come from outside): a clipboard-roast verb
+(`wl-paste` as the input — explicit and one-shot, unlike the
+decided-against snooping), a bindd spawning a walker/floating-terminal
+prompt, or voxtype push-to-talk piped in (speak to him, he answers in
+the clone voice — the unbeatable demo, needs voxtype's output to be
+scriptable).
 
 ## Kill counter with a grudge
 

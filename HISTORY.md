@@ -915,3 +915,99 @@ parked 0.4, banana refused, unset back to 80%; menu row screenshots
 clean with the footer intact. README table rows + ducking paragraph,
 AGENTS.md Ducking section and menu row list rewritten. Hand-copied to
 the installed clone; box left on the 0.8 default.
+
+He judges your screen now (v1.32.0, 2026-08-29): interactivity, found
+sideways. The IDEAS.md "ask an oracle" pitch died first — Costa:
+"omarchy users already got an agent. why would we do the first?" — the
+call is tool-less and fact-limited, strictly worse than the real agent
+one keybind away; what survived was the bit. Hunting for a text-free
+entrypoint (the menu takes no keyboard focus by design rule) landed on
+his: "maybe we do a 'clippy comment what is on my screen right now'? …
+it's preconfigured to see the screen, screenshot and send to agent".
+Plumbing verified before building: headless `claude -p` has no image
+flag, but `--tools "Read"` (loosened from the usual `--tools ""`) plus
+the path in the prompt reads the png natively — the throwaway-prompt
+test roasted the live screen in 6.5 s, citing the status line's $2.26
+and a typo of Costa's off the screen. Shipped: `clippy-ai --image
+<path>` (one jab, specificity mandatory — "a jab that could have been
+made without the screenshot is a failure" — facts kept in for
+cross-referencing; claude gets Read, codex gets `-i` per its docs,
+every other agent just gets the path in the prompt: "we are building
+something generic", untested elsewhere by his call). QML:
+`lookAtScreen()` grims his screen to `$XDG_RUNTIME_DIR/clippy-look.png`
+in a bash chain that deletes it when the call returns, plays a looping
+CheckingSomething while the agent chews (the 5-15 s as timing, not dead
+air), and says the line agent-dressed; `looking` gates
+decide()/unprompted(), failures set `lookFailed` (surfaced in the `ai`
+verb reply), a verdict landing on a sleeping/dead Clippy drops as
+stale. IPC `look` answers immediately ("ok — looking…"; hidden /
+asleep / dead / ai-off / busy each get their line); menu row "Judge my
+screen" → "Judging…" while running, shown only while `ai` is on. New
+design-rule clause in AGENTS.md: the screenshot leaves ONLY on the
+explicit gesture — never on a timer, never from decide() — an
+unprompted screenshot would be surveillance, not a gag. No new setting.
+Verified live over IPC after a shell restart: a look landed "Saturday
+5:47pm and you're staring at 'omarchy: Work' — even your window
+manager knows that's a lie" in the bubble, sparkle on, temp file gone,
+journal clean; double-fire answered busy; ai-off, hidden and
+bogus-aiAgent (exit 3, journal warn with real stderr, `ai` suffix)
+all answered right; menu screenshots clean in both ai states, footer
+intact. IDEAS.md "Talk back to him" rewritten to what remains (free
+text `ask`, reframed as provoking the heckler, entrypoints listed).
+Post-ship tweak, same session — Costa: "it does focus on the time a
+bit too much?" — both first verdicts had opened with the clock: the
+image prompt lacked the batch prompt's "never state the time" and even
+invited it ("cross-reference against the hour"). Rule replaced with
+"the screen is the star; the facts are backup … never state the time
+or the day — clock jokes are the lazy ones"; two re-runs went for tab
+titles instead of the clock (one of which Costa will remember). Then
+"we need focus on absurd stuff … generally the prompt should be far
+away from a real helpful AI" — the rules gained an absurdity hunt
+("the typo, the tab they forgot was open, … the file named
+final-final-v2; the obvious main activity is the boring target, the
+stupid little detail is the kill") and an explicit assistant ban ("no
+summarizing the screen, no noticing like a productivity tool, no
+competence — you are a petty little creature looking for material").
+Three test runs all attacked the same unfortunate tab from three
+different angles, one cross-referencing a company name read off the
+LinkedIn page next to it — no summaries, no clock, nothing helpful.
+Two more rounds the same evening. "it's focusing on the number of
+screenshots I have sent it" — a feedback loop: each look
+remember()ed itself AND passed --recent, so five stacked shoves made
+the ritual the most absurd thing in the prompt ("Fifth screenshot
+this hour…"). Fixed by dropping --recent from the look call only
+(batches keep it — "stop showing me your screen" is good material
+there) plus a prompt rule banning the ritual as a target. Then a
+sonnet verdict opened "Herd on a Saturday at 6pm" — the polite
+"never state the time" rule slips; hardened to "if your line
+contains a weekday, a clock time, or the word 'hour', it is wrong —
+throw it away". Three verdicts after: no clock, no meta, one
+attacking the terminal editing these very rules next to an X feed
+("rewriting my own insult rules while scrolling a tweet about cheese
+and ketchup"). Hand-copied to the installed clone; box left with ai
+on.
+
+A dash of Bill Burr (same session): "maybe we give him a dash of bill
+burr? is it possible or would pollute the prompt? do we allow curse
+words right? … should we be explicit about it?" Both answered in the
+system prompt. The Burr clause names the delivery, not the man to
+imitate — "the Bill Burr school: exasperated, incredulous that anyone
+lives like this, halfway into a rant by the end of the sentence" —
+fenced with "still a little paperclip, not an impression of anyone; no
+stand-up catchphrases, no crowd work", because the failure mode of
+"write like Bill Burr" is freakin'-Boston cosplay. Swearing was
+already permitted ("allowed and welcome") but sonnet never went past
+"damn" under permission alone, even after "fuck included" was added —
+the fix was prescription: batches "must carry at least one real swear
+— fuck-level, not damn-level" (the image mode's single jab drops the
+quota; clean mode replaces the tone line as before). Verified: the
+next batch landed "Saturday evening and you're in a window called
+Work. Your life is fucked." plus "staring at a screen like it owes
+you money" — the escalating-tag shape with no impression leakage;
+image runs kept their register. Hand-copied to the installed clone.
+
+Pre-commit stale sweep (the AGENTS.md rule): the `voice` reply still
+said "other audio ducks to 30% while he talks" — two duck versions out
+of date. Now derived live: the actual duckFactor percent, or "ducking
+is off — other audio keeps its volume". Verified over IPC against
+Costa's duck:false box.

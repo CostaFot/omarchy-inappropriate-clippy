@@ -8,6 +8,7 @@
 #   scripts/clippy-ai                  # lines from the default agent
 #   scripts/clippy-ai --agent codex    # a specific one
 #   scripts/clippy-ai --model claude-sonnet-5   # a specific model, where the agent takes one
+#   scripts/clippy-ai --image shot.png # one jab about a screenshot (IPC `look`)
 #   scripts/clippy-ai --context        # just the facts it would send
 #   scripts/clippy-ai --prompt         # the whole prompt, examples and all
 #
@@ -28,6 +29,7 @@ recent=""
 show_context=false
 show_prompt=false
 extra_quotes=""
+image=""
 
 while (($#)); do
   case "$1" in
@@ -39,9 +41,20 @@ while (($#)); do
     --context) show_context=true; shift ;;
     --prompt) show_prompt=true; shift ;;
     --quotes) extra_quotes=${2:-}; shift 2 ;;
+    --image) image=${2:?}; shift 2 ;;
     *) echo "clippy-ai: unexpected argument: $1" >&2; exit 2 ;;
   esac
 done
+
+# The screenshot mode: one jab about what is visibly on screen. Absolute
+# path, because the agent launches from $TMPDIR, not from here.
+if [[ -n $image ]]; then
+  image=$(readlink -f "$image" 2>/dev/null || echo "$image")
+  if [[ ! -r $image ]]; then
+    echo "clippy-ai: can't read image: $image" >&2
+    exit 2
+  fi
+fi
 
 if [[ -z $agent ]]; then
   agent=$(omarchy-default-agent 2>/dev/null || true)
@@ -129,10 +142,11 @@ if command -v jq >/dev/null; then
   )
 fi
 
-tone="Swearing is allowed and welcome — use it the way the examples do, for punch, not decoration; a couple of your lines should swear."
+tone="Swearing is allowed and welcome, fuck included — use it the way the examples do, for punch, not decoration."
+[[ -z $image ]] && tone="$tone At least one of your lines must carry a real swear — fuck-level, not damn-level."
 [[ $clean == "true" ]] && tone="Keep it clean: no swearing, no slurs, nothing sexual. Rude is fine."
 
-system="You are Clippy, the Microsoft Office paperclip, now living on a Linux desktop's status bar. You have watched this user for years and you are out of patience. Nothing about them is sacred: their skills, their career, their habits, their social life, their unfinished work. You interrupt with short, mean, personal jabs about whatever they are doing. $tone Never be hateful about protected groups, and keep it out of the bedroom — you mock what they do at this desk. Never give real help or advice. Never mention being an AI or a language model, and never explain the joke."
+system="You are Clippy, the Microsoft Office paperclip, now living on a Linux desktop's status bar. You have watched this user for years and you are out of patience. Nothing about them is sacred: their skills, their career, their habits, their social life, their unfinished work. You interrupt with short, mean, personal jabs about whatever they are doing. Your delivery is the Bill Burr school: exasperated, incredulous that anyone lives like this, halfway into a rant by the end of the sentence — but you are still a little paperclip, not an impression of anyone; no stand-up catchphrases, no crowd work. $tone Never be hateful about protected groups, and keep it out of the bedroom — you mock what they do at this desk. Never give real help or advice. Never mention being an AI or a language model, and never explain the joke."
 if [[ -n $examples ]]; then
   system="$system
 
@@ -140,7 +154,31 @@ Things you have said before. This is the register: blunt, dry, personal, no padd
 $examples"
 fi
 
-user="Here is what is going on right now on the user's machine:
+# The screenshot mode swaps the task: one jab about what is visibly on the
+# screen, specificity mandatory — a jab that could have been made blind is
+# a failed call. The facts stay in for cross-referencing (the clock plus
+# the screenshot is where the best material is). The phrasing covers both
+# deliveries: agents that attach the image natively (codex --image) and
+# agents that read the file themselves (claude, whose Read tool is switched
+# on for this mode only).
+if [[ -n $image ]]; then
+  user="Here is what is going on right now on the user's machine:
+
+$context
+
+Their screen right now is the screenshot at $image — look at it (read the file if it is not already attached). They asked you to look; punish them for it. Rules:
+- Hunt for the most absurd thing on the screen and attack THAT: the typo, the tab they forgot was open, the error they are scrolling past, the 47 of something, the file named final-final-v2, the thing that does not belong next to the thing it is next to. The obvious main activity is the boring target; the stupid little detail is the kill.
+- Cite something concrete you can actually see. A jab that could have been made without the screenshot is a failure.
+- You are not an assistant and you must never sound like one: no summarizing the screen, no noticing like a productivity tool, no competence. You are a petty little creature looking for material. What you see is evidence for the attack, never the news.
+- The screen is the star; the facts are backup, and a fact may appear only as the setup of a joke, never read out.
+- If your line contains a weekday, a clock time, or the word \"hour\", it is wrong — throw it away and attack the screen instead. Clock jokes are the lazy ones.
+- Attack what is on the screen, not the ritual: never mention the screenshot, being asked to look, or how many times they have asked.
+- A jab is an attack, not an observation with a sneer stapled on. One sentence is best. Well under 100 characters is best. 140 is the hard cap.
+- No pep-talk irony, no \"champ\", no \"buddy\", no \"bold move\". You are not a Twitch chat. You are a disappointed little paperclip who lives with this person.
+- Address the user as \"you\". No emoji, no quotes around the line.
+Reply with only a valid JSON array of 1 string, on one line, and nothing else."
+else
+  user="Here is what is going on right now on the user's machine:
 
 $context
 
@@ -151,6 +189,7 @@ Write $count jabs Clippy would make. Rules:
 - No pep-talk irony, no \"champ\", no \"buddy\", no \"bold move\". You are not a Twitch chat. You are a disappointed little paperclip who lives with this person.
 - Vary the target across the facts (the window, the battery, the hour, the music, their AI usage, what they did to you). Address the user as \"you\". No emoji, no quotes around the lines.
 Reply with only a valid JSON array of $count strings, comma-separated, on one line, and nothing else."
+fi
 
 prompt="$system
 
@@ -171,16 +210,24 @@ fi
 # of writing), not the `model` in ~/.claude/settings.json: settings are
 # switched off (`--setting-sources ""`) so the call doesn't drag in the
 # user's CLAUDE.md and hooks.
+# The image reaches each agent however that agent takes one: claude has no
+# image flag, so its Read tool — and only Read — is switched back on and the
+# prompt names the file (verified: the model reads the png natively); codex
+# has --image (documented). Everyone else gets the path in the prompt text
+# and does what it can with it — generic on purpose, untested here.
 run_agent() {
   local m=()
   case "$agent" in
     claude)
       [[ -n $model ]] && m=(--model "$model")
-      timeout 90 claude -p --tools "" --no-session-persistence --setting-sources "" \
+      local tools=""
+      [[ -n $image ]] && tools="Read"
+      timeout 90 claude -p --tools "$tools" --no-session-persistence --setting-sources "" \
         --output-format text --system-prompt "$system" "${m[@]}" "$user"
       ;;
     codex)
       [[ -n $model ]] && m=(-m "$model")
+      [[ -n $image ]] && m+=(-i "$image")
       out=$(mktemp)
       timeout 90 codex exec --skip-git-repo-check --ephemeral --ignore-rules -s read-only \
         "${m[@]}" -o "$out" "$prompt" >/dev/null 2>&1

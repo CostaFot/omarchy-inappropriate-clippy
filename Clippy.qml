@@ -630,6 +630,75 @@ Item {
     onLinesArrived: lines => root.warmAgentLines(lines)
   }
 
+  // ---- the look ----------------------------------------------------------
+  // IPC `look` and the menu's "Judge my screen": grim his screen into
+  // $XDG_RUNTIME_DIR, hand it to clippy-ai --image (one jab through the
+  // user's agent — the vision is the agent's), and the verdict lands in the
+  // bubble agent-dressed. Explicitly user-triggered ONLY — never on a timer,
+  // never from decide()/unprompted(): a screenshot leaving the machine on
+  // his own schedule would be surveillance, not a gag. The screenshot is
+  // deleted the moment the agent call returns, success or not.
+  property bool looking: false
+  property bool lookFailed: false
+  function lookAtScreen() {
+    if (!opened) return "hidden"
+    if (asleep) return "asleep"
+    if (mood === "dead" || mood === "dying" || mood === "reviving") return "dead — he judges nothing from the grave; respawn first"
+    if (!aiEnabled) return "off — the look runs through your coding agent; set ai true first"
+    if (lookProc.running) return "busy — already looking; the verdict lands in his bubble"
+    if (!targetScreen) return "not now"
+    var file = Quickshell.env("XDG_RUNTIME_DIR") + "/clippy-look.png"
+    var cmd = [pluginDir + "/scripts/clippy-ai", "--image", file]
+    if (clean) cmd.push("--clean")
+    if (aiAgent !== "") cmd.push("--agent", aiAgent)
+    if (aiModel !== "") cmd.push("--model", aiModel)
+    // Deliberately NO --recent: the look remember()s itself, so feeding the
+    // list back made repeated looks count each other ("fifth screenshot
+    // this hour") instead of attacking the screen. Batches still get it.
+    if (quotesFile !== "") cmd.push("--quotes", quotesFile)
+    lookProc.command = ["bash", "-c",
+      'f=$1; out=$2; shift 2; grim -o "$out" "$f" || exit 6; "$@"; rc=$?; rm -f "$f"; exit $rc',
+      "clippy-look", file, String(targetScreen.name)].concat(cmd)
+    lookProc.running = true
+    looking = true
+    // He visibly inspects the screen while the agent chews on it — the
+    // 5-15 s of latency played as timing instead of dead air.
+    walkAnim.stop()
+    brain.stop()
+    if (mood === "walking") { persisted.lastX = actor.x; mood = "idle" }
+    sprite.play(sprite.has("CheckingSomething") ? "CheckingSomething" : "Thinking", true)
+    return "ok — looking; the verdict lands in his bubble in ~10 s"
+  }
+  Process {
+    id: lookProc
+    stdout: StdioCollector { id: lookOut }
+    stderr: StdioCollector { id: lookErr }
+    onExited: function (code) {
+      root.looking = false
+      var line = null
+      try {
+        var parsed = JSON.parse(String(lookOut.text))
+        if (Array.isArray(parsed) && typeof parsed[0] === "string" && parsed[0].trim() !== "") line = parsed[0].trim()
+      } catch (e) {}
+      // Back to the idle loop when there's no line to say — but never while
+      // asleep (fallAsleep stopped the sprite; wakeUp restarts it) and never
+      // over a drag or another mood's animation.
+      function backToIdle() {
+        if (root.mood === "idle" && !root.dragging && !root.asleep) { root.idleAnim(); root.schedule(root.rand(3000, 8000)) }
+      }
+      if (code !== 0 || !line) {
+        root.lookFailed = true
+        console.warn("clippy: screen look failed (exit " + code + "): " + String(lookErr.text).trim())
+        backToIdle()
+        return
+      }
+      root.lookFailed = false
+      agentBrain.remember("shoved their screen in his face for a verdict")
+      // Asleep or dead by the time the verdict arrived: stale, drop it.
+      if (!root.say(line, null, true)) backToIdle()
+    }
+  }
+
   FileView {
     path: root.pluginDir + "/quotes.json"
     onLoaded: root.loadQuoteBook(text(), false)
@@ -729,7 +798,7 @@ Item {
   }
 
   function decide() {
-    if (mood !== "idle" || dragging || asleep) return
+    if (mood !== "idle" || dragging || asleep || looking) return
     // Parked on a widget (drag-drop, or one appeared under him): itchier
     // feet, but still the normal walk on the normal beat — no new timers.
     var urge = onWidget() ? Math.max(restless, 0.8) : restless
@@ -916,7 +985,7 @@ Item {
     if (asleep) return  // wakeUp() reschedules
     scheduleQuote()
     if (mood !== "idle" && mood !== "walking") return
-    if (isSnoozed() || dragging) return
+    if (isSnoozed() || dragging || looking) return
     var q = nextQuote()
     if (q) say(q.text, q.anim, q.ai)
   }
@@ -1670,6 +1739,7 @@ Item {
         "omarchy-shell costafot.clippy <verb> [args] — args are strings",
         "say <text> — a line in his bubble (spoken if the voice is on)",
         "talk — a line of his own choosing; shutUp drops the bubble",
+        "look — he screenshots his screen and your agent delivers the verdict in his bubble ~10 s later (needs ai true)",
         "slap left|right — hit him; fling left|right — off the bar, fatal",
         "kill / respawn — the deliberate versions",
         "epitaph — poke the grave while he's dead",
@@ -1688,6 +1758,9 @@ Item {
     function say(text: string): string { return !root.opened ? "hidden" : root.asleep ? "asleep" : (root.say(text) ? root.ipcOkVoice() : "not now") }
     // A line of his own choosing: what a left-click does.
     function talk(): string { var q = root.nextQuote(); return q && root.say(q.text, q.anim, q.ai) ? root.ipcOkVoice() : "not now" }
+    // Screenshot his screen, one jab from the agent about what's on it.
+    // Async: the reply is immediate, the verdict lands in the bubble.
+    function look(): string { return root.lookAtScreen() }
     function shutUp(): string { root.hideBubble(); return "ok" }
     // The grave's line, same as clicking the tombstone.
     function epitaph(): string {
@@ -1737,8 +1810,15 @@ Item {
     }
     function hideMenu(): string { menu.open = false; return "ok" }
     function showMenu(): string { root.showMenu(); return "ok" }
-    // What the agent side is doing: "off", or "<agent>: N cached[, busy]".
-    function ai(): string { return root.aiEnabled ? agentBrain.status() : "off" }
+    // What the agent side is doing: "off", or "<agent>: N cached[, busy]",
+    // plus what the last `look` is up to.
+    function ai(): string {
+      if (!root.aiEnabled) return "off"
+      var s = agentBrain.status()
+      if (root.looking) s += "; looking at the screen right now"
+      else if (root.lookFailed) s += "; the last screen look failed (journalctl --user -o cat | grep clippy)"
+      return s
+    }
     // Agent-first status for the voice: what `tts` resolves to and whether
     // it can actually be heard right now.
     function voice(): string {
@@ -1762,7 +1842,9 @@ Item {
                  + " (a better voice: scripts/setup-voice in the plugin dir)")
       if (root.ttsWarned) s += "; failing, see journal"
       if (ttsProc.running) s += "; speaking"
-      s += "; other audio ducks to 30% while he talks"
+      s += root.duckOn
+        ? "; other audio ducks to " + Math.round(root.duckFactor * 100) + "% of its volume while he talks"
+        : "; ducking is off — other audio keeps its volume"
       return s
     }
     // The whole voice inventory, for agents: what's active, what's on disk
@@ -1947,6 +2029,7 @@ Item {
     }
     onAct: function (name) {
       if (name === "say") { var q = root.nextQuote(); if (q) root.say(q.text, q.anim, q.ai) }
+      else if (name === "look") root.lookAtScreen()
       else if (name === "shutUp") root.hideBubble()
       else if (name === "snooze") root.snooze(60)
       else if (name === "unsnooze") root.unsnooze()

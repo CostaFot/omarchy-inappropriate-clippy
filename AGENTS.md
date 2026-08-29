@@ -36,7 +36,10 @@ Design rules that outrank any single feature:
   posts anonymous kill/slap deltas by default — one shared alias for every
   install, so nothing identifies anyone — with the off switch one menu tap
   (`set leaderboard off` over IPC) and the README saying exactly what's
-  sent; no cloud TTS, ever.
+  sent; no cloud TTS, ever. The screen look (`look`) sends a screenshot
+  to the user's agent ONLY on the explicit gesture — never on a timer,
+  never from decide()/unprompted(); an unprompted screenshot would be
+  surveillance, not a gag. Keep it that way.
 - Keep him mostly still — tune, don't make him busier.
 - Keep `help`, the README's scripting section, and the actual IPC verbs in
   sync; `help` is the blind agent's bootstrap and ends with the README
@@ -167,7 +170,9 @@ Design rules that outrank any single feature:
   and `chose(key, value)` for settings; the root maps the latter onto
   `setSetting()`. Opening it freezes the walk. When he is dead or hidden
   the action rows collapse to "Bring him back" → `act("revive")` →
-  `root.bringBack()`. Rows: actions; `Choice` chip rows for clean, sounds,
+  `root.bringBack()`. Rows: actions (including "Judge my screen" →
+  `act("look")`, visible only while `ai` is on — without the agent the
+  row would do nothing); `Choice` chip rows for clean, sounds,
   restless ("Walks"), size, the Voice picker, and Tempo/Pitch presets
   (Tempo slow 0.9 · normal 1 · brisk 1.1 · fast 1.25; Pitch deep 0.85 ·
   normal 1 · light 1.15 · squeaky 1.35 — shown ONLY while
@@ -228,7 +233,13 @@ an optional `hint` (dim second line,
   lines from `quotes.json` (+ `--quotes <quotesFile>`, nsfw dropped under
   `--clean`) go in the system prompt as register examples; the prompt
   asks for "jabs" under explicit rules (accusation not description, one
-  short sentence, numbers only as setups, no "champ"/Twitch-isms).
+  short sentence, numbers only as setups, no "champ"/Twitch-isms). The
+  delivery is named as "the Bill Burr school" — exasperated, escalating —
+  with an explicit not-an-impression fence (no catchphrases, no crowd
+  work), and swearing is prescriptive, not just permitted: batches must
+  land at least one "fuck-level, not damn-level" line (sonnet stays at
+  "damn" under mere permission), the one-jab image mode drops that
+  quota, and `--clean` replaces the whole tone line.
   `--context` prints the facts, `--prompt` the whole prompt. Output is a
   JSON array parsed three ways in turn: as JSON; else every JSON string
   literal in the text (claude sometimes emits the array with no commas);
@@ -243,7 +254,22 @@ an optional `hint` (dim second line,
   `randomQuote()` for unprompted lines, left-click, menu "Say something"
   and IPC `talk`; `slapped`/`dragged`/etc stay on the book (instant).
   IPC `ai` → `status()`. `take()` and short answers are journaled, so
-  `journalctl --user -o cat | grep clippy` tells the story. `aiModel`:
+  `journalctl --user -o cat | grep clippy` tells the story. The screen
+  look (v1.32.0): IPC `look` / the menu's "Judge my screen" (shown only
+  while `ai` is on) → `lookAtScreen()` — grims his screen to
+  `$XDG_RUNTIME_DIR/clippy-look.png`, runs `clippy-ai --image <path>`
+  (one jab; the prompt hunts the most absurd visible detail — "the
+  stupid little detail is the kill" — and bans assistant behavior
+  outright: no summarizing, no noticing like a productivity tool, no
+  competence, no time/day; same register examples; claude gets
+  `--tools "Read"` — its only image route, verified — codex gets `-i`,
+  every other agent just gets the path in the prompt, generic
+  best-effort), deletes the file when the call returns, and says the
+  line agent-dressed. Async: the IPC reply is immediate ("ok — looking
+  …"); while it runs `looking` gates `decide()`/`unprompted()` and he
+  plays a looping CheckingSomething; failures set `lookFailed`
+  (surfaced in the `ai` verb), a verdict landing on a sleeping/dead
+  Clippy is dropped as stale. `aiModel`:
   unset is the agent's CLI default (for claude that's the CLI default
   model, NOT settings.json's `model` — `--setting-sources ""` isolates
   it); shown in the "Lines from <agent>" row label when set, no picker
@@ -654,7 +680,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.30.0 (2026-08-29): everything above is live and
+Feature-complete at v1.32.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

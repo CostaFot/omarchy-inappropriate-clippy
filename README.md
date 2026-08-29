@@ -133,6 +133,18 @@ little sparkle in the corner. Whenever the agent is unset, not logged in,
 offline or slow, the book takes over and you won't notice, except that the
 sparkle is gone.
 
+And when you want a verdict on demand: "Judge my screen" in the menu (or
+`omarchy-shell costafot.clippy look`) screenshots the monitor he is standing
+on, hands the picture to the same agent, and ~10 seconds later the jab lands
+in his bubble — he visibly inspects the screen while the model chews on it.
+This one cites what it can actually **see** (the tab, the window, the thing
+you are pretending to read), which is where the good material was all along.
+The screenshot goes wherever your agent sends its prompts, same as the facts
+above — but only when you ask: he never takes one on his own, not on a timer,
+not ever, and the file is deleted the moment the call returns. `claude` reads
+the image natively and `codex` gets it attached; any other agent gets the
+file path in the prompt and does what it can with it.
+
 Verified with `claude` and `opencode`; `codex` and `pi` are wired the same way
 but weren't run here, and the rest are best guesses from their docs. To see
 what he'd send, or try an agent by hand:
@@ -355,6 +367,7 @@ the grave keeps what you already confessed.
 omarchy-shell costafot.clippy help       # every verb, one per line — start here
 omarchy-shell costafot.clippy say "Another theme. That'll fix it."
 omarchy-shell costafot.clippy talk       # a line of his own, what a click does
+omarchy-shell costafot.clippy look       # screenshots his screen; the agent's verdict lands in his bubble (needs ai on)
 omarchy-shell costafot.clippy shutUp
 omarchy-shell costafot.clippy snooze 30  # unsnooze wakes him early
 omarchy-shell costafot.clippy slap left   # or right: the way he flies
@@ -393,6 +406,7 @@ drops straight into a Hyprland bind:
 # ~/.config/hypr/bindings.conf
 bindd = SUPER SHIFT C, C, Toggle Clippy, exec, omarchy-shell costafot.clippy toggle
 bindd = SUPER SHIFT C, T, Clippy talks, exec, omarchy-shell costafot.clippy talk
+bindd = SUPER SHIFT C, J, Clippy judges the screen, exec, omarchy-shell costafot.clippy look
 ```
 
 `say` works from anywhere, so an Omarchy hook can feed him lines:
