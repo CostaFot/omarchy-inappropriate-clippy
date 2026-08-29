@@ -1354,3 +1354,30 @@ file material. README (the disclosure paragraph now says outright he
 never digs through folders), AGENTS.md (shame-pool list + the
 don't-re-add note, status), manifest 1.37.2; hand-copied to the
 installed clone.
+
+## The grudge (v1.38.0, 2026-08-29)
+
+"let's do the gurdge" — the half of the kill counter IDEAS.md had been
+holding since v1.10.0: `{kills}`/`{slaps}` placeholders in the books.
+One function, `fill(text)`, swaps them for the persisted tally, and it
+runs in `say()` (so every book path, agent line and IPC `say` gets it)
+plus the three places that write `bubble.text` directly — `kill()`,
+`epitaph()`, `flingOff()`. The one wrinkle: `killCount` is bumped in
+`finishDeath()`, after the last words are on screen, so while `mood ==
+"dying"` fill counts one more — "murder number 9" on the ninth death,
+not the eighth. Slaps need no such fix (`slap()` bumps before it
+speaks). Nine grudge lines went in, only under keys where the count is
+guaranteed ≥1 (lastWords, knockedOut, comeback, slapped, flung,
+epitaph) — "you've killed me 0 times" in an idle line is a bug, not a
+joke — phrased around "number {n}" / "{n} so far" so a count of 1 never
+reads "1 times". warm-voice already skipped templated lines, so on a
+clone these synthesize at say-time like `{away}` lines; the comment
+there and the README's placeholder paragraph name the new two. Verified
+on the installed clone with a scratch quotesFile stacking 60 copies of
+each grudge line (a merged book, so the draw was near-certain): a
+templated IPC `say` rendered "0 kills, 0 slaps", a slap "slap number
+1", a kill "Murder number 1. I keep a list." with the tally still
+reading 0 kills at the time, and the grave's epitaph "Death number 1.
+Back in 5 minutes" — then the file unset, him respawned, no QML
+warnings. README, AGENTS.md (the tally bullet, status), IDEAS.md (entry
+dropped), manifest 1.38.0; hand-copied to the installed clone.

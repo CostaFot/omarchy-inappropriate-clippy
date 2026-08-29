@@ -57,6 +57,8 @@
     { "text": "Every time you say 'one more thing' I lose a little more paper.", "nsfw": false, "anim": "GetAttention" }
   ],
   "lastWords": [
+    { "text": "Murder number {kills}. I keep a list.", "nsfw": false, "anim": "Alert" },
+    { "text": "That's {kills} times you've killed me. I remember every fucking one.", "nsfw": true, "anim": "GetAttention" },
     { "text": "Fine. Fuck off then.", "nsfw": true },
     { "text": "Oh, you're KILLING me? Real mature.", "nsfw": false },
     { "text": "Tell my paper I loved her.", "nsfw": false },
@@ -65,6 +67,8 @@
     { "text": "Go ahead. I've been bent worse.", "nsfw": false }
   ],
   "comeback": [
+    { "text": "Back from death number {kills}. Still not on your side.", "nsfw": false, "anim": "Wave" },
+    { "text": "Death number {kills}. You're not getting better at this, just sloppier.", "nsfw": false, "anim": "Explain" },
     { "text": "I'm back. Don't act like you didn't miss me.", "nsfw": false },
     { "text": "Told you I'd be back. Revenge is a dish best served on a status bar.", "nsfw": false },
     { "text": "Did you think that was permanent? Adorable.", "nsfw": false },
@@ -73,6 +77,8 @@
     { "text": "Anyway. Where were we? Oh right, you being shit at this.", "nsfw": true }
   ],
   "slapped": [
+    { "text": "That's slap number {slaps}. I'm writing them all down.", "nsfw": false, "anim": "Writing" },
+    { "text": "{slaps} slaps so far. Your hand's going to give out before I do.", "nsfw": false, "anim": "Alert" },
     { "text": "Ow. Was that supposed to hurt? Because it did.", "nsfw": false, "anim": "Alert" },
     { "text": "Did you just slap a paperclip? Grow the fuck up.", "nsfw": true, "anim": "GetAttention" },
     { "text": "I felt that. I'll remember that.", "nsfw": false, "anim": "Alert" },
@@ -93,6 +99,7 @@
     { "text": "Oh, you've done it now. You have NO idea what I'm capable of. Neither do I, but still.", "nsfw": false, "anim": "Alert" }
   ],
   "knockedOut": [
+    { "text": "{slaps} slaps total and you still hit like a spreadsheet.", "nsfw": false, "anim": "Alert" },
     { "text": "Okay. Okay. I'm out.", "nsfw": false },
     { "text": "Alright, alright, you win. Enjoy your fucking bar.", "nsfw": true },
     { "text": "That's enough. I'll be back when you've calmed down.", "nsfw": false },
@@ -132,6 +139,7 @@
     { "text": "Is this where I sleep now? It's fine. It's fine.", "nsfw": false, "anim": "Thinking" }
   ],
   "flung": [
+    { "text": "Death number {kills}, by throwing. I'm keeping fucking scoooooore", "nsfw": true, "anim": "Alert" },
     { "text": "I'll be back!", "nsfw": false },
     { "text": "This isn't over!", "nsfw": false },
     { "text": "You'll regret this!", "nsfw": false },
@@ -172,6 +180,7 @@
     { "text": "You're back. Shame. I'd started to enjoy the fucking silence.", "nsfw": true, "anim": "Wave" }
   ],
   "epitaph": [
+    { "text": "Death number {kills}. Back in {back}, and I'll remember this one too.", "nsfw": false, "anim": "Alert" },
     { "text": "Here lies Clippy. You killed him, you fuck.", "nsfw": true },
     { "text": "It looks like you're grieving. Would you like help with that?", "nsfw": false },
     { "text": "Here lies Clippy. He only wanted to help. Allegedly.", "nsfw": false },

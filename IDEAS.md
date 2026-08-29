@@ -14,12 +14,6 @@ refcount on the existing `ducked`, not a second `duckRun` caller (two
 independent holders re-invite the compounding-snapshot bug the 1 s
 duckRelease window exists to prevent).
 
-## Kill counter with a grudge
-
-The tally exists (v1.10.0); the grudge half remains: expose
-`{kills}`/`{slaps}` placeholders to both books, same as `{away}`. "That's
-the ninth time you've murdered me. I keep a list."
-
 ## The warm, observable
 
 v1.28.0 made book warming invisible and automatic — which works, but

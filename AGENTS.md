@@ -117,8 +117,15 @@ Design rules that outrank any single feature:
     one kill), shown dim at the foot of the menu and by IPC `stats`.
     PersistentProperties survive remounts but not a shell restart, so
     tallies reset on reboot — a documented trade the README owns up to.
-    No `{kills}`/`{slaps}` placeholders in lines (deliberately skipped;
-    the pitch lives in IDEAS.md).
+    `{kills}`/`{slaps}` placeholders (v1.38.0) work in ANY line via
+    `fill(text)`, applied in `say()` and in the three direct
+    `bubble.text` writes (`kill`, `epitaph`, `flingOff`); while `mood
+    == "dying"` kills counts one more, because `finishDeath()` bumps
+    after the last words are written. Grudge lines sit only in keys
+    where the count is guaranteed ≥1 (lastWords, knockedOut, comeback,
+    slapped, flung, epitaph) — "You've killed me 0 times" is not a
+    joke. Templated lines are skipped by warm-voice, so on a clone
+    they synthesize at say-time (~2-5 s), like `{away}` lines.
   - `asleep` (`pauseWhenAway`, default true): he stops while nobody can
     see him. Three sources, all bindings:
     `shell.serviceFor("omarchy.lock").locked`,
@@ -798,7 +805,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.37.2 (2026-08-29): everything above is live and
+Feature-complete at v1.38.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

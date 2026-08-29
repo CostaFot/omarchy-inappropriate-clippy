@@ -4,7 +4,7 @@
 # sense for a speak-clone `tts` command — it reads the live setting, so run
 # it after setup-voice --clone, and rerun it after changing --ref/--exag/--cfg
 # or re-cloning under the same name (the cache is keyed by all three plus the
-# sample's contents; --pitch derives instantly and needs no warming). Templated lines ({away}, {back}) are substituted at say-time and
+# sample's contents; --pitch derives instantly and needs no warming). Templated lines ({away}, {back}, {kills}, {slaps}) are substituted at say-time and
 # are skipped. ~2-3 s of GPU per line, 10-20 min for the built-in book.
 # `--lines <line>...` warms exactly those strings instead of the book — the
 # plugin uses it to pre-render each fresh batch of agent lines on arrival.

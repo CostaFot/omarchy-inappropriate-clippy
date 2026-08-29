@@ -114,7 +114,10 @@ into the bar himself, settings and all.
 `heardNothing` arrays. `{away}` in a `welcomeBack` line
 becomes how long you were gone ("47 minutes", "3 hours"); `{back}` in an
 `epitaph` becomes how long until he's back ("4 minutes", "never"); `{app}` in
-a `crashed` line becomes the program that just dumped core.
+a `crashed` line becomes the program that just dumped core. `{kills}` and
+`{slaps}` work in any line and become his running tally (the one `stats`
+prints — it resets with the shell, so does his grudge); a death in progress
+counts itself, so his last words can call it murder number nine.
 
 ## Letting your AI agent write his lines
 

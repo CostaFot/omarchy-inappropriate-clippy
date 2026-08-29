@@ -637,6 +637,14 @@ Item {
     return q ? q.text : fallback
   }
   function randomQuoteFrom(key) { return randomFrom(pool(key)) }
+  // `{kills}` / `{slaps}` in any line become the running tally (the one
+  // `stats` prints). A death in progress counts itself: killCount is
+  // bumped in finishDeath(), after the last words are written, so "murder
+  // number {kills}" is right on the way down, not one behind.
+  function fill(text) {
+    var kills = killCount + (mood === "dying" ? 1 : 0)
+    return String(text).replace(/\{kills\}/g, kills).replace(/\{slaps\}/g, slapCount)
+  }
   // What he says when nothing in particular happened: an agent line if one
   // is cached, else one from the book.
   function nextQuote() {
@@ -1198,7 +1206,7 @@ Item {
   // line without speaking it — slap reactions, where the crack plays first
   // and slapSoundDone() un-silences the bubble when it ends.
   function say(text, anim, ai, silent) {
-    text = String(text || "").trim()
+    text = fill(text || "").trim()
     if (text === "") return false
     if (mood === "dead" || mood === "dying" || mood === "reviving" || asleep) return false
     if (listening) return false // his own voice must never end up in the transcript
@@ -1259,7 +1267,7 @@ Item {
     bubbleTimer.stop()
     mood = "dying"
     agentBrain.remember(lineKey === "knockedOut" ? "knocked him out with slaps" : "killed him")
-    var words = randomLine(lineKey || "lastWords", "Fine. Fuck off then.")
+    var words = fill(randomLine(lineKey || "lastWords", "Fine. Fuck off then."))
     bubble.ai = false
     bubble.silent = false
     bubble.text = words
@@ -1319,7 +1327,7 @@ Item {
     if (!grave.shown || asleep) return false
     if (bubble.shown) { hideBubble(); return true }
     var q = randomQuoteFrom("epitaph")
-    var text = (q ? q.text : "Here lies Clippy. You did this.").replace(/\{back\}/g, backText())
+    var text = fill((q ? q.text : "Here lies Clippy. You did this.").replace(/\{back\}/g, backText()))
     bubble.ai = false
     bubble.silent = false
     bubble.text = text
@@ -1889,7 +1897,7 @@ Item {
     playFlingSound()
     bubble.ai = false
     bubble.silent = false
-    bubble.text = randomLine("flung", "Noooooooooooooooooooooooooooo")
+    bubble.text = fill(randomLine("flung", "Noooooooooooooooooooooooooooo"))
     bubble.shown = true
     var to = dir > 0 ? stage.width + actor.width : -actor.width * 2
     flingHold.holds = 0
