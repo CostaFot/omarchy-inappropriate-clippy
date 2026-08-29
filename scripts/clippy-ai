@@ -177,19 +177,12 @@ fi
 
 [[ -n $recent ]] && fact "what they did to Clippy lately: $recent"
 
-# the shame pool: files, Arch neglect, work habits — batches and looks only
+# the shame pool: Arch neglect and work habits — batches and looks only.
+# No rummaging through folders (Downloads, screenshots, trash, loose $HOME
+# files were here once): lines built from what's sitting in a directory kept
+# pulling every batch back to file jokes, and reading a folder back at the
+# user feels like surveillance, not observation (v1.37.2).
 if ! $minimal; then
-  if [[ -d $HOME/Downloads ]]; then
-    dlcount=$(ls -A "$HOME/Downloads" 2>/dev/null | grep -c .)
-    if ((dlcount >= 15)); then
-      dlnames=$(ls -At "$HOME/Downloads" 2>/dev/null | head -3 | cut -c1-60 | paste -sd ',' - | sed 's/,/, /g')
-      shame "$dlcount files in Downloads, newest: $dlnames"
-    fi
-  fi
-
-  shots=$(ls "$HOME/Pictures"/screenshot-* 2>/dev/null | grep -c .)
-  ((shots >= 10)) && shame "$shots screenshots hoarded in ~/Pictures"
-
   if [[ -r /var/log/pacman.log ]]; then
     lastup=$(grep -a 'starting full system upgrade' /var/log/pacman.log | tail -1 | cut -c2-11)
     lastsec=$(date -d "$lastup" +%s 2>/dev/null)
@@ -236,12 +229,6 @@ if ! $minimal; then
       [[ -n $tophist ]] && shame "most-typed shell command: $tophist"
     fi
   fi
-
-  trash=$(ls -A "$HOME/.local/share/Trash/files" 2>/dev/null | grep -c .)
-  ((trash >= 10)) && shame "$trash items sitting in the trash"
-
-  loose=$(find "$HOME" -maxdepth 1 -type f ! -name '.*' 2>/dev/null | grep -c .)
-  ((loose >= 5)) && shame "$loose loose files dumped in the home directory"
 
   if $hyprjq; then
     ws=$(hyprctl workspaces -j 2>/dev/null | jq length 2>/dev/null)

@@ -124,10 +124,11 @@ gathers the evidence: your open window titles, what's playing, what you've
 done to him lately (slaps, drags, the odd murder), and anything currently
 embarrassing — a dying battery, an uptime or a pacman sync measured in weeks,
 a program that dumped core today, a live microphone, more than half your
-agent plan gone. Plus a random few draws from the shame pool: what's rotting
-in `~/Downloads` (filenames included), the screenshot hoard, repos in
-`~/Work` with uncommitted changes (names included), your most-typed shell
-command, the trash, the browser tab count. He hands all of it to your coding
+agent plan gone. Plus a random few draws from the shame pool: how long since
+your last pacman sync, the package count, repos in `~/Work` with uncommitted
+changes (names included), your most-typed shell command, the workspace and
+browser tab counts. He never digs through your folders — no Downloads
+inventory, no screenshot hoard, no trash. He hands all of it to your coding
 agent as text and asks for five lines in his voice, with a handful of lines
 from the book (and your `quotesFile`) as examples of how far to go. They're
 cached and handed out one at a time, so a click never waits on a model.

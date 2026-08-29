@@ -1331,3 +1331,26 @@ unreadable warning on a bogus path, the contract reply from `set` in
 both ai states, then everything unset and the config restored.
 AGENTS.md (clippy-ai section, set replies, status), README (the ai-
 verb sentence), manifest 1.37.1; hand-copied to the installed clone.
+
+## The folder facts cut (v1.37.2, 2026-08-29)
+
+"clippy focuses a bit too much on folders. i think we should remove
+them from the prompts?" — the same gravity v1.36.0 fought in replies
+("it answers from my folders") was still pulling batches and looks:
+the shame pool's file-rummage facts (Downloads count + newest
+filenames, the ~/Pictures screenshot hoard, the trash count, loose
+$HOME files) kept turning batch lines into folder jokes. All four cut
+from scripts/clippy-ai, on Costa's call scoped to exactly those —
+asked explicitly, he kept the ~/Work git sweep (dirty repos, commit
+drought) and the rest of the habit facts (pacman age, package/orphan
+count, top history command, workspace and browser-tab counts), which
+leaves the pool at seven candidates so the `shuf -n 3` draw still
+varies. The pool's header comment now states the rule for future
+facts: nothing built by listing a directory's contents — a line read
+back from a folder feels like surveillance, not observation. Verified:
+five `--context` draws with zero folder lines and the remaining pool
+rotating, `--prompt` rendering clean, and a live claude batch with no
+file material. README (the disclosure paragraph now says outright he
+never digs through folders), AGENTS.md (shame-pool list + the
+don't-re-add note, status), manifest 1.37.2; hand-copied to the
+installed clone.

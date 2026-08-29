@@ -257,12 +257,14 @@ an optional `hint` (dim second line,
   extremes only when they fire (battery low/discharging, load > cores,
   memory ≥85%, uptime >3 days, disk ≥85%, coredumps today, failed units,
   live mic, agent usage only ≥50%); and a shame pool where each fact
-  self-gates on notability (Downloads count+newest filenames, screenshot
-  hoard, days since pacman -Syu, package/orphan count, dirty repos and
-  commit drought in `~/Work`, most-typed history command, trash, loose
-  `$HOME` files, workspace and browser-tab counts) and `shuf -n 3` of
-  the survivors go in — so `--context` is one random draw and batches
-  don't converge on one stat. A `--reply` call thins all of it
+  self-gates on notability (days since pacman -Syu, package/orphan
+  count, dirty repos and commit drought in `~/Work`, most-typed history
+  command, workspace and browser-tab counts) and `shuf -n 3` of the
+  survivors go in — so `--context` is one random draw and batches don't
+  converge on one stat. The folder-rummage facts (Downloads
+  count+filenames, screenshot hoard, trash, loose `$HOME` files) were
+  cut in v1.37.2 — batches kept converging on file jokes; don't re-add
+  facts built by listing a directory's contents. A `--reply` call thins all of it
   (v1.36.0): no time, no window list, no extremes, no usage, no shame
   pool — just the focused window and the track, the right-now facts, so
   their words are most of what the model reads (a shame draw was in the
@@ -796,7 +798,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.37.1 (2026-08-29): everything above is live and
+Feature-complete at v1.37.2 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.
