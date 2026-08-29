@@ -70,7 +70,11 @@ argue with whoever you turned him into. Everything else in this section
 (`clean`'s example filtering, the caching, the sparkle) applies unchanged. A
 path that doesn't exist falls back to the built-in gremlin, and
 `omarchy-shell costafot.clippy ai` tells you which character is actually
-running. Fair warning: his built-in taste rules (no clock jokes, the length
+running. Write the file as the character brief — who he is, how he talks,
+what he goes after — and nothing about output: the plugin appends the facts
+block, the mode framing (screenshot, their words, line count) and the JSON
+contract itself, so a file that dictates a format fights the scaffold.
+Fair warning: his built-in taste rules (no clock jokes, the length
 cap, "never be hateful") are part of what you are replacing — your prompt,
 your responsibility.
 
@@ -79,7 +83,15 @@ but weren't run here, and the rest are best guesses from their docs. To see
 what he'd send, or try an agent by hand:
 
 ```bash
-~/.config/omarchy/plugins/costafot.clippy/scripts/clippy-ai --context
-~/.config/omarchy/plugins/costafot.clippy/scripts/clippy-ai --prompt
-~/.config/omarchy/plugins/costafot.clippy/scripts/clippy-ai --agent opencode
+cd ~/.config/omarchy/plugins/costafot.clippy
+scripts/clippy-ai                          # a JSON array of lines from the default agent (--count N, default 3)
+scripts/clippy-ai --agent opencode         # a specific agent; --model <name> where it takes one
+scripts/clippy-ai --context                # the facts it would send (one random draw of the shame pool)
+scripts/clippy-ai --prompt                 # the whole prompt, register examples and all
+scripts/clippy-ai --image shot.png         # one jab about a screenshot — what `look` runs
+scripts/clippy-ai --reply "make me"        # one comeback — what `listen`/`reply` run; --said <his line> is what they answered
+scripts/clippy-ai --clean                  # drop the nsfw examples, the `clean` key
+scripts/clippy-ai --quotes ~/mine.json     # merge a quotesFile into the examples
+scripts/clippy-ai --prompt-file ~/who.txt  # your character instead of the built-in one, the `promptFile` key
+scripts/clippy-ai --recent "slapped him"   # the note the plugin passes about what you did to him lately
 ```

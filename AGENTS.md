@@ -57,7 +57,12 @@ Design rules that outrank any single feature:
 - Keep `help`, `docs/scripting.md`'s verb block, and the actual IPC verbs
   in sync; `help` is the blind agent's bootstrap and ends with a
   copy-pasteable Hyprland `bindd` example, the `docs/` path and the Pages
-  URL.
+  URL. `scripting.md` also states the reply vocabulary (`ok — but`, `not
+  now`, `busy — …`, `no — <rule>`…) and `set`'s value rules
+  (`parseSettingValue`) — a new reply shape or a new refusal word goes
+  there too; the verifier is "every reply string named in scripting.md
+  greps in Clippy.qml, every IPC function but `ping` has a line in the
+  block".
 
 ## Architecture
 
@@ -834,10 +839,8 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.40.0 (2026-08-29): everything above is live and
-verified on Costa's machine. On GitHub at the README install URL (Pages
-for `docs/` still to be switched on in the repo settings once the split is
-pushed — `gh api -X POST repos/CostaFot/omarchy-inappropriate-clippy/pages
--f 'source[branch]=main' -f 'source[path]=/docs'`); not on
+Feature-complete at v1.40.1 (2026-08-29): everything above is live and
+verified on Costa's machine. On GitHub at the README install URL; Pages is
+on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

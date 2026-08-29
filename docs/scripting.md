@@ -13,9 +13,13 @@ omarchy-shell costafot.clippy slap left   # or right: the way he flies
 omarchy-shell costafot.clippy fling left  # off that end of the bar; fatal
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
-omarchy-shell costafot.clippy hide        # show brings him back, from hidden or dead
+omarchy-shell costafot.clippy epitaph     # poke the grave while he's dead: an epitaph in the bubble
+omarchy-shell costafot.clippy unsnooze    # wakes him early
+omarchy-shell costafot.clippy hide
+omarchy-shell costafot.clippy show        # brings him back, from hidden or dead
 omarchy-shell costafot.clippy toggle
-omarchy-shell costafot.clippy showMenu  # the menu; hideMenu closes it
+omarchy-shell costafot.clippy showMenu    # the menu, no pointer needed
+omarchy-shell costafot.clippy hideMenu
 omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden | asleep
 omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"
 omarchy-shell costafot.clippy voice      # off, "espeak-ng: ready", "espeak-ng: not installed — silent (...)", or the custom command
@@ -36,8 +40,30 @@ command away. An agent that has never seen these files can bootstrap from
 `help` alone: it lists every verb, ends with the path to this folder, and
 `voice`, `ai` and the `set` replies say what's wrong and how to fix it.
 `set` writes the key to `shell.json` for you, same as the menu does.
-Replies come back on stdout (`ok`, `not now`, `hidden`, `asleep`...), and
-`qs ipc -n -p "$OMARCHY_PATH/shell" show` lists every method with its arguments.
+
+Every argument is required and is one string — quote anything with spaces
+(`set tts "piper ... | aplay ..."` is one argument). `set` reads the value
+by shape: `true`/`false` become booleans, a number becomes a number,
+`unset` (or `default`, or an empty string) removes the key so the default
+comes back, anything else is stored as a string. `get` prints the value in
+effect as JSON, so a string comes back quoted.
+
+Every verb answers one line on stdout. `ok` means it happened; `ok — <note>`
+adds what happens next ("looking; the verdict lands in his bubble in ~10 s",
+"posting as costa"); `ok — but <why>` means the write landed but won't be
+felt yet ("ai is off, so there are no agent lines to apply it to"). The
+refusals name the state: `not now` (mid-animation, dragging, snoozed),
+`hidden`, `asleep`, `dead — …`, `off — …` (the feature is off, with the key
+that turns it on), `already`, `alive`, `dying`/`reviving`, `busy — …` (a
+look or a comeback in flight), `not snoozed`, `no grave`, `no ears — …`
+(no voxtype). `slap` answers `ok`, `dodged`, `not now` or `off`; `toggle`
+answers `shown` or `hidden`; `state` answers one of its eight words;
+`kill`, `shutUp`, `snooze`, `showMenu` and `hideMenu` always answer `ok`.
+`set` and `get` answer `unknown key <k>; one of …` for a key that isn't in
+[configuration.md](configuration.md), `no — <the rule>` for a value that
+doesn't fit (`duck` outside 0–1, a handle with capitals), and `can't write
+shell.json` when the write fails. `qs ipc -n -p "$OMARCHY_PATH/shell" show`
+lists every method with its arguments.
 
 Omarchy is keyboard-first and these are plain commands, so any of them
 drops straight into a Hyprland bind:

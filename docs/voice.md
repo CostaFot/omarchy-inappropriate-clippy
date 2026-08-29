@@ -22,8 +22,23 @@ Epitaphs stay whispered whatever you pick.
 If you'd rather he sounded good (why?), `scripts/setup-voice` does the whole
 thing locally: it installs a neural TTS into a venv, downloads what it
 needs, and points `tts` at it. No cloud calls, a model on your disk, and
-the espeak robot is one `set tts true` away. Bare, it checks what you're
-running on: an NVIDIA GPU with 6 GB to spare gets the shipped voice — a
+the espeak robot is one `set tts true` away. The scripts live in the plugin
+dir — `~/.config/omarchy/plugins/costafot.clippy/scripts/` — and every
+`scripts/…` below is relative to that. The modes:
+
+```bash
+scripts/setup-voice                      # bare: the shipped Rubick clone on an NVIDIA GPU with 6 GB of VRAM, robot George otherwise
+scripts/setup-voice --robot              # robot George, GPU or not
+scripts/setup-voice af_heart             # any kokoro voice, unprocessed (af_*, am_*, bm_*, ...)
+scripts/setup-voice en_US-ryan-high      # any piper catalog voice (the dash in the name picks piper)
+scripts/setup-voice --clone ~/sample.mp4 [name]                  # clone any voice from a 10-20 s sample; NVIDIA GPU
+scripts/setup-voice --clone ~/scene.mp4 name --from 5:59 --to 6:12   # the same, cut out of a longer recording
+scripts/warm-voice                       # re-render the book into the clone cache (after --exag/--cfg edits)
+scripts/voice-scan                       # one JSON object of every voice on this machine
+```
+
+Bare, it checks what you're
+running on: an NVIDIA GPU with 6 GB of VRAM gets the shipped voice — a
 clone of Rubick the Grand Magus, built from the 20-second sample in
 `assets/voices/` (Dota 2 audio, © Valve) — and anything less gets the
 blessed robot,

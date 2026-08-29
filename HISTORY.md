@@ -1471,3 +1471,40 @@ after a shell restart: `help` ends with the docs path and the URL, no QML
 warnings, `omarchy plugin validate` clean with `docs/` in the tree. AGENTS.md
 (intro, the settings/disclosure/help rules, status), manifest 1.40.0;
 hand-copied to the installed clone.
+
+## The agent pass over docs/ (v1.40.1, 2026-08-29)
+
+"the docs is mainly targeted for agents, not humans I guess. is it
+written well enough for them? too much wording? too long? too little
+details? too much? assess" — the answer was that length and voice were
+fine (all six pages ≈ 8k tokens; an agent doesn't mind the jokes and the
+Pages audience is human and wants them) and the real gaps were missing
+facts in the two pages `help` names by name, checked against the live
+`help`, the IpcHandler and `settings` output (37 keys, table already
+exact). Approved as a plan: add scaffolding, cut nothing. `scripting.md`:
+`epitaph` was absent from the verb block and `unsnooze`/`show`/`hideMenu`
+lived only in other lines' comments — each has its own line now, so every
+IPC function but `ping` is in the block; the "`ok`, `not now`…" ellipsis
+became the reply vocabulary (`ok — <note>` / `ok — but <why>`, the state
+refusals, per-verb answers for `slap`/`toggle`/`state`, the `set`/`get`
+errors), each string grepped in Clippy.qml before it was written; and
+`set`'s value rules from `parseSettingValue` (true/false/number/`unset`|
+`default`|empty/string, one quoted arg) plus `get`'s JSON-quoted strings.
+`configuration.md`: `intervalMin`/`intervalMax` split into two rows (a
+machine reading column 1 saw a non-key), `screen`'s default is `—` with
+"unset, he takes the focused one" in the What cell. `voice.md`: the
+scripts had only relative `scripts/…` paths with no anchor (ai.md gave the
+absolute path, voice.md never did) — one sentence names the plugin dir,
+followed by a synopsis block of setup-voice's modes taken from the
+script's own header (bare / `--robot` / kokoro name / piper name /
+`--clone … [--from] [--to]`) plus warm-voice and voice-scan; "6 GB to
+spare" → "6 GB of VRAM" (`gpu_ok()` checks total). `ai.md`: the three-line
+clippy-ai example became the full flag list from the script's `case`
+(`--count`, `--agent`, `--model`, `--context`, `--prompt`, `--image`,
+`--reply`/`--said`, `--clean`, `--quotes`, `--prompt-file`, `--recent`),
+and one sentence for an agent writing a promptFile: character brief only,
+no output instructions — the scaffold appends the facts, mode framing and
+JSON contract. AGENTS.md's sync rule now covers the reply vocabulary and
+names the verifier; its status also stopped claiming Pages was still to be
+switched on (it was, in v1.40.0's session). Manifest 1.40.1; docs/,
+manifest, AGENTS.md and HISTORY.md hand-copied to the installed clone.
