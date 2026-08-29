@@ -779,3 +779,41 @@ and tried to install a voice named "--help". The "~5 min" warm estimate
 became "10-20 min" everywhere after measuring ~2.5 s/line with the box
 otherwise busy. Verified over IPC after a shell restart; the restart
 killed and re-started grossman's warm as designed.
+
+Slap speaks after the crack (2026-08-29, v1.29.0): "we play a sound and
+we don't play a voice. I think it would be way funnier if we actually
+played the voice lines … after the slap sound ends" — with the caveat
+"if it makes the code too difficult, we shouldn't do it". It wasn't:
+the v1.22.0 silence existed because the voice's duck was crushing our
+own SFX stream, and that bug has been fixed since (duck skips
+node.name=quickshell), leaving pure sequencing — ~20 lines. `playOneOf`
+now returns the chosen SoundEffect, the SoundBank delegate reports
+`playing` dropping to `root.slapSoundDone(this)`, and slap() parks the
+fx in `slapWaitFx` after its still-silent `say()`; when the finish (or
+a 2 s `slapVoiceCap` — covers a stuck backend and Qt's re-play of an
+already-playing effect emitting no toggle) matches the parked fx and
+the bubble still shows the silent slapped line, `bubble.silent` flips
+false and a new third watcher (`onSilentChanged`, same callLater
+coalescing) starts the voice through syncSpeech — the
+voice-watches-the-bubble invariant kept, no imperative speak call. The
+guards make the edges fall out: a re-slap supersedes the parked fx, a
+fling sound never matches it, a knockout (kill() before the say) fails
+the mood check, a dismissed/slept bubble fails `shown`, a drag line
+lands non-silent. Sounds off → the line is said non-silent and speaks
+at once; tts off → identical to before. Knockout deliberately keeps
+speaking lastWords over the crack — v1.22.0 scoped that as "a death,
+not a slap reaction". Slapped lines were already in warm-voice's book,
+so the clone answers from cache and the line lands right on the
+crack's tail. bubbleTimer needed nothing: say()'s ≥4 s floor outlives
+the ≤2 s wait, then the existing hold-for-voice beats take over.
+Verified over IPC with the rubick clone live (drag/feel not needed —
+nothing pointer-only changed): three slaps started aplay 648/1170/1082
+ms after the slap, tracking each sample's length plus the duck; a
+double slap 300 ms apart produced exactly one voice line at 1534 ms (an
+earlier count of two turned out to be the previous line's aplay still
+draining — cut by the slap as designed); slap + `shutUp` mid-crack
+stayed voiceless; `slapSound false` spoke at 286 ms (duck only);
+`tts false` was the old behavior and `set tts true` restored the clone
+from the stash; ten fast slaps knocked him out with lastWords at 40 ms
+(over the crack, unchanged) and `show` revived him. Journal clean, duck
+state file gone after the lines.

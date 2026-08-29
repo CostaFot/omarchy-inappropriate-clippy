@@ -192,7 +192,8 @@ Design rules that outrank any single feature:
   agent lines) is the "this came from the agent" dress: border in
   `Color.accent` and a nf-md-creation sparkle (U+F0674, literal in the
   file) in the top-right. `silent` (4th `say()` arg) rides on the
-  instance because the voice watches the bubble, not the say paths. The
+  instance because the voice watches the bubble, not the say paths;
+  slaps set it and `slapSoundDone()` clears it when the crack ends. The
   kill and fling paths write `bubble.text` directly and set `bubble.ai =
   false` first. While a grave stands the bubble anchors to it.
 - `Tombstone.qml` — a headstone at the death spot while `mood == "dead"`
@@ -270,9 +271,14 @@ Design rules that outrank any single feature:
   ≥1.2 px/ms. A `SoundEffect` per file via an `Instantiator`
   (`assets/sounds/slap-*.wav`, mono 44.1 kHz — SoundEffect wants WAV), a
   `shoveAnim` on `actor.x`, a `wobble` on `actor.rotation` (pivot
-  `Item.Bottom`), then `say()` with a `slapped` line — silent
-  (`bubble.silent`): the line shows, any in-flight voice is cut, no duck
-  fires, the crack plays clean. Slap timestamps in `slapTimes`;
+  `Item.Bottom`), then `say()` with a `slapped` line — silent while the
+  crack plays (`bubble.silent`; any in-flight voice is cut), un-silenced
+  by `slapSoundDone()` when the chosen SoundEffect's `playing` drops (or
+  `slapVoiceCap` gives up at 2 s), so the voice speaks the line right
+  after the SFX; identity-guarded via `slapWaitFx` (a re-slap supersedes,
+  fling sounds never match) and state-guarded (a dismissed/replaced/dead
+  bubble stays silent). No sound played (sounds off, fx not Ready) → the
+  line is said non-silent and speaks at once. Slap timestamps in `slapTimes`;
   `slapsToKill` (10; 0 = never) inside `slapWindowMs` →
   `kill("knockedOut")`, and the knockout still speaks its lastWords — a
   death, not a slap reaction. `slap: false` restores the old
@@ -314,14 +320,16 @@ on stdin"). Built-in voice `en+m3`, overridden to `en+whisper` while
 is one opaque string and ignores all three (clones bend via
 `cloneTempo`/`clonePitch` instead).
 
-- The hook is two handlers on the Bubble instance
-  (`onShownChanged`/`onTextChanged` → `Qt.callLater(syncSpeech)`,
-  coalescing say()'s text+shown double-fire) rather than calls in the say
-  paths, so the three direct `bubble.text` writes (`kill`, `epitaph`,
-  `flingOff`) are covered and every bubble hide cuts the voice mid-word;
-  `fallAsleep()` hides the bubble, so sleep gating is free, and
-  `onOpenedChanged` stops it on `hide` (close() only flips `opened`; the
-  bubble props stay put). A silent bubble (slaps) means stop-speaking.
+- The hook is three handlers on the Bubble instance
+  (`onShownChanged`/`onTextChanged`/`onSilentChanged` →
+  `Qt.callLater(syncSpeech)`, coalescing say()'s text+shown double-fire)
+  rather than calls in the say paths, so the three direct `bubble.text`
+  writes (`kill`, `epitaph`, `flingOff`) are covered and every bubble
+  hide cuts the voice mid-word; `fallAsleep()` hides the bubble, so
+  sleep gating is free, and `onOpenedChanged` stops it on `hide`
+  (close() only flips `opened`; the bubble props stay put). A silent
+  bubble means stop-speaking; the slap path un-silences it when the SFX
+  ends, and the flip alone starts the line.
 - Process discipline: one `ttsProc` running `["bash", "-c", cmd]` with
   the line on stdin (bash always starts, so a missing engine is exit 127
   in `onExited` — a raw fail-to-start never fires `exited`). **Kills are
@@ -612,7 +620,7 @@ no settings row (free text — IPC and agent only).
 
 ## Status
 
-Feature-complete at v1.28.0 (2026-08-29): everything above is live and
+Feature-complete at v1.29.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

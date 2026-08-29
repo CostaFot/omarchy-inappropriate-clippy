@@ -297,9 +297,9 @@ works with any engine, the espeak robot and the clones alike, only touches
 streams that were already playing when the line started (so his own voice
 is never ducked, and neither are his own sound effects), and volumes are
 snapshotted and restored exactly — if the shell dies mid-sentence, the
-next mount puts them back. The one thing the voice never reads out is a
-slap reaction: the crack of the slap is the joke, so that line stays in
-the bubble and the SFX plays at full volume.
+next mount puts them back. A slap reaction gets both, in order: the crack
+plays first at full volume, and the moment it ends he speaks the line —
+the voice never talks over its own sound effect.
 
 Once voices are on disk, switching between them takes no terminal: the
 menu's Voice row is a picker showing everything installed — off, the espeak

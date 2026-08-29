@@ -854,8 +854,8 @@ Item {
   }
 
   // `ai` marks an agent line; the bubble dresses it up. `silent` shows the
-  // line without speaking it — slap reactions, where the SFX is the joke
-  // and a voice line would duck it mid-crack.
+  // line without speaking it — slap reactions, where the crack plays first
+  // and slapSoundDone() un-silences the bubble when it ends.
   function say(text, anim, ai, silent) {
     text = String(text || "").trim()
     if (text === "") return false
@@ -1015,7 +1015,7 @@ Item {
     persisted.slapCount++
     bumpLeaderboard(0, 1)
     agentBrain.remember("slapped him")
-    playSlapSound()
+    var fx = playSlapSound()
     walkAnim.stop()
     brain.stop()
     bubbleTimer.stop()
@@ -1037,16 +1037,19 @@ Item {
       return true
     }
     var q = randomQuoteFrom("slapped")
-    say(q ? q.text : "Ow.", q && q.anim ? q.anim : "Alert", false, true)
+    say(q ? q.text : "Ow.", q && q.anim ? q.anim : "Alert", false, !!fx)
+    if (fx) { slapWaitFx = fx; slapVoiceCap.restart() }
     return true
   }
 
-  function playSlapSound() { playOneOf(slapFx) }
+  function playSlapSound() { return playOneOf(slapFx) }
   function playFlingSound() { playOneOf(flingFx) }
   function playOneOf(fxs) {
-    if (!fxs.count) return
+    if (!fxs.count) return null
     var fx = fxs.objectAt(Math.floor(Math.random() * fxs.count))
-    if (fx && fx.status === SoundEffect.Ready) fx.play()
+    if (!fx || fx.status !== SoundEffect.Ready) return null
+    fx.play()
+    return fx
   }
 
   // One SoundEffect per file, decoded up front, so a slap lands without a
@@ -1056,10 +1059,29 @@ Item {
       required property string modelData
       source: modelData
       onStatusChanged: if (status === SoundEffect.Error) console.warn("clippy: can't load sound " + source)
+      onPlayingChanged: if (!playing) root.slapSoundDone(this)
     }
   }
   SoundBank { id: slapFx; model: root.slapSounds }
   SoundBank { id: flingFx; model: root.flingSounds }
+
+  // The slapped line waits for the crack: slap() shows it silent, and when
+  // the chosen SoundEffect finishes — or slapVoiceCap gives up at 2 s (a
+  // backend that never flips `playing`, or a re-play of an already-playing
+  // effect, which restarts without a false→true toggle) — the bubble is
+  // un-silenced; the voice watches the bubble, so that alone starts the
+  // line. Identity-guarded (a re-slap replaces slapWaitFx, so a stale
+  // finish is ignored; fling sounds land here too and never match) and
+  // state-guarded (a dismissed, replaced, dead or asleep bubble stays
+  // silent).
+  property var slapWaitFx: null
+  Timer { id: slapVoiceCap; interval: 2000; onTriggered: root.slapSoundDone(root.slapWaitFx) }
+  function slapSoundDone(fx) {
+    if (!fx || fx !== slapWaitFx) return
+    slapWaitFx = null
+    slapVoiceCap.stop()
+    if (mood === "talking" && bubble.shown && bubble.silent) bubble.silent = false
+  }
 
   // ---- the voice ----------------------------------------------------------
   // Speaks whatever the bubble shows. Driven by watching the bubble itself
@@ -1970,10 +1992,11 @@ Item {
 
       Bubble {
         id: bubble
-        // A silent line shows but is never spoken (slap reactions — the
-        // SFX is the joke). Lives on the bubble because the voice watches
-        // the bubble, not the say paths; a silent line landing mid-speech
-        // still cuts the old line (syncSpeech falls through to the stop).
+        // A silent line shows without speaking (slap reactions — the SFX
+        // plays first; slapSoundDone() un-silences when it ends). Lives on
+        // the bubble because the voice watches the bubble, not the say
+        // paths; a silent line landing mid-speech still cuts the old line
+        // (syncSpeech falls through to the stop).
         property bool silent: false
         above: root.barBottom
         x: Math.round(root.clamp(stage.mouthX - width / 2, 4, Math.max(4, stage.width - width - 4)))
@@ -1986,6 +2009,7 @@ Item {
         // double-fire into one sync.
         onShownChanged: Qt.callLater(root.syncSpeech)
         onTextChanged: Qt.callLater(root.syncSpeech)
+        onSilentChanged: Qt.callLater(root.syncSpeech)
       }
     }
   }
