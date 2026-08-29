@@ -14,7 +14,7 @@ paragraph per big feature with its disclosure sentence, and links — and
 `docs/` is the manual, one page per feature (`configuration.md` holds the
 settings table, `ai.md`, `voice.md`, `graveyard.md`, `scripting.md`,
 `index.md` the contents). The same files are the GitHub Pages site
-(source: `/docs` on `main`, `_config.yml` picks `jekyll-theme-minimal`;
+(source: `/docs` on `main`, `_config.yml` picks `jekyll-theme-primer` — minimal was tried first and squeezed the settings table into a 250 px column;
 no front matter needed — the Pages gem's default plugins render bare
 markdown and rewrite `.md` relative links) AND ship in the plugin clone,
 which is what keeps the agent connection: `help` ends with

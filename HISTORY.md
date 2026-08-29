@@ -1445,7 +1445,10 @@ serves both: GitHub Pages renders it (source `/docs` on `main`) and
 README verbatim with `sed -n`, headings promoted to H1
 (`configuration.md` with the table and the quotesFile paragraph, `ai.md`,
 `voice.md`, `graveyard.md`, `scripting.md`), plus `index.md` as the
-contents and a three-line `_config.yml` (`jekyll-theme-minimal`; the
+contents and a three-line `_config.yml` (`jekyll-theme-minimal` first,
+swapped for `jekyll-theme-primer` after a look in Chrome at the live site:
+minimal's 540 px column squeezed the settings table's What column to
+~250 px, six-line cells; the
 Pages gem's default plugins render front-matter-less markdown and rewrite
 `.md` links, so the same links work on GitHub and on the site). Cross-refs
 patched: the table's four "See below" cells link across files, the
