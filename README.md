@@ -35,6 +35,13 @@ the bottom — every slap, every death (well, since the last reboot; he
 forgives nothing, but the shell forgets). Snooze moved to the
 menu to make room for the slap; `"slap": false` gives middle-click back to it.
 
+He watches the crash log. A program of yours dumps core and he reacts on
+the spot ("There goes brave. It fought your bullshit as long as it
+could.") — read straight from systemd-coredump's journal stream, so it's
+instant, needs no agent, and nothing leaves the machine. One line per
+program per minute, so a crash loop doesn't turn into a monologue;
+`"crashLines": false` turns it off.
+
 He sleeps when you're away: the screen locked or off, or Omarchy's idle
 screensaver up. No pacing, no lines, and no calls to your agent for an
 audience of nobody. He's back the moment you are, and if you were gone more
@@ -82,6 +89,7 @@ into the bar himself, settings and all.
 | `slapsToKill` | `10` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |
+| `crashLines` | `true` | When one of your programs dumps core he has a line about it, on the spot. `false` and crashes pass without comment |
 | `tts` | `false` | `true` and he says every line out loud through `espeak-ng` (install that yourself); a shell command as a string gets each line on stdin instead. See below |
 | `ttsVoice` | `en+m3` | The built-in voice — any name from `espeak-ng --voices`. Death still whispers |
 | `ttsSpeed` | `155` | Words per minute for the built-in voice (espeak-ng `-s`, 80–450) |
@@ -101,9 +109,10 @@ into the bar himself, settings and all.
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
 `quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`,
-`flung`, `welcomeBack`, `epitaph` and `firstRun` arrays. `{away}` in a `welcomeBack` line
+`flung`, `crashed`, `welcomeBack`, `epitaph` and `firstRun` arrays. `{away}` in a `welcomeBack` line
 becomes how long you were gone ("47 minutes", "3 hours"); `{back}` in an
-`epitaph` becomes how long until he's back ("4 minutes", "never").
+`epitaph` becomes how long until he's back ("4 minutes", "never"); `{app}` in
+a `crashed` line becomes the program that just dumped core.
 
 ## Letting your AI agent write his lines
 

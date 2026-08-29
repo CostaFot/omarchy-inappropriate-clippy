@@ -116,7 +116,7 @@ Item {
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
     ttsSaved: "", cloneTempo: 1, clonePitch: 1, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
-    pauseWhenAway: true, avoidWidgets: true, tombstone: true,
+    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true,
     greeted: false, leaderboard: "", leaderboardSaved: ""
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
@@ -179,6 +179,7 @@ Item {
   readonly property bool dragEnabled: setting("drag", true) !== false
   // Letting go of him mid-fling throws him off the bar, fatally.
   readonly property bool flingEnabled: setting("fling", true) !== false
+  readonly property bool crashLinesOn: setting("crashLines", true) !== false
   // `ai: true` has his unprompted and clicked lines come from the user's
   // default coding agent (scripts/clippy-ai), reacting to what's on screen,
   // battery, the hour. The book stays the fallback. `aiAgent` overrides
@@ -571,7 +572,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "welcomeBack", "epitaph", "firstRun"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   function emptyBook() {
@@ -697,6 +698,45 @@ Item {
       // Asleep or dead by the time the verdict arrived: stale, drop it.
       if (!root.say(line, null, true)) backToIdle()
     }
+  }
+
+  // ---- crash reactions ---------------------------------------------------
+  // systemd-coredump journals every dump under a fixed MESSAGE_ID with
+  // structured COREDUMP_* fields — the same stream omarchy-crash-watch
+  // follows for its "Process crashed" toast, but read directly so the
+  // reaction doesn't inherit that watcher's gates (default agent chosen,
+  // capture toggled on). `_UID=$(id -u)` matches inside journald, so every
+  // line the follower emits is already one of the user's own crashes, and
+  // `-n 0` means a remount never replays dealt-with ones. The reaction is a
+  // book line — instant, nothing leaves the machine, works with `ai` off
+  // (the agent still hears about crashes via clippy-ai's extremes facts).
+  // His own host crashing needs no special case: a quickshell dump takes
+  // this follower down with it and the restart starts at -n 0.
+  property var crashLastAt: ({})
+  Process {
+    id: crashWatch
+    running: root.crashLinesOn
+    command: ["bash", "-c",
+      'exec journalctl -f -n 0 -o json "MESSAGE_ID=fc2e22bc6ee647b6b90729ab34a250b1" "_UID=$(id -u)"']
+    stdout: SplitParser {
+      onRead: line => root.crashReact(line)
+    }
+  }
+  function crashReact(jsonLine) {
+    var e
+    try { e = JSON.parse(jsonLine) } catch (err) { return }
+    // COMM is truncated to 15 chars, so prefer the executable's basename.
+    var exe = String(e.COREDUMP_EXE || "")
+    var name = exe.indexOf("/") === 0 ? exe.slice(exe.lastIndexOf("/") + 1) : String(e.COREDUMP_COMM || "")
+    if (name === "" || name.indexOf("omarchy-crash-") === 0 || name.indexOf("omarchy-agent-") === 0) return
+    // A crash loop dumps core repeatedly; one line per program per minute.
+    var now = Date.now()
+    if (crashLastAt[name] && now - crashLastAt[name] < 60000) return
+    crashLastAt[name] = now
+    agentBrain.remember(name + " crashed on them")
+    if (isSnoozed() || dragging || looking) return
+    var q = randomQuoteFrom("crashed")
+    if (q) say(q.text.replace(/\{app\}/g, name), q.anim)
   }
 
   FileView {

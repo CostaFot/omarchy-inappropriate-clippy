@@ -1064,3 +1064,46 @@ names now leave with the rest, so it says so), AGENTS.md fact list
 rewritten for the tiers. Hand-copied to the installed clone; shell
 restart cleared the brain cache and the live plugin fetched and
 served a fresh batch of 5 through the new script, journal clean.
+
+## He heckles crashes now (v1.34.0, 2026-08-29)
+
+Costa asked for one reactive feature off the IDEAS list — trigger a
+line "when a crash happens", asking first "is it easy? do we have
+visibility of crashes?" — and mid-scope remembered a stock crash line
+in the book ("i think it's the one that says 'real fucking nice'?").
+Two findings shaped it: the crash awareness he remembered was actually
+clippy-ai's extremes fact (batch-only, minutes late), and the "real
+nice" line existed but sat in the generic `quotes` pool, firing at
+random moments where nothing was fucked up. Visibility turned out
+better than hoped: systemd-coredump journals every dump under a fixed
+MESSAGE_ID with structured COREDUMP_* fields, `omarchy-crash-watch`
+already follows exactly that stream for its "Process crashed" toast,
+and — verified empirically before building — `_UID=$(id -u)` works as
+a journald match on those entries, so filtering costs nothing.
+
+Shipped: `crashLines` (default true, no menu row — an IPC-only toggle
+like slap/drag/fling), a Process following `journalctl -f -n 0 -o
+json` on the coredump MESSAGE_ID + _UID match, `crashReact()` parsing
+each entry (EXE basename over 15-char COMM, omarchy-crash-*/
+omarchy-agent-* skipped, 60 s per-program dedupe in `crashLastAt`),
+`remember()`ing the crash for --recent, then a new `crashed` book key
+with `{app}` substitution — deliberately a book reaction, not an
+agent call: instant, agent-free, nothing leaves the machine. The
+notification-service route was rejected for inheriting the watcher's
+gates (no reaction unless a default agent is chosen and capture is
+on). The "real fucking nice" line MOVED (not copied) into `crashed` —
+as a random line it was a non-sequitur, as a crash reaction it lands —
+plus five new lines, clean-covered. `-n 0` means a remount or a
+quickshell crash (which kills the follower with us) never replays
+dealt-with dumps.
+
+Verified live on the installed clone: `tail -f /dev/null & kill -SEGV
+$!` dumped core (attributed to bash — the fork hadn't exec'd yet) and
+the bubble read "bash would rather die than keep running for you. I
+get it." next to omarchy's own toast; a second crash inside the
+window drew no line (dedupe); `set crashLines false` killed the
+follower, `unset` brought it back (one pgrep self-match comedy in the
+test loop, not the plugin); journal clean. README (table row, feature
+paragraph, quotesFile key list + {app}), AGENTS.md (key list, crash
+bullet, status v1.34.0), IDEAS.md (reactive-lines entry marked
+first-instance-shipped), manifest 1.34.0.

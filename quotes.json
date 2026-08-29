@@ -45,7 +45,6 @@
     { "text": "You know what would help? Not being shit. Anyway.", "nsfw": true, "anim": "Wave" },
     { "text": "Force-pushed to main. You absolute fucking menace.", "nsfw": true, "anim": "Alert" },
     { "text": "Your machine isn't slow. Your fucking decisions are.", "nsfw": true, "anim": "Processing" },
-    { "text": "Nice. Real nice. Truly nobody has ever fucked up quite like that.", "nsfw": true, "anim": "Congratulate" },
     { "text": "Btw I use Arch. I also judge you. These are related.", "nsfw": false, "anim": "GetWizardy" },
     { "text": "Nobody is coming to review that PR. Merge it and live with the shame.", "nsfw": false, "anim": "SendMail" },
     { "text": "Well, shit. Still no coffee? That explains the last commit.", "nsfw": true, "anim": "Thinking" },
@@ -148,6 +147,14 @@
     { "text": "You absolute bastard!", "nsfw": true },
     { "text": "See you in hell, asshole!", "nsfw": true },
     { "text": "This is assault, you prick!", "nsfw": true }
+  ],
+  "crashed": [
+    { "text": "Nice. Real nice. Truly nobody has ever fucked up quite like that.", "nsfw": true, "anim": "Congratulate" },
+    { "text": "{app} just dumped core. It saw where this was going and chose death.", "nsfw": false, "anim": "Alert" },
+    { "text": "There goes {app}. It fought your bullshit as long as it could.", "nsfw": true, "anim": "Wave" },
+    { "text": "{app} crashed. Don't look at me — I just work here.", "nsfw": false, "anim": "Explain" },
+    { "text": "{app} would rather die than keep running for you. I get it.", "nsfw": false, "anim": "Thinking" },
+    { "text": "Congratulations, {app} is fucking dead. Should I crash too? For symmetry?", "nsfw": true, "anim": "Congratulate" }
   ],
   "welcomeBack": [
     { "text": "Welcome back, dipshit.", "nsfw": true, "anim": "Wave" },

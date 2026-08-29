@@ -58,8 +58,10 @@ completion out loud — background plumbing shouldn't speak.
 
 ## Reactive lines without the agent
 
-Battery, CPU, hour of the day: `shell.serviceFor("omarchy.notifications")`
-and the agents plugin state are reachable from a panel — see
+First instance shipped as v1.34.0's crash reactions (`crashed` book key,
+fired off systemd-coredump's journal stream). What remains: battery, CPU,
+hour of the day: `shell.serviceFor("omarchy.notifications")` and the
+agents plugin state are reachable from a panel — see
 ~/Work/omarchy-navbar-cat for how it listens to Hyprland/MPRIS/UPower. Or
 feed more of that into `clippy-ai`'s facts: notifications, the workspace.
 

@@ -149,6 +149,24 @@ Design rules that outrank any single feature:
     `greetTimer` (2 s, so the window is mapped) is armed from
     `maybeBoot()`'s tail and from `wakeUp()`'s idle branch, where it
     takes precedence over the welcomeBack line.
+  - crash reactions (`crashLines`, default true, v1.34.0): a Process
+    follows `journalctl -f -n 0 -o json` on systemd-coredump's
+    MESSAGE_ID (`fc2e22bc…`) with `_UID=$(id -u)` matched inside
+    journald, so every emitted line is one of the user's own dumps —
+    the same stream `omarchy-crash-watch` follows for its toast, read
+    directly so we don't inherit that watcher's gates (default agent
+    chosen, capture toggled on). `crashReact()` prefers COREDUMP_EXE's
+    basename over the 15-char-truncated COMM, skips omarchy-crash-*/
+    omarchy-agent-* machinery, dedupes per program per 60 s
+    (`crashLastAt`), `remember()`s the crash for the agent's --recent,
+    then says a `crashed` book line with `{app}` substituted — a book
+    reaction like `slapped`, instant and agent-free on purpose (the
+    agent already gets crashes via clippy-ai's extremes facts).
+    say()'s own gates drop it while dead/asleep; snoozed/dragging/
+    looking are checked explicitly. `-n 0` means a remount or a
+    quickshell crash never replays old dumps; the follower only runs
+    while `crashLines` is on. Test a crash with
+    `sleep 30 & kill -SEGV $!`.
 - `ClippySprite.qml` — port of clippy.js `src/animator.js`. The full sheet
   is one `Image` inside a `clip: true` 124×93 viewport, translated to the
   cell (`x = -cell.x`) — the CSS background-position approach, so a frame
@@ -288,8 +306,8 @@ an optional `hint` (dim second line,
   (names differ per agent). `set aiAgent`/`set aiModel` while `ai` is
   off answer "ok — but ai is off…".
 - `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut,
-  dragged, dropped, flung, welcomeBack, epitaph, firstRun }` (the key
-  list is `quoteKeys` in Clippy.qml; add there and here), entries
+  dragged, dropped, flung, crashed, welcomeBack, epitaph, firstRun }` (the
+  key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. `quotesFile` is
   merged in (same shape, or a bare array): quotes are two books, `book` +
   `extraBook`, merged per key in `pool(key)` so FileView load order
@@ -692,7 +710,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.33.0 (2026-08-29): everything above is live and
+Feature-complete at v1.34.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.
