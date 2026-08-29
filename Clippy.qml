@@ -109,7 +109,7 @@ Item {
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
-    ttsSaved: "",
+    ttsSaved: "", cloneTempo: 1, clonePitch: 1,
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true,
     greeted: false, leaderboard: ""
@@ -210,6 +210,15 @@ Item {
   readonly property string ttsVoice: String(setting("ttsVoice", "en+m3")).replace(/'/g, "") || "en+m3"
   readonly property real ttsSpeed: clamp(Number(setting("ttsSpeed", 155)) || 155, 80, 450)
   readonly property real ttsPitch: clamp(Number(setting("ttsPitch", 45)), 0, 99)
+  // Clone knobs, factors around 1: cloneTempo speeds him up (pitch kept),
+  // clonePitch shifts the voice (tempo kept). Appended to speak-clone at
+  // launch time, never baked into the stored tts string — the picker keeps
+  // calling the voice by name and setup-voice's strings stay canonical.
+  // Both derive from the line cache (ffmpeg, milliseconds), so auditioning
+  // values is instant and warm-voice never needs a rerun.
+  readonly property real cloneTempo: clamp(Number(setting("cloneTempo", 1)) || 1, 0.5, 2)
+  readonly property real clonePitch: clamp(Number(setting("clonePitch", 1)) || 1, 0.5, 2)
+  readonly property bool cloneKnobsApply: typeof ttsSetting === "string" && ttsSetting.indexOf("speak-clone") !== -1
   // Ducking is always on: everyone else's audio drops to 30 % while he
   // speaks and comes back after. No setting — Costa: "ALWAYS duck other
   // audio", stupid simple. Works with any engine: the snapshot is taken
@@ -1099,6 +1108,11 @@ Item {
     var cmd = typeof ttsSetting === "string" ? ttsSetting
             : "exec espeak-ng -v '" + (mood === "dead" ? "en+whisper" : ttsVoice)
               + "' -s " + ttsSpeed + " -p " + ttsPitch
+    // The clone knobs ride here, not in the stored string. Appended last,
+    // so on a hand-set command that already carries the flags these win
+    // (argparse keeps the final occurrence).
+    if (cloneKnobsApply && (cloneTempo !== 1 || clonePitch !== 1))
+      cmd += " --tempo " + cloneTempo + " --pitch " + clonePitch
     ttsProc.command = ["bash", "-c", cmd]
     ttsProc.stdinEnabled = true
     ttsProc.running = true
@@ -1592,8 +1606,11 @@ Item {
       }
       var s = typeof root.ttsSetting === "string"
             ? "custom command: " + root.ttsSetting
+              + (root.cloneKnobsApply && (root.cloneTempo !== 1 || root.clonePitch !== 1)
+                 ? " — bent by cloneTempo " + root.cloneTempo + " / clonePitch " + root.clonePitch
+                 : "")
               + (root.ttsSetting.indexOf("speak-clone") !== -1
-                 ? " (clone wavs live in ~/.local/share/chatterbox-tts/voices — switch with set tts using another --ref, then rerun scripts/warm-voice; new voices: scripts/setup-voice)"
+                 ? " (clone wavs live in ~/.local/share/chatterbox-tts/voices — switch with set tts using another --ref, then rerun scripts/warm-voice; new voices: scripts/setup-voice; cloneTempo/clonePitch bend speed and pitch, factors around 1)"
                  : "")
             : (root.ttsEngineMissing
                ? "espeak-ng: not installed — silent (sudo pacman -S espeak-ng, or set tts to a shell command)"
@@ -1695,9 +1712,15 @@ Item {
       }
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
       if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
-        if (typeof root.ttsSetting === "string") return "ok — but tts is a custom command, which ignores the built-in tuning"
+        if (typeof root.ttsSetting === "string") return "ok — but tts is a custom command, which ignores the built-in tuning (a clone bends with cloneTempo/clonePitch instead)"
         if (root.ttsEngineMissing) return "ok — but espeak-ng isn't installed, so he stays silent until it is"
         if (!root.ttsOn) return "ok — heard once tts is on"
+      }
+      if ((key === "cloneTempo" || key === "clonePitch") && parsed !== undefined) {
+        if (root.cloneKnobsApply) return "ok — heard on the next line (derived from the line cache, so it's instant and warm-voice needs no rerun)"
+        if (!root.ttsOn && String(root.setting("ttsSaved", "") || "").indexOf("speak-clone") !== -1)
+          return "ok — heard once the clone voice is back on (set tts true)"
+        return "ok — but the active voice isn't a clone, so this won't be heard (the knobs bend speak-clone voices only; espeak has ttsSpeed/ttsPitch)"
       }
       if ((key === "aiAgent" || key === "aiModel") && parsed !== undefined && !root.aiEnabled)
         return "ok — but ai is off, so there are no agent lines to apply it to; set ai true first"

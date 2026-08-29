@@ -207,12 +207,15 @@ PY
 # Clippy voice-clone client: the line on stdin, played in the cloned voice.
 # Cached by (ref, knobs, text); cache hits never touch the daemon.
 # --pitch shifts after synthesis (ffmpeg, tempo kept): <1 deeper, >1 higher.
+# --tempo speeds up (>1) or slows (<1) playback, pitch kept. Both are
+# derived from the cached raw take, so neither ever touches the GPU.
 import argparse, hashlib, json, os, socket, subprocess, sys, time
 p = argparse.ArgumentParser()
 p.add_argument("--ref", required=True)
 p.add_argument("--exag", type=float, default=0.5)
 p.add_argument("--cfg", type=float, default=0.5)
 p.add_argument("--pitch", type=float, default=1.0)
+p.add_argument("--tempo", type=float, default=1.0)
 a = p.parse_args()
 text = sys.stdin.read().strip()
 if not text:
@@ -250,12 +253,25 @@ if not os.path.exists(raw):
         else:
             sys.exit("speak-clone: daemon never came up (see ~/.cache/clippy-voice/daemon.log)")
 out = raw
-if a.pitch != 1.0:
-    out = f"{cache}/{key}-p{a.pitch:g}.wav"
+if a.pitch != 1.0 or a.tempo != 1.0:
+    out = f"{cache}/{key}" + (f"-p{a.pitch:g}" if a.pitch != 1.0 else "") \
+        + (f"-t{a.tempo:g}" if a.tempo != 1.0 else "") + ".wav"
     if not os.path.exists(out):
-        r = subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", raw, "-af",
-                            f"aresample=48000,asetrate=48000*{a.pitch},aresample=48000,atempo={1/a.pitch}",
-                            out])
+        # asetrate*P shifts pitch AND tempo by P; one atempo of T/P lands the
+        # final tempo on T. When T == P no atempo is needed (that's the
+        # chipmunk chain), and atempo refuses factors under 0.5, so extreme
+        # slowdowns are chained in 0.5 stages.
+        af = []
+        if a.pitch != 1.0:
+            af.append(f"aresample=48000,asetrate=48000*{a.pitch},aresample=48000")
+        net = a.tempo / a.pitch
+        while net < 0.5:
+            af.append("atempo=0.5")
+            net *= 2
+        if net != 1.0:
+            af.append(f"atempo={net:g}")
+        r = subprocess.run(["ffmpeg", "-loglevel", "error", "-y", "-i", raw,
+                            "-af", ",".join(af), out])
         if r.returncode != 0:
             out = raw  # no ffmpeg or a bad filter: play it straight
 # exec, not a subprocess: the plugin SIGTERMs this pid to cut a replaced

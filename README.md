@@ -87,6 +87,8 @@ into the bar himself, settings and all.
 | `ttsSpeed` | `155` | Words per minute for the built-in voice (espeak-ng `-s`, 80–450) |
 | `ttsPitch` | `45` | Pitch for the built-in voice (espeak-ng `-p`, 0–99) |
 | `ttsSaved` | — | Where a custom `tts` command parks while the voice is toggled off, so toggling doesn't lose it. Managed for you; `set ttsSaved unset` forgets it |
+| `cloneTempo` | `1` | How fast a cloned voice talks, pitch untouched — `1.1` is a little brisker, `0.9` slower (0.5–2). Instant: derived from the line cache, never the GPU |
+| `clonePitch` | `1` | Pitch for a cloned voice, tempo untouched — `0.85` deeper, `1.2` lighter (0.5–2). Set both knobs the same for the full chipmunk |
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
@@ -195,11 +197,14 @@ menu's Voice picker, and IPC `voice` tells your agent the whole story.
 Temper your expectations: the clone gets the accent and the cadence, not
 the soul. It's fun. It is not amazing.
 
-Tuning the clone is editing the `tts` string it wrote: `--exag` and `--cfg`
-shape the delivery (both up = snappier), and `--pitch` shifts the whole
-voice after synthesis — `0.85` is noticeably deeper, `1.1` lighter, tempo
-untouched. Pitch is applied to the line cache, not the GPU, so auditioning
-values is instant.
+Tuning the clone: `cloneTempo` and `clonePitch` are settings like any other.
+`set cloneTempo 1.1` and he talks a little faster, pitch untouched;
+`set clonePitch 0.85` and he's noticeably deeper, tempo untouched; both to
+`1.2` and you've built the chipmunk. They're applied to the line cache with
+ffmpeg, never the GPU, so auditioning values is instant and the warm cache
+stays warm. The synthesis itself is still tuned by editing the `tts`
+string's `--exag` and `--cfg` knobs (both up = snappier delivery) — those
+re-render every line, so rerun `scripts/warm-voice` after.
 
 A fresh clone starts with an empty cache, so *every* line costs those few
 seconds — including the reaction to a slap, which lands well after the

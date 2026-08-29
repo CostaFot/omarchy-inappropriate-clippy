@@ -227,10 +227,11 @@ loader, like omarchy.menu — not to the bar widget.
   Tuning (v1.12.0): `ttsVoice` (default `en+m3`; single quotes stripped so
   the quoting in `startTts()` holds), `ttsSpeed` (80–450), `ttsPitch`
   (0–99) shape the built-in command only — a custom command stays one
-  opaque string and ignores all three, and dead still overrides to
-  `en+whisper` whatever `ttsVoice` says. Agent-first: `voice` appends
-  "— <voice>, <speed> wpm, pitch <pitch>" when the engine is ready, and
-  `set` on the three keys answers "ok — but …" when a custom command,
+  opaque string and ignores all three (a speak-clone command bends via
+  `cloneTempo`/`clonePitch` instead, v1.25.0 below), and dead still
+  overrides to `en+whisper` whatever `ttsVoice` says. Agent-first: `voice`
+  appends "— <voice>, <speed> wpm, pitch <pitch>" when the engine is ready,
+  and `set` on the three keys answers "ok — but …" when a custom command,
   a missing engine or `tts` off means the change can't be heard.
 - Ducking (in `Clippy.qml` + `scripts/duck`, v1.20.0; always-on since
   v1.21.0): every *other* audio stream drops to 30 % while he speaks and
@@ -1035,6 +1036,34 @@ through the line then ran hold+echo to `dead`; journal clean; Costa
 confirmed by ear ("worked"). README: the mid-word paragraph's hide list
 drops "his death" and the waits-its-turn sentence now covers last words.
 Hand-copied to the installed clone.
+
+Clone tempo + pitch as settings (2026-08-29, v1.25.0): "can we speed up the
+voice a little" grew into Costa's "make the speed and pitch configurable —
+fun variants for free". Two new keys, `cloneTempo`/`clonePitch` (factors
+around 1, clamped 0.5–2), bend any speak-clone voice. speak-clone grew
+`--tempo` next to `--pitch`: asetrate*P shifts pitch AND tempo together,
+one atempo of T/P lands the final tempo on T (T==P needs no atempo — that
+IS the chipmunk chain — and atempo's 0.5 floor is handled by chaining 0.5
+stages for extreme slowdowns); derived file `{key}[-pP][-tT].wav`, the
+pitch-only name unchanged so old derivatives are reused. The knobs ride at
+LAUNCH time — `launchTts()` appends `--tempo/--pitch` when either ≠ 1 and
+the command contains "speak-clone" (`cloneKnobsApply`) — never into the
+stored tts string, so the picker keeps naming the voice, setup-voice's
+strings stay canonical, and a hand-set command already carrying the flags
+is overridden (argparse keeps the last occurrence). Derivation is ffmpeg
+on the cached raw take: auditioning is instant and warm-voice never needs
+a rerun (agent-line warms render raw only; the bend happens at speak
+time). Agent-first replies: `set` on the keys answers heard-on-next-line /
+heard-once-tts-is-back-on (clone parked in ttsSaved) / "the active voice
+isn't a clone" (pointing espeak users at ttsSpeed/ttsPitch), the espeak
+tuning reply now points clone users here, and `voice` appends "— bent by
+cloneTempo X / clonePitch Y" when non-default. No menu row — free numbers,
+the aiModel rule. Verified: stub-seeded cache derivations for tempo-only,
+both, pitch-only and the extreme 0.5+2.0 combo at exact expected
+durations, then live over IPC — `set cloneTempo 1.1`, a real agent line
+derived `{key}-t1.1.wav` at exactly raw/1.1 and played it, journal clean.
+`cloneTempo 1.1` left set on Costa's box — the original ask was "a little
+faster". Hand-copied to the installed clone.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the
