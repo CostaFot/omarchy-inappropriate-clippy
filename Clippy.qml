@@ -259,9 +259,16 @@ Item {
   // Every voice already on disk, so the menu can offer a picker and an agent
   // can enumerate (`voices`) and switch (`useVoice`) without reading the
   // README. scripts/voice-scan fills it: espeak/GPU/kokoro presence, clone
-  // wavs, piper models. Installing NEW voices stays with scripts/setup-voice —
+  // wavs, piper models, drop-in command files (~/.local/share/clippy-voices).
+  // Installing NEW voices stays with scripts/setup-voice —
   // switching here is only ever a `set tts` write, never a download.
-  property var voiceInv: ({ espeak: false, gpu: false, kokoro: false, clones: [], piper: [] })
+  property var voiceInv: ({ espeak: false, gpu: false, kokoro: false, clones: [], piper: [], dropins: [] })
+  // A useVoice for a name the (possibly stale) inventory doesn't know parks
+  // the name here and kicks a rescan — the natural agent flow is "write a
+  // drop-in file, useVoice it in the same breath", and without this the
+  // first try always answered "unknown". Applied once when the scan lands,
+  // only if the name resolved (no retry loop for a genuinely unknown name).
+  property string voicePendingApply: ""
   Process {
     id: voiceScan
     command: [root.pluginDir + "/scripts/voice-scan"]
@@ -269,6 +276,11 @@ Item {
     onExited: function (code) {
       if (code !== 0) return
       try { root.voiceInv = JSON.parse(voiceScanOut.text) } catch (e) { /* best-effort */ }
+      if (root.voicePendingApply !== "") {
+        var id = root.voicePendingApply
+        root.voicePendingApply = ""
+        if (root.voiceOptions.indexOf(id) !== -1) root.applyVoice(id)
+      }
     }
     Component.onCompleted: running = true
   }
@@ -303,6 +315,8 @@ Item {
     if (m) return m[1]
     m = ttsSetting.match(/\/piper -m \S*\/([A-Za-z0-9_.-]+)\.onnx/)
     if (m) return m[1]
+    var ds = voiceInv.dropins || []
+    for (var i = 0; i < ds.length; i++) if (ds[i].cmd === ttsSetting) return ds[i].name
     return "custom"
   }
   // What the picker offers: only the usable. Clones need the GPU they
@@ -314,6 +328,8 @@ Item {
     var i
     if (voiceInv.gpu) for (i = 0; i < (voiceInv.clones || []).length; i++) opts.push(voiceInv.clones[i])
     for (i = 0; i < (voiceInv.piper || []).length; i++) opts.push(voiceInv.piper[i].name)
+    var ds = voiceInv.dropins || []
+    for (i = 0; i < ds.length; i++) if (opts.indexOf(ds[i].name) === -1) opts.push(ds[i].name)
     if (currentVoiceId === "custom" || String(setting("ttsSaved", "") || "") !== "") opts.push("custom")
     return opts
   }
@@ -363,7 +379,16 @@ Item {
       if (!setSettings(changes)) return "can't write shell.json"
       return "ok — " + id + " (piper)"
     }
-    return "unknown voice " + JSON.stringify(id) + " — `voices` lists what's installed; new ones: scripts/setup-voice in " + pluginDir + " (a kokoro/piper name, --robot, or --clone <sample.wav> <name> on an NVIDIA GPU)"
+    var ds = voiceInv.dropins || []
+    for (i = 0; i < ds.length; i++) {
+      if (ds[i].name !== id) continue
+      changes.tts = ds[i].cmd
+      if (!setSettings(changes)) return "can't write shell.json"
+      return "ok — " + id + " (drop-in)"
+    }
+    voicePendingApply = id
+    voiceScan.running = true
+    return JSON.stringify(id) + " isn't in the last inventory scan — rescanning now: a just-dropped file in ~/.local/share/clippy-voices switches in a beat (`voices` confirms). If it's genuinely not installed: scripts/setup-voice in " + pluginDir + " (a kokoro/piper name, --robot, or --clone <sample.wav> <name> on an NVIDIA GPU), or drop a command file in ~/.local/share/clippy-voices"
   }
 
   // ---- bar geometry (same idiom as plugins/notifications/Service.qml) -----
@@ -1625,6 +1650,7 @@ Item {
     // The whole voice inventory, for agents: what's active, what's on disk
     // (useVoice-able right now), and where new voices come from.
     function voices(): string {
+      voiceScan.running = true // async — this reply is the last scan, the next one is fresh
       var inv = root.voiceInv
       var lines = []
       lines.push("active: " + root.currentVoiceId
@@ -1634,6 +1660,7 @@ Item {
       if ((inv.clones || []).length > 0 && !inv.gpu) lines.push("note: clone wavs exist but there's no NVIDIA GPU to synthesize on — not offered")
       lines.push("more voices: scripts/setup-voice in " + root.pluginDir
         + " — bare ships a Rubick clone on an NVIDIA GPU (else robot george), a kokoro/piper name installs that voice, --clone <sample.wav> <name> clones anything (GPU)")
+      lines.push("drop-ins: a file at ~/.local/share/clippy-voices/<name> whose first non-comment line is a shell command (line on stdin) shows up here by name")
       lines.push("raw: set tts <shell command handed each line on stdin> | true (espeak) | false")
       return lines.join("\n")
     }

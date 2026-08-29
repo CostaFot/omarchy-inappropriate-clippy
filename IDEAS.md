@@ -40,24 +40,6 @@ concerned idle; at 5% he faints via the existing `kill()` path with a
 dedicated last-words key. The state machine supports all of it — a couple
 of gates plus UPower, which navbar-cat also demonstrates.
 
-## Drop-in voices: any engine, first-class in the picker
-
-The `tts` contract already runs any engine on earth (shell command, line
-on stdin) — but a hand-set command shows up as "custom" in the picker
-instead of by name. A drop-in dir (say `~/.local/share/clippy-voices/`,
-one small file per voice: name + command) would close that gap:
-`voice-scan` is 33 lines and the single source both the menu picker and
-the `voices` verb read from, so listing the dir is a few lines;
-`applyVoice()` and `currentVoiceId` need a case each; the `voices` verb
-and README follow. Result: drop a file, the voice appears in the menu by
-name. Deliberately NOT pluggable clone models (chatterbox stays the one
-cloner — setup-voice/daemon/speak-clone/warm-voice are all shaped around
-it, and every neural engine is its own venv-pinning snowflake; that way
-lies a TTS package manager). The knobs and warm-voice wouldn't apply to
-drop-ins — they're cache-shaped around speak-clone — and that's fine:
-this is for the plug-in-my-weird-engine user, who has already accepted
-raw mode. Pitched 2026-08-29.
-
 ## Monitor hopping
 
 He's pinned to one screen; let a trek occasionally target the adjacent
@@ -79,6 +61,15 @@ setup and it doubles his territory.
   it yet.
 
 ## Decided against
+
+- **Pluggable clone models** — the other half of the drop-in-voices
+  pitch (shipped v1.27.0: any *engine* is now first-class in the picker
+  via `~/.local/share/clippy-voices/`). Swappable neural cloners stay
+  out: every one is its own venv-pinning snowflake, and
+  setup-voice/daemon/speak-clone/warm-voice are chatterbox-shaped end to
+  end — generalizing them is becoming a TTS package manager, against the
+  "less options, less to debug" call. A weird-engine user drops a
+  command file and owns the raw mode.
 
 - **Update nagging** — the count is one `checkupdates --nocolor | wc -l`
   away (`omarchy-update-available` only covers Omarchy itself, and

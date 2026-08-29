@@ -362,18 +362,33 @@ is one opaque string and ignores all three (clones bend via
   command string clears it; `set ttsSaved unset` is the escape hatch.
 - The picker: `scripts/voice-scan` prints one JSON object of every voice
   on disk (espeak/GPU/kokoro presence, clone wavs, piper models with
-  sample rates) and feeds `voiceInv` via a Process (mount, tts changes,
-  menu open). `currentVoiceId` names the live tts value
-  (off/robot/george/<clone>/<piper>/custom; clones keep their name
-  through knob changes via the `--ref` regex); `voiceOptions` is the
+  sample rates, drop-in files) and feeds `voiceInv` via a Process (mount,
+  tts changes, menu open, the `voices` verb, and an unknown `useVoice`,
+  which parks the name in `voicePendingApply` and applies it when the
+  scan lands — so write-file-then-useVoice works in one breath; a name
+  that still doesn't resolve is dropped, no retry loop).
+  `currentVoiceId` names the live tts value
+  (off/robot/george/<clone>/<piper>/<drop-in>/custom; clones keep their
+  name through knob changes via the `--ref` regex; a drop-in is named by
+  exact string match against its file's command); `voiceOptions` is the
   picker list (clones only when the GPU is there; "custom" appears when
   a hand-set command is live or parked); `applyVoice(name)` is the one
   resolver behind both the menu chips and IPC `useVoice <name>`, and
   parks an unrecognized custom command in `ttsSaved` before overwriting.
-  IPC `voices` lists active + installed + how to install more + the raw
-  `set tts` contract. Switching lives in the plugin (instant `set tts`);
-  installing stays with setup-voice — a menu tap must never start a 2 GB
-  download.
+  IPC `voices` lists active + installed + how to install more + the
+  drop-in dir + the raw `set tts` contract. Switching lives in the
+  plugin (instant `set tts`); installing stays with setup-voice — a menu
+  tap must never start a 2 GB download.
+- Drop-in voices: `~/.local/share/clippy-voices/<name>` — filename is the
+  picker name (`[A-Za-z0-9_.-]+`; off/robot/espeak/custom/george are
+  reserved and skipped by voice-scan), the first non-comment non-blank
+  line is the shell command (the raw `set tts` contract; the user owns
+  the trap wrap). voice-scan JSON-escapes the command via jq and ships
+  `{name, cmd}` pairs; `applyVoice` writes `cmd` verbatim, which is what
+  makes the exact-match naming in `currentVoiceId` hold. Clone knobs and
+  warm-voice deliberately don't extend to drop-ins (they're
+  speak-clone-cache-shaped) — a drop-in containing "speak-clone" still
+  gets the knobs via `cloneKnobsApply`, which is correct, not a leak.
 - `scripts/setup-voice` — installs engines (nothing is bundled; 60-340
   MB downloads on demand) and ends every mode with `set tts` + a spoken
   hello, always through stdin→aplay (aplay, not pw-play — sndfile can't
@@ -566,7 +581,7 @@ no settings row (free text — IPC and agent only).
 
 ## Status
 
-Feature-complete at v1.26.1 (2026-08-29): everything above is live and
+Feature-complete at v1.27.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

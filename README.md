@@ -245,6 +245,32 @@ screen until he's actually finished saying it, and his last words — a
 kill, a knockout, a fling — get said in full before he goes, instead of
 cutting him off mid-rant.
 
+A hand-set command shows up in the menu as "custom". If you'd rather it
+had a name — or you keep a few engines around — make it a **drop-in**:
+a file at `~/.local/share/clippy-voices/<name>` whose first
+non-comment, non-blank line is the command (everything above can be `#`
+notes to yourself). The filename becomes the voice: it appears in the
+menu's Voice picker and in `voices` by name, and `useVoice <name>`
+switches to it like any other. Same raw contract as `set tts` — one
+shell command, line on stdin, the trap wrap above included if you want
+clean cut-offs — just with a name on it:
+
+```bash
+mkdir -p ~/.local/share/clippy-voices
+cat > ~/.local/share/clippy-voices/lessac <<'EOF'
+# piper lessac, hand-installed
+trap 'kill $! 2>/dev/null' TERM; piper --model ~/voices/en_US-lessac-medium.onnx --output-raw | aplay -q -t raw -r 22050 -f S16_LE -c 1 - & wait $!
+EOF
+omarchy-shell costafot.clippy useVoice lessac
+```
+
+Running `useVoice` right on the heels of writing the file is fine — he
+rescans the dir and switches the moment the scan lands. Names are
+`[A-Za-z0-9_.-]`, and `off`/`robot`/`espeak`/`george`/`custom`
+are taken. Drop-ins are for plugging in an engine you already run — the
+clone knobs and `warm-voice` don't apply to them (those are shaped
+around `speak-clone`'s cache).
+
 When he talks, everything else shuts up. The moment a line starts, every
 other audio stream drops to 30% — Spotify, a browser tab, a game,
 whatever's playing — and comes back the instant he's done. Voice
@@ -260,7 +286,8 @@ the bubble and the SFX plays at full volume.
 
 Once voices are on disk, switching between them takes no terminal: the
 menu's Voice row is a picker showing everything installed — off, the espeak
-robot, robot george, every clone you've made, every piper model — and a tap
+robot, robot george, every clone you've made, every piper model, every
+drop-in file — and a tap
 switches instantly. Nothing in the menu ever downloads; installing a NEW
 voice is always `scripts/setup-voice`. The same picker speaks IPC for your
 agent: `voices` lists what's installed and where new ones come from,

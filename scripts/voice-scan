@@ -24,6 +24,23 @@ if [ -x "$cb/speak-clone" ]; then
   done
 fi
 
+# drop-ins: ~/.local/share/clippy-voices/<name>, one file per voice. The
+# filename is the picker name; the first non-comment non-blank line is the
+# shell command handed each line on stdin (the raw `set tts` contract —
+# including the trap wrap if the command is a pipeline, see the README).
+dv="$HOME/.local/share/clippy-voices"; d=""
+if [ -d "$dv" ] && command -v jq >/dev/null; then
+  for f in "$dv"/*; do
+    [ -f "$f" ] || continue
+    n="$(basename "$f")"
+    [[ "$n" =~ ^[A-Za-z0-9_.-]+$ ]] || continue
+    case "$n" in off|robot|espeak|custom|george) continue ;; esac  # reserved in the picker
+    cmd="$(grep -m1 -v -e '^#' -e '^[[:space:]]*$' "$f")"
+    [ -n "$cmd" ] || continue
+    d="$d{\"name\":\"$n\",\"cmd\":$(jq -n --arg c "$cmd" '$c')},"
+  done
+fi
+
 # piper: every downloaded model, with the sample rate aplay needs.
 pp="$HOME/.local/share/piper-tts/venv/bin/piper"; pv="$HOME/.local/share/piper-voices"; p=""
 if [ -x "$pp" ] && command -v jq >/dev/null; then
@@ -34,5 +51,5 @@ if [ -x "$pp" ] && command -v jq >/dev/null; then
   done
 fi
 
-printf '{"espeak":%s,"gpu":%s,"kokoro":%s,"clones":[%s],"piper":[%s]}\n' \
-  "$e" "$g" "$k" "${c%,}" "${p%,}"
+printf '{"espeak":%s,"gpu":%s,"kokoro":%s,"clones":[%s],"piper":[%s],"dropins":[%s]}\n' \
+  "$e" "$g" "$k" "${c%,}" "${p%,}" "${d%,}"
