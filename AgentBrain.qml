@@ -30,6 +30,7 @@ Item {
   property string model: ""
   // The user's own quotes file, for the examples in the prompt.
   property string quotesFile: ""
+  property string promptFile: ""
   property int batch: 5
   property int lowWater: 1
   property int maxAgeMs: 20 * 60 * 1000
@@ -120,6 +121,7 @@ Item {
     if (agentOverride !== "") cmd.push("--agent", agentOverride)
     if (model !== "") cmd.push("--model", model)
     if (quotesFile !== "") cmd.push("--quotes", quotesFile)
+    if (promptFile !== "") cmd.push("--prompt-file", promptFile)
     if (recent.length) cmd.push("--recent", recent.join("; "))
     proc.command = cmd
     proc.running = true

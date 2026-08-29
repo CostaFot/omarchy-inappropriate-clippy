@@ -102,6 +102,7 @@ into the bar himself, settings and all.
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See below |
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
+| `promptFile` | — | Path to a text file that replaces his entire built-in AI prompt — persona, rules, tone, all of it. Your file decides who he is. See below |
 | `greeted` | `false` | Set to `true` by his first-boot hello (the one telling you to set him up), so he only says it once per install. `set greeted unset` to hear it again |
 | `leaderboard` | — | Who the kill/slap counts post as on [the public graveyard](https://clippy-leaderboard-production.up.railway.app). Unset posts to the shared `anonymous-clippy-abuser` stone, a handle claims your own, `off` stops posting. See below |
 | `leaderboardSaved` | — | Where a handle parks while the graveyard is toggled off, so toggling doesn't lose it. Managed for you |
@@ -174,6 +175,19 @@ explicit gesture, same rule as the screenshot. Say nothing and he notices
 that too, without spending a call on it. No mic handy? `omarchy-shell
 costafot.clippy reply "your words"` is the same fight, typed. Without an
 agent set he answers both with the stock sass you deserve.
+
+Don't like who he is? `promptFile` points at a plain text file that replaces
+his entire built-in prompt — the persona, the delivery, the rules, the
+swearing, all of it. Your file becomes the character; the machinery stays. He
+still gets the facts, still judges screenshots, still fires back when you talk
+to him, and still answers in the JSON the plugin expects — but who is doing
+all that is now whatever your file says. The built-in register examples step
+aside too: only your own `quotesFile` lines ride along, so his old book can't
+argue with whoever you turned him into. Everything else in this section
+(`clean`'s example filtering, the caching, the sparkle) applies unchanged. A
+path that doesn't exist falls back to the built-in gremlin. Fair warning: his
+built-in taste rules (no clock jokes, the length cap, "never be hateful") are
+part of what you are replacing — your prompt, your responsibility.
 
 Verified with `claude` and `opencode`; `codex` and `pi` are wired the same way
 but weren't run here, and the rest are best guesses from their docs. To see

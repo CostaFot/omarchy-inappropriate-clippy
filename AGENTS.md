@@ -292,6 +292,19 @@ an optional `hint` (dim second line,
   must carry one in their single line, both with a
   check-before-you-answer clause (that clause is what finally moved
   sonnet), and `--clean` replaces the whole tone line.
+  `--prompt-file` (the `promptFile` key, v1.37.0 — expandHome'd, passed
+  from all three call sites: AgentBrain batches, the look, sendReply)
+  replaces the whole CHARACTER layer — the system prompt AND the
+  per-mode rule lists — leaving only the scaffold: the facts block, the
+  mode framing (screenshot pointer / their words / line count) and the
+  JSON output contract the parser depends on. Register examples then
+  come from quotesFile ONLY, under a neutral "match this register"
+  framing (the built-in book would fight the custom persona); `--clean`
+  still filters nsfw examples but adds no tone line — the file owns the
+  tone, and the built-in taste rules (no-clock, length cap, swear
+  quota) go with it, a documented trade. Unreadable or empty file →
+  stderr note and the built-in prompt (the quotesFile fallback idiom).
+  Free-text path, so IPC/agent only — no menu row.
   `--context` prints the facts, `--prompt` the whole prompt. Output is a
   JSON array parsed three ways in turn: as JSON; else every JSON string
   literal in the text (claude sometimes emits the array with no commas);
@@ -325,8 +338,8 @@ an optional `hint` (dim second line,
   unset is the agent's CLI default (for claude that's the CLI default
   model, NOT settings.json's `model` — `--setting-sources ""` isolates
   it); shown in the "Lines from <agent>" row label when set, no picker
-  (names differ per agent). `set aiAgent`/`set aiModel` while `ai` is
-  off answer "ok — but ai is off…". Talk-back (v1.35.0): IPC `listen`
+  (names differ per agent). `set aiAgent`/`set aiModel`/`set
+  promptFile` while `ai` is off answer "ok — but ai is off…". Talk-back (v1.35.0): IPC `listen`
   (toggle) / `reply <text>` and the menu's "Say it to his face" (shown
   only while `ai` is on AND voxtype exists — `voxProbe` feeds
   `voxtypeMissing`, probed on mount and menu open). `listen` records the
@@ -774,7 +787,7 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.36.2 (2026-08-29): everything above is live and
+Feature-complete at v1.37.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

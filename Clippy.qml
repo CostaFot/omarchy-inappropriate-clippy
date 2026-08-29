@@ -111,7 +111,7 @@ Item {
   // `flingSound` is null here because its default is whatever `slapSound` is.
   readonly property var settingDefaults: ({
     size: 30, clean: false, intervalMin: 90, intervalMax: 420, speed: 40, restless: 0.3,
-    respawn: 300, screen: "", quotesFile: "",
+    respawn: 300, screen: "", quotesFile: "", promptFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
     ttsSaved: "", cloneTempo: 1, clonePitch: 1, duck: 0.8, duckSaved: "",
@@ -172,6 +172,12 @@ Item {
     return p.indexOf("~") === 0 ? Quickshell.env("HOME") + p.slice(1) : p
   }
   readonly property string quotesFile: expandHome(setting("quotesFile", ""))
+  // A text file whose contents REPLACE clippy-ai's built-in character
+  // prompt (persona, tone and the per-mode rule lists) in every mode —
+  // the facts, the three mode framings and the JSON output contract stay.
+  // Register examples then come only from quotesFile. Free-text path, so
+  // IPC/agent only, no menu row; a bad path falls back to the built-in.
+  readonly property string promptFile: expandHome(setting("promptFile", ""))
   // Slapping: middle-click, or flinging the pointer across him. `slap: false`
   // turns both off and gives middle-click back to snooze.
   readonly property bool slapEnabled: setting("slap", true) !== false
@@ -630,6 +636,7 @@ Item {
     agentOverride: root.aiAgent
     model: root.aiModel
     quotesFile: root.quotesFile
+    promptFile: root.promptFile
     onLinesArrived: lines => root.warmAgentLines(lines)
   }
 
@@ -660,6 +667,7 @@ Item {
     // list back made repeated looks count each other ("fifth screenshot
     // this hour") instead of attacking the screen. Batches still get it.
     if (quotesFile !== "") cmd.push("--quotes", quotesFile)
+    if (promptFile !== "") cmd.push("--prompt-file", promptFile)
     lookProc.command = ["bash", "-c",
       'f=$1; out=$2; shift 2; grim -o "$out" "$f" || exit 6; "$@"; rc=$?; rm -f "$f"; exit $rc',
       "clippy-look", file, String(targetScreen.name)].concat(cmd)
@@ -847,6 +855,7 @@ Item {
     // remember()s itself, and feeding the list back would make repeat
     // rounds count each other instead of attacking the words.
     if (quotesFile !== "") cmd.push("--quotes", quotesFile)
+    if (promptFile !== "") cmd.push("--prompt-file", promptFile)
     replyProc.command = cmd
     replyProc.running = true
     walkAnim.stop()
@@ -2239,7 +2248,7 @@ Item {
           return "ok — heard once the clone voice is back on (set tts true)"
         return "ok — but the active voice isn't a clone, so this won't be heard (the knobs bend speak-clone voices only; espeak has ttsSpeed/ttsPitch)"
       }
-      if ((key === "aiAgent" || key === "aiModel") && parsed !== undefined && !root.aiEnabled)
+      if ((key === "aiAgent" || key === "aiModel" || key === "promptFile") && parsed !== undefined && !root.aiEnabled)
         return "ok — but ai is off, so there are no agent lines to apply it to; set ai true first"
       return "ok"
     }

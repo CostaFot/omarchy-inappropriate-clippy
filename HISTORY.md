@@ -1265,3 +1265,40 @@ twice got its words twisted back with no window in sight ("\"Can't
 help yourself\" is the whole fucking resume — nobody's helped you yet
 either."). AGENTS.md talk-back section, manifest 1.36.2; hand-copied to
 the installed clone.
+
+## His character is now BYO (v1.37.0, 2026-08-29)
+
+"okay, we give people our prompts, but they can replace it completely.
+That would be like the goal, the plan" — the `promptFile` key, grown
+out of the previous question "are the AI prompts configurable?"
+(answer until now: no — only quotesFile/clean/aiModel steered them).
+One read of the assembly found the seam: the prompt is a character
+layer (the system prompt AND the per-mode rule bullets — all voice and
+attitude) over a mechanical scaffold (the facts block, the mode
+framing, the JSON contract the parser needs), and replacing only the
+system prompt would be a half-measure — "punish them for asking" would
+bleed through a supportive-grandma persona from the user blocks. So
+`--prompt-file` swaps the whole character layer in all three modes;
+scaffold-only user blocks carry the facts, the screenshot pointer /
+their words / the count, and the output contract, nothing else.
+Costa's calls, asked explicitly: the built-in register examples DROP
+when a custom prompt is set — quotesFile lines still ride along, under
+a neutral "match this register" framing, because the book would fight
+whoever the file turns him into — and ship now, not IDEAS.md. Bad or
+empty path → stderr note + the built-in prompt (the quotesFile
+fallback idiom); `--clean` still filters nsfw examples but adds no
+tone line — the file owns the tone, and the built-in taste rules
+(no-clock, length cap, swear quota) go with it, which the README
+states plainly ("your prompt, your responsibility"). QML: `promptFile`
+(expandHome'd, no menu row — free-text path), passed from AgentBrain
+batches, the look and sendReply; `set promptFile` while ai is off
+answers ok-but like aiAgent/aiModel. Verified: all three prompt shapes
+render clean around a Victorian-ghost persona file, the bad path falls
+back with the note, the flag-less built-in prompt is untouched,
+quotesFile-only examples confirmed, and a live claude call came back
+fully in character in 4.5 s ("Saturday's dusk descends, and you have
+named this window Work, as though the word itself might absolve
+you.") — no Clippy register, no swears, which is exactly the point.
+README (table row + section paragraph), AGENTS.md (clippy-ai section,
+set replies, status), manifest 1.37.0; hand-copied to the installed
+clone.
