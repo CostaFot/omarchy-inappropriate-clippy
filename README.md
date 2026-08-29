@@ -93,7 +93,8 @@ into the bar himself, settings and all.
 | `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
 | `greeted` | `false` | Set to `true` by his first-boot hello (the one telling you to set him up), so he only says it once per install. `set greeted unset` to hear it again |
-| `leaderboard` | — | A handle, and your kills and slaps go on [the public graveyard](https://clippy-leaderboard-production.up.railway.app). Off until you set one. See below |
+| `leaderboard` | — | Who the kill/slap counts post as on [the public graveyard](https://clippy-leaderboard-production.up.railway.app). Unset posts to the shared `anonymous-clippy-abuser` stone, a handle claims your own, `off` stops posting. See below |
+| `leaderboardSaved` | — | Where a handle parks while the graveyard is toggled off, so toggling doesn't lose it. Managed for you |
 
 `quotesFile` takes the same shape as [`quotes.json`](quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
@@ -317,20 +318,30 @@ your agent can also run directly.
 
 There is a [public leaderboard](https://clippy-leaderboard-production.up.railway.app)
 — a graveyard, one headstone per handle, sized by how many times its owner
-has killed him. Slaps are the tiebreak. Join with any handle you like:
+has killed him. Slaps are the tiebreak. By default every install posts to
+one shared stone, `anonymous-clippy-abuser` — the whole nameless world
+piled into a single grave. Claim a stone of your own with any handle:
 
 ```bash
 omarchy-shell costafot.clippy set leaderboard yourname
 ```
 
-What leaves your machine: the handle you chose and small kill/slap counts,
-POSTed to that page when you slap or kill him. Nothing else — no hostname,
-no usage data, no cookies, and nothing at all until you set a handle. There
-are no accounts either: handles are first-come, never-owned, so anyone can
+What leaves your machine: that alias (or your handle) and small kill/slap
+counts, POSTed when you slap or kill him. Nothing else — no hostname, no
+install ID, no usage data, no cookies. The server stores only handles and
+counts; like any web request it sees your IP in transit, and keeps nothing
+of it. Don't want even that? The menu's "Online leaderboard" row toggles the
+posting off, or:
+
+```bash
+omarchy-shell costafot.clippy set leaderboard off
+```
+
+There are no accounts: handles are first-come, never-owned, so anyone can
 post as you, two people with the same name share a grave, and a while-loop
 over `slap left` is an instant world record. All of that is fine. Every
-score was self-reported murder to begin with. `set leaderboard unset` stops
-the posting; the grave keeps what you already confessed.
+score was self-reported murder to begin with. There is no delete either —
+the grave keeps what you already confessed.
 
 ## Scripting him
 
@@ -353,7 +364,7 @@ omarchy-shell costafot.clippy voice      # off, "espeak-ng: ready", "espeak-ng: 
 omarchy-shell costafot.clippy voices     # every voice installed on this machine, and where new ones come from
 omarchy-shell costafot.clippy useVoice rubick  # switch to any installed voice by name
 omarchy-shell costafot.clippy stats      # the lifetime tally: "34 slaps, 5 kills"
-omarchy-shell costafot.clippy leaderboard  # off, or "posting as costa: #4 of 31 with 12 kills, 87 slaps — https://..."
+omarchy-shell costafot.clippy leaderboard  # "posting anonymously to the shared ... stone", "posting as costa: #4 of 31 ...", or off
 omarchy-shell costafot.clippy set clean true   # any key from the table; "unset" puts the default back
 omarchy-shell costafot.clippy get clean        # the value in effect, as JSON
 omarchy-shell costafot.clippy settings         # all of them

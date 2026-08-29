@@ -57,6 +57,11 @@ Item {
   }
   readonly property var entryLocation: findEntry(shell ? shell.shellConfig : null)
   readonly property var settings: entryLocation ? entryLocation.entry : ({})
+  // False until shellConfig has delivered our entry — in that window every
+  // setting reads as its default, which must never be acted on outwardly:
+  // default-on leaderboard would post an anonymous bump for a user whose
+  // "off" (or handle) just hasn't loaded yet.
+  readonly property bool settingsLoaded: entryLocation !== null
 
   // An entry under `plugins[]` is one the bar never looks at, so the icon
   // would not show up. Move it, keys and all, into the bar layout: the
@@ -112,7 +117,7 @@ Item {
     ttsSaved: "", cloneTempo: 1, clonePitch: 1,
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true,
-    greeted: false, leaderboard: ""
+    greeted: false, leaderboard: "", leaderboardSaved: ""
   })
   function defaultFor(key) { return key === "flingSound" ? slapSoundSetting : settingDefaults[key] }
   function isSettingKey(key) { return Object.prototype.hasOwnProperty.call(settingDefaults, key) }
@@ -1305,9 +1310,11 @@ Item {
   }
 
   // ---- leaderboard --------------------------------------------------------
-  // Opt-in bragging: a handle in `leaderboard` and every slap and kill is
-  // POSTed as a delta to the public graveyard — the handle and two small
-  // numbers, nothing else. Handles are claim-free: the server merges
+  // Default-on bragging: every slap and kill is POSTed as a delta to the
+  // public graveyard — a handle and two small numbers, nothing else. Unset
+  // means the shared anonymous stone (one alias for every install, so
+  // nothing identifies anyone); "off" is the only silence; a handle claims
+  // a stone of your own. Handles are claim-free: the server merges
   // collisions and an IPC while-loop is an instant world record, which is
   // fine — every score was self-reported murder to begin with. The flush is
   // the duckProc park-don't-clobber idiom (deltas accumulate while a POST
@@ -1315,8 +1322,12 @@ Item {
   // back and backs off like AgentBrain's topUp. Pending deltas die with the
   // shell — the same trade the tally itself makes.
   readonly property string leaderboardUrl: "https://clippy-leaderboard-production.up.railway.app"
-  readonly property string leaderboardHandle: String(setting("leaderboard", "") || "").trim().toLowerCase()
-  readonly property bool leaderboardOn: leaderboardHandle !== ""
+  readonly property string lbAnonHandle: "anonymous-clippy-abuser"
+  readonly property string lbSetting: String(setting("leaderboard", "") || "").trim().toLowerCase()
+  readonly property bool leaderboardOff: lbSetting === "off"
+  readonly property bool leaderboardNamed: !leaderboardOff && lbSetting !== ""
+  readonly property string leaderboardHandle: leaderboardOff ? "" : (leaderboardNamed ? lbSetting : lbAnonHandle)
+  readonly property bool leaderboardOn: !leaderboardOff
   property int lbPendingKills: 0
   property int lbPendingSlaps: 0
   property int lbSentKills: 0
@@ -1332,24 +1343,49 @@ Item {
     onExited: function (code) { root.lbCurlMissing = code !== 0 }
     Component.onCompleted: running = true
   }
-  // Joining announces the handle with a zero-delta bump: the stone appears
-  // on the page at once and the reply fills lbCache with the rank. Leaving
-  // just stops posting — claim-free has no delete. A remount while joined
-  // re-announces from maybeBoot for the same cache refill.
+  // A handle change announces itself with a zero-delta bump: the stone
+  // appears on the page at once and the reply fills lbCache with the rank.
+  // maybeBoot can run before shellConfig delivers the entry — flush is
+  // gated on settingsLoaded, a named/off value arriving fires the change
+  // handler below, and an unset one changes nothing, so this handler
+  // announces the anonymous default. Asleep is wakeUp's flush to re-run.
+  // Turning off just stops posting — claim-free has no delete. Every mount
+  // re-announces from maybeBoot for the same cache refill (default-on means
+  // that includes the shared anonymous stone).
   onLeaderboardHandleChanged: {
     lbCache = null
     lbFailures = 0
     lbRetry.stop()
     if (leaderboardOn) { lbProbe.running = true; flushLeaderboard(true) }
   }
+  onSettingsLoadedChanged: if (settingsLoaded && booted && !asleep && leaderboardOn) flushLeaderboard(true)
+  // A forced flush that lands while a POST is in flight parks here instead
+  // of being dropped — before this, the mount announce could swallow the
+  // handle-change announce and leave lbCache showing the wrong stone.
+  property bool lbFlushQueued: false
   function bumpLeaderboard(kills, slaps) {
     if (!leaderboardOn) return
     lbPendingKills += kills
     lbPendingSlaps += slaps
     flushLeaderboard(false)
   }
+  // The menu toggle and `set leaderboard true|false|off`. Mirrors
+  // setVoiceEnabled: turning off parks a named handle in `leaderboardSaved`
+  // so the toggle never eats it; turning on restores the stash, else lands
+  // on the anonymous default. One setSettings write each way.
+  function setLeaderboardEnabled(on) {
+    if (on) {
+      var saved = String(setting("leaderboardSaved", "") || "").trim().toLowerCase()
+      if (/^[a-z0-9_.-]{1,24}$/.test(saved) && saved !== "off")
+        return setSettings({ leaderboard: saved, leaderboardSaved: undefined })
+      return setSetting("leaderboard", undefined)
+    }
+    if (leaderboardNamed) return setSettings({ leaderboard: "off", leaderboardSaved: lbSetting })
+    return setSetting("leaderboard", "off")
+  }
   function flushLeaderboard(force) {
-    if (!leaderboardOn || lbProc.running || lbCurlMissing) return
+    if (!settingsLoaded || !leaderboardOn || lbCurlMissing) return
+    if (lbProc.running) { lbFlushQueued = lbFlushQueued || force; return }
     if (!force && lbPendingKills === 0 && lbPendingSlaps === 0) return
     lbSentKills = lbPendingKills
     lbSentSlaps = lbPendingSlaps
@@ -1371,7 +1407,9 @@ Item {
         root.lbSentKills = 0
         root.lbSentSlaps = 0
         root.lbFailures = 0
-        root.flushLeaderboard(false) // deltas that accumulated mid-flight
+        var again = root.lbFlushQueued
+        root.lbFlushQueued = false
+        root.flushLeaderboard(again) // deltas (or a parked announce) that accumulated mid-flight
         return
       }
       root.lbPendingKills += root.lbSentKills
@@ -1618,7 +1656,7 @@ Item {
         "state / stats — what he's doing, the lifetime tally",
         "ai / voice — the agent lines and the voice; each answers with what's wrong and the fix",
         "voices / useVoice <name> — every voice installed on this machine, switching to one, and how to add a new one (clone anyone from a 10-20 s clip)",
-        "leaderboard — the public graveyard: your handle, rank and the page (set leaderboard <handle> to join)",
+        "leaderboard — the public graveyard: posting state, rank and the page (default: the shared anonymous stone; set leaderboard <handle> claims yours, off stops posting)",
         "set <key> <value> / get <key> / settings — the config; settings lists every key, unset restores a default",
         "any verb drops into a Hyprland bind: bindd = SUPER SHIFT C, T, Clippy talks, exec, omarchy-shell costafot.clippy talk",
         "README: " + root.pluginDir + "/README.md"
@@ -1739,9 +1777,12 @@ Item {
     // Agent-first status for the graveyard: who he posts as, the rank the
     // last reply carried, and whatever is currently wrong.
     function leaderboard(): string {
-      if (!root.leaderboardOn)
-        return "off — set leaderboard <handle> (1-24 of a-z 0-9 _ . -) to join the public graveyard: " + root.leaderboardUrl
-      var s = "posting as " + root.leaderboardHandle
+      if (root.leaderboardOff)
+        return "off — nothing is posted; set leaderboard unset posts anonymously (the shared '" + root.lbAnonHandle
+          + "' stone), set leaderboard <handle> (1-24 of a-z 0-9 _ . -) claims your own: " + root.leaderboardUrl
+      var s = root.leaderboardNamed
+        ? "posting as " + root.leaderboardHandle
+        : "posting anonymously to the shared '" + root.lbAnonHandle + "' stone (set leaderboard <handle> claims your own, off stops posting)"
       var c = root.lbCache
       if (c && c.rank)
         s += ": #" + c.rank + " of " + c.total + " with " + c.kills + (c.kills === 1 ? " kill, " : " kills, ")
@@ -1781,19 +1822,35 @@ Item {
           return "ok — new clone voice: pre-rendering the book for it in the background (10-20 min of GPU, once; `voice` says when it's done)"
         return "ok"
       }
-      if (key === "leaderboard" && parsed !== undefined) {
-        // A handle, not a toggle — and the server's rule, said up front.
-        if (parsed === true || parsed === false) return "a handle, not a boolean — set leaderboard <name> (unset leaves)"
+      if (key === "leaderboard") {
+        // Default-on: unset is the shared anonymous stone, "off" the only
+        // silence, a handle a stone of your own. Booleans toggle like the
+        // menu row (replies read pre-write state — the settings binding
+        // may not have updated within this call).
+        if (parsed === false || parsed === "off") {
+          var wasNamed = root.leaderboardNamed
+          if (!root.setLeaderboardEnabled(false)) return "can't write shell.json"
+          return "ok — off; nothing is posted"
+            + (wasNamed ? " (your handle is parked in leaderboardSaved; set leaderboard true restores it)" : "")
+            + " — the graveyard keeps what was already posted (handles are claim-free, there is no delete)"
+        }
+        if (parsed === true) {
+          var stash = String(root.setting("leaderboardSaved", "") || "").trim().toLowerCase()
+          if (!root.setLeaderboardEnabled(true)) return "can't write shell.json"
+          var who = /^[a-z0-9_.-]{1,24}$/.test(stash) && stash !== "off" ? stash : root.lbAnonHandle
+          if (root.lbCurlMissing) return "ok — but curl isn't installed, so nothing gets posted"
+          return "ok — posting as " + who + "; the graveyard: " + root.leaderboardUrl
+        }
+        if (parsed === undefined) {
+          if (!root.setSetting(key, undefined)) return "can't write shell.json"
+          return "ok — posting anonymously to the shared '" + root.lbAnonHandle
+            + "' stone (the default; set leaderboard <handle> claims your own, set leaderboard off stops posting)"
+        }
         var handle = String(parsed).trim().toLowerCase()
         if (!/^[a-z0-9_.-]{1,24}$/.test(handle)) return "no — a handle is 1-24 of a-z 0-9 _ . - (it lands lowercased)"
-        if (!root.setSetting(key, handle)) return "can't write shell.json"
+        if (!root.setSettings({ leaderboard: handle, leaderboardSaved: undefined })) return "can't write shell.json"
         if (root.lbCurlMissing) return "ok — but curl isn't installed, so nothing gets posted"
         return "ok — posting as " + handle + "; the graveyard: " + root.leaderboardUrl + " (`leaderboard` reports your rank)"
-      }
-      if (key === "leaderboard" && parsed === undefined && root.leaderboardOn) {
-        var was = root.leaderboardHandle
-        if (!root.setSetting(key, undefined)) return "can't write shell.json"
-        return "ok — off; the graveyard keeps what " + was + " already posted (handles are claim-free, there is no delete)"
       }
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
       if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
@@ -1855,6 +1912,7 @@ Item {
       // The old Voice toggle path, kept for IPC parity: toggling the voice
       // off never throws away a custom command.
       else if (key === "tts" && (value === true || value === false)) root.setVoiceEnabled(value)
+      else if (key === "graveyardOn") root.setLeaderboardEnabled(value)
       else root.setSetting(key, value)
     }
   }

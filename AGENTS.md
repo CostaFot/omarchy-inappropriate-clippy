@@ -32,8 +32,11 @@ Design rules that outrank any single feature:
   "ok — but <why>" (tts keys, ai keys, clone knobs all do); status verbs
   (`voice`, `ai`, `leaderboard`) say what's wrong and how to fix it.
   Anything broken is surfaced in the UI and to agents, not just journaled.
-- Nothing leaves the machine without opt-in (`ai`, `leaderboard`); no
-  cloud TTS, ever.
+- Nothing leaves the machine undisclosed: `ai` is opt-in; the graveyard
+  posts anonymous kill/slap deltas by default — one shared alias for every
+  install, so nothing identifies anyone — with the off switch one menu tap
+  (`set leaderboard off` over IPC) and the README saying exactly what's
+  sent; no cloud TTS, ever.
 - Keep him mostly still — tune, don't make him busier.
 - Keep `help`, the README's scripting section, and the actual IPC verbs in
   sync; `help` is the blind agent's bootstrap and ends with the README
@@ -518,7 +521,7 @@ only, never touches volumes); they compose.
 
 ## The graveyard (global leaderboard)
 
-Opt-in death leaderboard. Server: repo `CostaFot/clippy-leaderboard`
+Default-on death leaderboard (anonymous; opt-out). Server: repo `CostaFot/clippy-leaderboard`
 (`~/Work/clippy-leaderboard`), Flask + psycopg2 + gunicorn on Railway
 (project `clippy-leaderboard`, Postgres internal-only — no public proxy,
 keep it that way; domain
@@ -534,9 +537,18 @@ rejected twice as theater (anything in a public repo is public).
 tiebreak, top 100); `GET /api/scores?limit=` and `/api/score/<handle>`
 round out the API.
 
-Client (Clippy.qml): `leaderboard` key — "" default, a handle joins;
-nothing leaves the machine until it's set, and the README disclosure
-says exactly what does (handle + two small deltas).
+Client (Clippy.qml): `leaderboard` key — "" (default) posts as the
+shared `anonymous-clippy-abuser` stone (`lbAnonHandle`; one alias for
+every install — a per-install suffix would be a pseudonymous identifier
+and change the privacy story, don't add one), a handle claims a stone,
+"off" is the only silence (`leaderboardOff/Named/On` derive from
+`lbSetting`); the README disclosure says exactly what leaves the
+machine (alias-or-handle + two small deltas).
+`setLeaderboardEnabled(on)` is the toggle behind the menu row and `set
+leaderboard true|false|off` — the ttsSaved idiom: off parks a named
+handle in `leaderboardSaved`, on restores it (else anonymous), one
+`setSettings` write each way; `set leaderboard unset` goes anonymous
+but keeps the stash, `set leaderboard <name>` clears it.
 `bumpLeaderboard(0,1)/(1,0)` directly after the persisted counter bumps
 in `slap()`/`finishDeath()`; the flush is the park-don't-clobber idiom
 (deltas accumulate while a POST is in flight, so a beating coalesces),
@@ -545,17 +557,28 @@ a failure re-adds the sent deltas and backs off 30 s·2ⁿ capped ~16 min,
 lock screen, but held deltas still flush after a long lock), and
 `wakeUp()` re-runs `flushLeaderboard(true)` BEFORE its dead branch (a
 remount while locked skips maybeBoot's flush and drops the old
-instance's retry timer). Joining, or a remount while joined, fires a
+instance's retry timer). A handle change, or any mount while posting, fires a
 zero-delta bump — legal, creates the stone and fills `lbCache` with the
-rank for free. `lbProbe` surfaces a missing curl (a Process that can't
+rank for free (default-on means every mount announces). The flush is
+gated on `settingsLoaded` (entryLocation non-null): before shellConfig
+delivers the entry every setting reads as its default, and default-on
+must not post for a user whose "off" or handle simply hasn't loaded —
+`onSettingsLoadedChanged` announces the anonymous default, the handle
+change handler announces everything else, and a forced flush landing
+while a POST is in flight parks in `lbFlushQueued` instead of being
+dropped (it once left `lbCache` showing the wrong stone). `lbProbe` surfaces a missing curl (a Process that can't
 start never fires onExited); `lbProc` collects stderr into the failure
 warn. The curl sends `-A costafot.clippy/<manifest version>`. Pending
 deltas die with the shell — the tally's own documented trade. IPC
-`leaderboard` verb (off-with-join-instructions / "posting as X: #4 of
-31…" + pending / unreachable / no-curl suffixes); `set leaderboard`
-replies state the handle rule, reject booleans, and note unset keeps
-what was posted. Menu: footer rank when joined, join hint while unset;
-no settings row (free text — IPC and agent only).
+`leaderboard` verb (off-with-instructions / "posting anonymously to the
+shared … stone" / "posting as X: #4 of 31…" + pending / unreachable /
+no-curl suffixes); `set leaderboard` replies state the handle rule,
+take booleans as the toggle, and note off keeps what was posted (no
+delete). Menu: the "Online leaderboard" ●/○ row (→ `graveyardOn` in
+`onChose`) with a dim gated line under it declaring who it posts as —
+the alias by default, the handle when named — plus the claim-a-stone
+hint while anonymous; footer rank whenever posting; the handle itself
+stays free text — IPC and agent only.
 
 ## Dev loop and gotchas
 
@@ -620,7 +643,7 @@ no settings row (free text — IPC and agent only).
 
 ## Status
 
-Feature-complete at v1.29.1 (2026-08-29): everything above is live and
+Feature-complete at v1.30.0 (2026-08-29): everything above is live and
 verified on Costa's machine. On GitHub at the README install URL; not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `HISTORY.md`.

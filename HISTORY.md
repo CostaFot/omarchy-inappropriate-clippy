@@ -838,3 +838,46 @@ the live rubick clone — fresh cache files, journal clean. Deliberately
 no IPC `fling` test: the box is joined to the leaderboard as
 "costafot" and a test fling would post a real kill to the public
 board.
+
+Everyone dies on the board now (v1.30.0, 2026-08-29): Costa — "i think
+we should always send kill/slap to the API. for users who have not set
+anything, let's use the alias 'anonymous-clippy-abuser'. there should
+be a toggle in the panel to disable. the leaderboard/counts is half the
+fun and being opt in we would lack anything to show". The legality
+question got answered first: one shared alias for every install means
+the stored data is anonymous (no per-install ID — adding one would make
+it pseudonymous and change the whole analysis), the server keeps only
+handles and counts, and opt-out anonymous telemetry with disclosure is
+standard open-source practice; the disclosure is the README plus the
+IPC surface, deliberately NOT an in-character line (Costa: "no
+incharacter discolsure. we will have the readme and will provide info
+via terminal to any agent asking right"). The key's new grammar: unset
+posts to the shared `anonymous-clippy-abuser` stone (the default), a
+handle claims a stone, "off" is the only silence
+(`leaderboardOff/Named/On` derive from `lbSetting`).
+`setLeaderboardEnabled(on)` sits behind a new "Online leaderboard" ●/○
+menu row ("public graveyard" was the first name; Costa, offered
+variants: "'online leaderboard' sounds good") and `set leaderboard
+true|false|off` — the ttsSaved idiom: off parks a named handle in
+`leaderboardSaved`, on restores it; booleans, previously rejected ("a
+handle, not a boolean"), now toggle. Under the toggle, a dim line gated
+on it declares who it posts as — the alias by default, the handle when
+named ("I think we can gate the name too under") — carrying the
+claim-a-stone hint while anonymous; the old footer join nudge is gone,
+its job moved up there. First deploy caught a real mount race: before shellConfig
+delivers the entry, every setting reads as its default — which now
+means "anonymous" — so maybeBoot's zero-delta announce posted an
+anonymous bump on Costa's joined box, and the in-flight POST swallowed
+the costafot announce, leaving `lbCache` on the wrong stone. Fixed with
+`settingsLoaded` (entryLocation non-null) gating the flush — an "off"
+that hasn't loaded yet must never leak a bump — plus `lbFlushQueued`
+parking a forced flush that lands mid-POST; `onSettingsLoadedChanged`
+announces the anonymous default, whose handle never fires the change
+handler. Verified live over IPC through shell restarts: named mount
+shows the right rank at once, off + restart posts nothing (no "off"
+stone, server totals unchanged), anonymous mode announces the shared
+stone (#2 of 2), toggle off/on round-trips the handle through the
+stash, and the menu row screenshots with the footer rank. The AGENTS.md
+design rule rewritten from "nothing leaves without opt-in" to "nothing
+leaves undisclosed"; README says exactly what leaves (alias-or-handle +
+two small deltas, IP seen in transit and not kept). Server untouched.
