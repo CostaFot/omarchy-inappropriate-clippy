@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Audio ducking for the voice: lower every stream that is playing right now,
+# then put it back. The snapshot is taken BEFORE the TTS engine spawns, so
+# his own stream is never in it — no name-matching against aplay/espeak/
+# whatever a custom command runs.
+#
+#   duck start [factor]   snapshot sink-input volumes, scale each by factor
+#   duck stop             restore the snapshot
+#
+# State: one "<id> <raw> [<raw>...]" line per stream (one raw pactl volume
+# per channel — raw, not percent, so a 100%+0.12dB stream restores exactly)
+# in $XDG_RUNTIME_DIR/clippy-duck. Idempotent both ways — start with a
+# snapshot standing is a no-op (a replacement line mid-speech must not
+# re-snapshot the already-ducked volumes), stop with none is a no-op.
+# flock serializes overlapping calls; a vanished stream at restore is
+# ignored (pactl errors are dropped).
+set -uo pipefail
+
+state="${XDG_RUNTIME_DIR:-/tmp}/clippy-duck"
+cmd="${1:-}"
+factor="${2:-0.3}"
+[[ $factor =~ ^[0-9]*\.?[0-9]+$ ]] || factor=0.3
+
+exec 9>"$state.lock"
+flock 9
+
+case "$cmd" in
+start)
+  [[ -e $state ]] && exit 0
+  tmp="$state.new"
+  # A Volume line reads "front-left: 65829 / 100% / 0.12 dB, ..." — the raw
+  # value is the integer sitting directly before a slash ("100% /" has the
+  # percent sign in the way, so it never matches).
+  pactl list sink-inputs 2>/dev/null | awk '
+    /^Sink Input #/ { id = substr($3, 2) }
+    /^\tVolume:/ {
+      vols = ""; line = $0
+      while (match(line, /[0-9]+ \//)) {
+        vols = vols " " substr(line, RSTART, RLENGTH - 2)
+        line = substr(line, RSTART + RLENGTH)
+      }
+      if (id != "" && vols != "") { print id vols; id = "" }
+    }' > "$tmp"
+  if [[ ! -s $tmp ]]; then rm -f "$tmp"; exit 0; fi  # nothing playing
+  while read -r id vols; do
+    args=()
+    for v in $vols; do
+      args+=("$(awk -v p="$v" -v f="$factor" 'BEGIN { printf "%d", p * f }')")
+    done
+    pactl set-sink-input-volume "$id" "${args[@]}" 2>/dev/null || true
+  done < "$tmp"
+  mv "$tmp" "$state"
+  ;;
+stop)
+  [[ -e $state ]] || exit 0
+  while read -r id vols; do
+    [[ -n $id && -n $vols ]] || continue
+    args=(); for v in $vols; do args+=("$v"); done
+    pactl set-sink-input-volume "$id" "${args[@]}" 2>/dev/null || true
+  done < "$state"
+  rm -f "$state"
+  ;;
+*)
+  echo "usage: duck start [factor] | duck stop" >&2
+  exit 2
+  ;;
+esac

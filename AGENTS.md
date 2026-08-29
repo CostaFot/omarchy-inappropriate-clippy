@@ -217,6 +217,31 @@ loader, like omarchy.menu — not to the bar widget.
   "— <voice>, <speed> wpm, pitch <pitch>" when the engine is ready, and
   `set` on the three keys answers "ok — but …" when a custom command,
   a missing engine or `tts` off means the change can't be heard.
+- Ducking (in `Clippy.qml` + `scripts/duck`, v1.20.0): `duck` —
+  false (default) off, true lowers every *other* audio stream to 30 % while
+  he speaks and restores it after, a number 0..1 is the factor (0 mutes).
+  The script snapshots `pactl list sink-inputs` volumes (raw values, not
+  the rounded percent — a 100 %+0.12 dB stream must restore exactly) into
+  `$XDG_RUNTIME_DIR/clippy-duck` and scales each; the snapshot is taken
+  BEFORE the engine spawns, so his own stream is never in it — no
+  name-matching against aplay/espeak/whatever a custom command runs, and
+  any engine works. Idempotent both ways under flock. QML side: `startTts`
+  ducks first and the launch continues from `duckProc.onExited`
+  (`launchTts` is the old body); the duck is held across a replacement
+  line (`ducked` already true → straight to the engine, and the
+  queued-restart branch in `ttsProc.onExited` returns before the
+  restore); every speech end with an empty queue lands on `duckStop()`,
+  which is gated on `ducked`, not `duckEnabled` — `set duck false`
+  mid-sentence still restores. A line cancelled while the snapshot is in
+  flight restores instead of speaking (`ttsLine === ""` in the duck's
+  onExited); overlapping flips park in `duckNext` (one Process); a mount
+  runs `duck stop` as crash healing, so a shell death mid-sentence gives
+  the volumes back next start. Menu row "Duck other audio while he talks"
+  under the Voice picker; `set duck` answers "ok — but the voice is off…"
+  when tts is off, and `voice` appends the ducking factor while enabled.
+  Orthogonal to Costa's `costafot.autoduck` plugin: that one *mutes*
+  browser streams against other *browser* streams and never touches
+  volumes, so they compose.
 - `Tombstone.qml` — a headstone at the death spot while `mood == "dead"`
   (`tombstone: true`): tooltip-coloured stone, paperclip-over-RIP engraving,
   mound, OutBounce thud on appear, 500 ms fade out when `revive()` flips the
@@ -704,6 +729,28 @@ the menu never advertises `setup-voice` while espeak-ng is installed
 (the nudge only shows when it's missing), and there is no `help` IPC
 verb — a blind agent gets "Function not found" and must find the README
 to learn the methods.
+
+Audio ducking done (2026-08-29, v1.20.0): `duck` lowers everything else
+while he talks, the way voice assistants do (Costa: "lower the volume of
+what is currently playing so we can talk with agent", OpenWhispr named as
+the reference). See the Ducking bullet above for the whole mechanism; the
+short version is a pre-spawn snapshot of `pactl` sink-input volumes in
+`scripts/duck` (restore-exact raw values, flock, idempotent), `startTts`
+split into duck-then-`launchTts`, restore on every speech end, crash
+healing at mount. pipewire-pulse never implemented PulseAudio's
+`module-role-ducking`, so manual per-stream is the right primitive; the
+snapshot-before-spawn trick is what makes it engine-agnostic. Verified
+live on Costa's box: script round trip from the terminal (5 real streams
+ducked to 30 % and restored, raw-volume fix caught by a +0.12 dB stream),
+then end to end through the plugin — a pw-play tone plus six other
+streams at 30 % during a spoken line, all back at 100 % after, state file
+appearing and vanishing on cue, journal clean. `duck true` was left set
+on his box (it's what he asked for); the voice there was bare espeak at
+the time. Install-dir reality check: the plugin dir is a real v1.18 clone
+carrying the v1.19 work as uncommitted changes (the v1.17 note saying the
+dev symlink was back is stale) — the duck files were copied in by hand
+for the live test, so dev edits in ~/Work still need that copy or a
+restored symlink to reach the shell.
 
 Ideas, in rough order of payoff (a longer pitched list lives in IDEAS.md):
 - Reactive lines without the agent: battery, CPU, hour of the

@@ -109,7 +109,7 @@ Item {
     respawn: 300, screen: "", quotesFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
-    ttsSaved: "",
+    ttsSaved: "", duck: false,
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true
   })
@@ -209,6 +209,14 @@ Item {
   readonly property string ttsVoice: String(setting("ttsVoice", "en+m3")).replace(/'/g, "") || "en+m3"
   readonly property real ttsSpeed: clamp(Number(setting("ttsSpeed", 155)) || 155, 80, 450)
   readonly property real ttsPitch: clamp(Number(setting("ttsPitch", 45)), 0, 99)
+  // `duck`: lower everyone else's audio while he speaks, restore it after —
+  // false (default) off, true ducks the other streams to 30 %, a number in
+  // 0..1 is your own factor (0 mutes them outright). Works with any engine:
+  // the snapshot is taken before the engine spawns (see scripts/duck).
+  readonly property var duckSetting: setting("duck", false)
+  readonly property real duckFactor: duckSetting === true ? 0.3
+    : (typeof duckSetting === "number" ? clamp(duckSetting, 0, 1) : 1)
+  readonly property bool duckEnabled: duckFactor < 1
   // An inline `set` doesn't remount us (keepLoaded — the binding just
   // updates), so a changed engine gets its failure warning back here, and
   // turning the voice off shuts him up instead of finishing the line. Two
@@ -1011,6 +1019,15 @@ Item {
     if (ttsProc.running) ttsProc.signal(15)
   }
   function startTts() {
+    // Duck first, speak second: scripts/duck snapshots the streams playing
+    // right now and lowers them, so it must run before the engine's own
+    // stream exists — the launch continues from duckProc's onExited. A
+    // replacement line finds `ducked` already true and skips straight to
+    // the engine.
+    if (duckEnabled && !ducked) { ducked = true; duckRun("start"); return }
+    launchTts()
+  }
+  function launchTts() {
     // Always through bash: bash itself always starts, so a missing engine is
     // exit 127 in onExited — QProcess swallows a straight fail-to-start and
     // exited would never fire. exec so the kill lands on espeak, not on a
@@ -1033,12 +1050,55 @@ Item {
       if (code === 0) root.ttsWarned = false // heard again — stop claiming "failing"
       if (root.ttsQueued !== "") {
         root.ttsQueued = ""
-        root.startTts()
-      } else if (code !== 0 && root.ttsLine !== "" && !root.ttsWarned) {
+        root.startTts() // the duck is held across a replacement line
+        return
+      }
+      root.duckStop() // done talking — everyone gets their volume back
+      if (code !== 0 && root.ttsLine !== "" && !root.ttsWarned) {
         root.ttsWarned = true
         console.warn("clippy: tts failed (exit " + code + ") — "
           + (typeof root.ttsSetting === "string" ? root.ttsSetting : "is espeak-ng installed?"))
       }
+    }
+  }
+
+  // ---- ducking ------------------------------------------------------------
+  // One process, serialized: a flip that arrives while a duck run is still
+  // in flight parks in duckNext instead of clobbering the command. `ducked`
+  // is gated on itself, not on duckEnabled — `set duck false` mid-sentence
+  // must still restore when the sentence ends.
+  property bool ducked: false   // a start has been issued and not yet undone
+  property string duckNext: ""
+  function duckStop() {
+    if (!ducked) return
+    ducked = false
+    duckRun("stop")
+  }
+  function duckRun(action) {
+    if (duckProc.running) { duckNext = action; return }
+    duckProc.action = action
+    duckProc.command = [pluginDir + "/scripts/duck", action, String(duckFactor)]
+    duckProc.running = true
+  }
+  Process {
+    id: duckProc
+    property string action: ""
+    // Heal on mount: a shell death mid-sentence leaves the snapshot file
+    // standing and everyone quiet; `duck stop` restores it, and is a no-op
+    // when there is nothing to restore.
+    Component.onCompleted: { action = "stop"; command = [root.pluginDir + "/scripts/duck", "stop"]; running = true }
+    onExited: {
+      if (root.duckNext !== "") {
+        var next = root.duckNext
+        root.duckNext = ""
+        root.duckRun(next)
+        return
+      }
+      if (action !== "start") return
+      // The line this duck was for may already be gone (bubble hidden while
+      // the snapshot ran) — restore instead of speaking into it.
+      if (root.ttsLine === "") root.duckStop()
+      else if (!ttsProc.running) root.launchTts()
     }
   }
 
@@ -1367,6 +1427,7 @@ Item {
                  + " (a better voice: scripts/setup-voice in the plugin dir)")
       if (root.ttsWarned) s += "; failing, see journal"
       if (ttsProc.running) s += "; speaking"
+      if (root.duckEnabled) s += "; ducking other audio to " + Math.round(root.duckFactor * 100) + "% while he talks"
       return s
     }
     // The whole voice inventory, for agents: what's active, what's on disk
@@ -1432,6 +1493,8 @@ Item {
         if (root.ttsEngineMissing) return "ok — but espeak-ng isn't installed, so he stays silent until it is"
         if (!root.ttsOn) return "ok — heard once tts is on"
       }
+      if (key === "duck" && parsed !== false && parsed !== undefined && !root.ttsOn)
+        return "ok — but the voice is off, so there's no speech to duck around; set tts true (or useVoice <name>) first"
       return "ok"
     }
     // The value in effect, as JSON (so "" and 0 and false are tellable apart).
