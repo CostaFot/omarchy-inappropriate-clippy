@@ -40,17 +40,20 @@ Left-click the bubble to dismiss it.
 
 ### Slaps, deaths, dodges
 
-<!-- shot: middle-click him, ~2 s gif of the shove + bubble -->
-<img src="assets/screenshots/slap.gif" width="700" alt="A slap: shove, wobble, and the line that follows">
+<!-- shot: slap left over IPC, grabbed mid-wobble; a ~2 s gif of the shove + bubble (slap.gif) would replace this still -->
+<img src="assets/screenshots/slap-line.png" width="700" alt="Keep going, I'm sure it fixes the build.">
 
 Ten slaps in six seconds knocks him out. One slap in ten he dodges — a
 sidestep, a whoosh, a gloat, no score.
 
+<!-- shot: kill over IPC, the last words before he goes -->
+<img src="assets/screenshots/last-words.png" width="700" alt="Oh, you're KILLING me? Real mature.">
+
 Either way a tombstone marks the spot until he respawns (five minutes).
 The menu keeps the tally — every slap, every death, since the last reboot.
 
-<!-- shot: click the grave, catch the epitaph bubble -->
-<img src="assets/screenshots/tombstone.png" width="700" alt="The tombstone, with an epitaph">
+<!-- shot: epitaph over IPC (a click on the grave), {back} filled in -->
+<img src="assets/screenshots/tombstone.png" width="700" alt="Back in 5 minutes. Start apologizing.">
 
 Snooze moved to the menu to make room for the slap. `slap: false` puts it
 back on middle-click.
@@ -74,8 +77,8 @@ Gone more than a minute and he greets you on the way back. Rudely.
 
 ## Settings
 
-<!-- shot: showMenu, the card with the tally at the foot -->
-<img src="assets/screenshots/menu.png" width="420" alt="The right-click menu">
+<!-- shot: showMenu over IPC, alive and dead; the tally and the graveyard rank at the foot -->
+<img src="assets/screenshots/menu.png" width="420" alt="The right-click menu"> <img src="assets/screenshots/menu-dead.png" width="420" alt="The same menu while he is dead: one row, Bring him back">
 
 Right-click him for the common ones: clean mode, sounds, walks, size, voice.
 Everything else is a key, set from a terminal or by your agent:
@@ -98,10 +101,19 @@ also under `docs/`.
 Off by default. `ai: true` and the lines are about what you're actually
 doing: your window titles, what's playing, what you did to him lately.
 
-You can talk back. `promptFile` makes him whoever you want.
+<!-- shot: talk with ai on — the sparkle in the bubble corner marks an agent line -->
+<img src="assets/screenshots/ai-line-3.png" width="700" alt="You said hello, I answered, and you killed me twice tonight — that's the healthiest bond you've got.">
 
-<!-- shot: ai on, the sparkle-dressed bubble over a recognisable window title -->
-<img src="assets/screenshots/ai-line.png" width="700" alt="An agent line: the sparkle in the bubble corner, about the window you actually have open">
+You can talk back, and he talks back. Ask him to judge your screen and he
+finds the stupidest thing on it.
+
+<!-- shot: reply "you're a useless piece of office stationery" over IPC -->
+<img src="assets/screenshots/comeback.png" width="700" alt="Useless stationery still ranks higher than you on a leaderboard you built just to lose to me.">
+
+<!-- shot: look over IPC, on an empty desktop -->
+<img src="assets/screenshots/screen-look.png" width="700" alt="Brave crashed again and you named the folder 'scratchpad' like this was ever going somewhere.">
+
+`promptFile` makes him whoever you want.
 
 **Leaves your machine:** those facts, to your own coding agent, nowhere
 else. He never reads your files. A screenshot only when you ask for the
@@ -122,7 +134,7 @@ Your music ducks while he talks.
 A public leaderboard of who has killed him the most. On by default,
 anonymous.
 
-<!-- shot: the leaderboard page in a browser, a few stones on it -->
+<!-- shot: the leaderboard page, headless chromium at 2x -->
 <img src="assets/screenshots/graveyard.png" width="700" alt="The graveyard: one headstone per handle, sized by kills">
 
 **Leaves your machine:** one alias shared by every install (or a handle you

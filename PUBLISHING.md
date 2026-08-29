@@ -58,7 +58,7 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   clean at the time of writing.
 - Docs (v1.40.0): the README is the pitch — install + remove, the mouse
   table, a short section per feature with its **Leaves your machine** line
-  and a screenshot placeholder (v1.40.2; the shots themselves are still to
+  and a screenshot (v1.40.4; `crash.png` and the slap gif are still to
   take, see the `<!-- shot -->` comments) — and the manual is `docs/`,
   served by GitHub Pages at
   https://costafot.github.io/omarchy-inappropriate-clippy/ (source `/docs`

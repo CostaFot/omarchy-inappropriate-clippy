@@ -14,8 +14,12 @@ an audit folded every still-true fact into this file). Future work goes in
 `IDEAS.md`, never here. User docs are split
 (v1.40.0): `README.md` is the pitch — install + remove, the mouse table,
 a short section per big feature (1-3 sentence paragraphs, a screenshot
-placeholder under `assets/screenshots/` with a `<!-- shot: … -->` comment
-saying what to capture, and a bold **Leaves your machine:** line for
+under `assets/screenshots/` with a `<!-- shot: … -->` comment saying how
+it was captured — 1400×260 bar-strip crops of a `grim` at monitor scale
+1.6, every state driven over IPC, `omarchy-toggle-idle stay-awake` first
+or he falls asleep mid-shoot, `set leaderboard off` first or the kills
+post; the alt text is the line in the bubble; `crash.png` and `slap.gif`
+are still to take — and a bold **Leaves your machine:** line for
 anything that touches the network) and links; no key names in README
 prose, the configuration table owns them, `slap: false` the one exception
 because it explains where snooze went — and
