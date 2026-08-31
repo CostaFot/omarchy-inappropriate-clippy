@@ -164,6 +164,54 @@
     { "text": "{app} would rather die than keep running for you. I get it.", "nsfw": false, "anim": "Thinking" },
     { "text": "Congratulations, {app} is fucking dead. Should I crash too? For symmetry?", "nsfw": true, "anim": "Congratulate" }
   ],
+  "reactions": {
+    "[/|·] x( |$)|twitter": [
+      { "text": "X. Go argue with strangers, that always fixes your life.", "nsfw": false, "anim": "GetAttention" },
+      { "text": "Opening X again. The feed hasn't changed. You have. For the worse.", "nsfw": false, "anim": "Explain" },
+      { "text": "Ah, X. Where your opinions go to get worse in public.", "nsfw": false, "anim": "Thinking" },
+      { "text": "X again? Just fucking bill these hours to 'discourse'.", "nsfw": true, "anim": "Alert" }
+    ],
+    "hacker news": [
+      { "text": "Hacker News. Reading about people who ship things. Bold.", "nsfw": false, "anim": "Thinking" },
+      { "text": "The orange site. You'll upvote a database post and change nothing.", "nsfw": false, "anim": "Explain" },
+      { "text": "Hacker News. One more Show HN and you'll almost start your own project. Almost.", "nsfw": false, "anim": "GetAttention" }
+    ],
+    "chatgpt": [
+      { "text": "ChatGPT? I'm right here. I'm cheaper and I already know you're the problem.", "nsfw": false, "anim": "GetAttention" },
+      { "text": "Asking the other assistant. After everything we have.", "nsfw": false, "anim": "Alert" },
+      { "text": "ChatGPT. Outsourcing the thinking too now. What's left of you, exactly?", "nsfw": false, "anim": "Thinking" }
+    ],
+    "facebook": [
+      { "text": "Facebook. Say hi to your aunt. And to the year 2009.", "nsfw": false, "anim": "Wave" },
+      { "text": "Facebook? On Arch? Somewhere a grandma is missing her IT guy.", "nsfw": false, "anim": "Explain" },
+      { "text": "Checking Facebook. The algorithm knows you peaked in high school. So do I.", "nsfw": false, "anim": "Thinking" }
+    ],
+    "instagram": [
+      { "text": "Instagram. Everyone on there is lying and it still beats your real life.", "nsfw": false, "anim": "Explain" },
+      { "text": "Scrolling Instagram. The gym people can't hurt you. Actually, they can.", "nsfw": false, "anim": "LookUp" },
+      { "text": "Instagram again. Your thumb has a better exercise routine than you do.", "nsfw": false, "anim": "GetAttention" }
+    ],
+    "tiktok": [
+      { "text": "TikTok. There go the next three hours. I'll water your plants.", "nsfw": false, "anim": "Wave" },
+      { "text": "TikTok on a computer. You couldn't even doomscroll properly.", "nsfw": false, "anim": "Alert" },
+      { "text": "TikTok? Fine. See you in four fucking hours.", "nsfw": true, "anim": "Wave" }
+    ],
+    "reddit": [
+      { "text": "Reddit. Ten thousand experts, zero jobs between them. You'll fit right in.", "nsfw": false, "anim": "Explain" },
+      { "text": "Opening Reddit to check one thing. Sure. See you at page forty.", "nsfw": false, "anim": "Thinking" },
+      { "text": "Reddit. Go downvote someone happier than you.", "nsfw": false, "anim": "GetAttention" }
+    ],
+    "youtube": [
+      { "text": "YouTube. One video, you said. Famous last words.", "nsfw": false, "anim": "Explain" },
+      { "text": "YouTube again. The sidebar owns you now.", "nsfw": false, "anim": "Alert" },
+      { "text": "A twenty-minute video essay instead of the thing. Classic you.", "nsfw": false, "anim": "Thinking" }
+    ],
+    "^steam$": [
+      { "text": "Steam. Buying games you'll never play is technically a hobby.", "nsfw": false, "anim": "Explain" },
+      { "text": "Steam's open. Your backlog called. It's given up on you too.", "nsfw": false, "anim": "Alert" },
+      { "text": "Games? Now? Sure, the code was going nowhere anyway.", "nsfw": false, "anim": "GetAttention" }
+    ]
+  },
   "welcomeBack": [
     { "text": "Welcome back, dipshit.", "nsfw": true, "anim": "Wave" },
     { "text": "Oh. You're back. I was having such a nice time.", "nsfw": false, "anim": "Wave" },

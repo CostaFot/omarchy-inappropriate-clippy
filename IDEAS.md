@@ -100,14 +100,6 @@ are reachable from a panel — see ~/Work/omarchy-navbar-cat for how it
 listens to Hyprland/MPRIS/UPower. Or feed more of that into `clippy-ai`'s
 facts: notifications, the workspace.
 
-## Window-class reactions
-
-A step past the reactive-lines idea above: a `reactions` key in
-quotes.json mapping window-class regex → lines, fired on Hyprland
-`activewindow` (navbar-cat shows the event wiring). Steam opens → instant
-mockery, no agent call, no latency. The agent path stays for the clever
-stuff; this covers the obvious stuff instantly.
-
 ## Battery panic as behavior, not just a line
 
 Below 10% he refuses to walk (saving energy, obviously) and plays the

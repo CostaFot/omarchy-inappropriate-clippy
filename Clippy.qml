@@ -117,7 +117,7 @@ Item {
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
     ttsSaved: "", cloneTempo: 1, clonePitch: 1, voiceCacheMb: 500, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
-    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true, gags: true, peekChance: 0.04,
+    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true, reactions: true, gags: true, peekChance: 0.04,
     greeted: false, leaderboard: "", leaderboardSaved: ""
   })
   function defaultFor(key) { return key === "flingSound" || key === "dodgeSound" ? slapSoundSetting : settingDefaults[key] }
@@ -208,6 +208,9 @@ Item {
   // Letting go of him mid-fling throws him off the bar, fatally.
   readonly property bool flingEnabled: setting("fling", true) !== false
   readonly property bool crashLinesOn: setting("crashLines", true) !== false
+  // Instant book lines when the focused window — or the browser tab, read
+  // off the window title — turns into a matching app or site.
+  readonly property bool reactionsOn: setting("reactions", true) !== false
   // `ai: true` has his unprompted and clicked lines come from the user's
   // default coding agent (scripts/clippy-ai), reacting to what's on screen,
   // battery, the hour. The book stays the fallback. `aiAgent` overrides
@@ -626,6 +629,12 @@ Item {
   readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun", "noBrain", "heardNothing", "dodged"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
+  // The window reactions ride in the same JSON files under a "reactions"
+  // key (regex string -> lines array) but OUTSIDE quoteKeys — a parallel
+  // book pair, merged per pattern at match time the way pool() merges
+  // per key. The key loop below never touches it.
+  property var reactionBook: ({})
+  property var extraReactionBook: ({})
   function emptyBook() {
     var b = {}
     for (var i = 0; i < quoteKeys.length; i++) b[quoteKeys[i]] = []
@@ -648,8 +657,18 @@ Item {
     var raw = Array.isArray(data) ? { quotes: data } : (data || {})
     var b = {}
     for (var i = 0; i < quoteKeys.length; i++) b[quoteKeys[i]] = normalizeQuotes(raw[quoteKeys[i]])
-    if (extra) extraBook = b
-    else book = b
+    // Always rebuilt, so a quotesFile edit that drops "reactions" resets
+    // the extra map too (the emptyBook discipline).
+    var rb = {}
+    var rr = raw.reactions
+    if (rr && typeof rr === "object" && !Array.isArray(rr)) {
+      for (var p in rr) {
+        var lines = normalizeQuotes(rr[p])
+        if (lines.length) rb[p] = lines
+      }
+    }
+    if (extra) { extraBook = b; extraReactionBook = rb }
+    else { book = b; reactionBook = rb }
   }
   function pool(key) {
     var all = book[key].concat(extraBook[key])
@@ -939,6 +958,107 @@ Item {
       // Asleep, dead or hidden by the time it landed: stale, drop it.
       if (!root.say(line, null, true)) root.backToIdle()
     }
+  }
+
+  // ---- window reactions --------------------------------------------------
+  // Instant book lines when the focused window turns into a matching app
+  // or site — the crash-reaction shape: no agent call, nothing leaves the
+  // machine, works with `ai` off. Browser tabs count: the Hyprland window
+  // title carries the page title, and quickshell consumes windowtitlev2
+  // internally, so activeToplevel.title updates on a tab switch with no
+  // focus change and the derived key below reevaluates. Patterns are
+  // tested against class and title SEPARATELY, case-insensitive (Steam
+  // anchors ^steam$ on the class; X anchors on the title's "/ X"
+  // separator). Pacing outranks the joke (the mostly-still rule): one
+  // line per pattern per 45 min AND one reaction of any kind per 10 min,
+  // both constants — the on/off taste call is the `reactions` key, the
+  // odds are ours. Deliberately no agentBrain.remember(): the agent
+  // already sees the focused window in clippy-ai's core facts, and
+  // window switches would flood the 5-deep ring.
+  property var reactionRegexCache: ({}) // pattern -> RegExp | null (null = bad, warned once)
+  function reactionRegex(p) {
+    if (p in reactionRegexCache) return reactionRegexCache[p]
+    var re = null
+    try { re = new RegExp(p, "i") }
+    catch (e) { console.warn("clippy: bad reactions regex \"" + p + "\": " + e) }
+    reactionRegexCache[p] = re
+    return re
+  }
+  function matchReactions(cls, title) {
+    var seen = {}, hits = []
+    var books = [reactionBook, extraReactionBook]
+    for (var b = 0; b < books.length; b++)
+      for (var p in books[b]) {
+        if (seen[p]) continue
+        seen[p] = true
+        var re = reactionRegex(p)
+        if (!re || (!re.test(cls) && !re.test(title))) continue
+        var q = (reactionBook[p] || []).concat(extraReactionBook[p] || [])
+        if (clean) q = q.filter(function (x) { return !x.nsfw })
+        if (q.length) hits.push({ pattern: p, quotes: q })
+      }
+    return hits
+  }
+  readonly property string activeWinClass: {
+    var t = Hyprland.activeToplevel
+    if (!t) return ""
+    var ipc = t.lastIpcObject
+    if (ipc && ipc["class"]) return String(ipc["class"])
+    return t.wayland && t.wayland.appId ? String(t.wayland.appId) : ""
+  }
+  readonly property string activeWinTitle: {
+    var t = Hyprland.activeToplevel
+    return t ? String(t.title || "") : ""
+  }
+  readonly property string activeWinKey: activeWinClass + "\n" + activeWinTitle
+  // The first delivery after a mount is state, not a transition — layout
+  // writes to shell.json remount us, and a remount must not re-fire a
+  // reaction at whatever already has focus. And one focus change is TWO
+  // property updates (title lands first, the class follows from the async
+  // lastIpcObject refresh), briefly pairing the old title with the new
+  // class — reacting on the raw signal could jab you for the window you
+  // just left. The settle timer coalesces the burst (a fast tab flip
+  // too) into one look at the settled state.
+  property bool reactionArmed: false
+  onActiveWinKeyChanged: {
+    // Arm only on a real observation: at a cold shell start the first
+    // delivery is the empty null-toplevel state, and eating just that
+    // would let the already-focused window read as a transition.
+    if (!reactionArmed) { if (activeWinKey !== "\n") reactionArmed = true; return }
+    reactionSettle.restart()
+  }
+  Timer {
+    id: reactionSettle
+    interval: 250
+    onTriggered: {
+      if (!root.reactionsOn || root.activeWinKey === "\n") return
+      root.reactionReact(root.activeWinClass, root.activeWinTitle)
+    }
+  }
+  property var reactionLastAt: ({})
+  property real reactionGlobalAt: 0
+  readonly property int reactionCooldownMs: 45 * 60000
+  readonly property int reactionGapMs: 10 * 60000
+  function reactionReact(cls, title) {
+    var hits = matchReactions(cls, title)
+    if (!hits.length) return
+    var now = Date.now()
+    // Inside the global gap nothing is stamped, so the next quiet-window
+    // match still lands fresh.
+    if (now - reactionGlobalAt < reactionGapMs) return
+    var live = hits.filter(function (h) {
+      return !(reactionLastAt[h.pattern] && now - reactionLastAt[h.pattern] < reactionCooldownMs)
+    })
+    if (!live.length) return
+    var h = randomFrom(live)
+    // Stamped BEFORE the state gates (the crashLastAt discipline): a
+    // snoozed doomscroll must not bank a reaction for later. Every
+    // matched pattern is stamped so one page can't queue two lines.
+    reactionGlobalAt = now
+    for (var i = 0; i < hits.length; i++) reactionLastAt[hits[i].pattern] = now
+    if (isSnoozed() || dragging || occupied || peeking) return
+    var q = randomFrom(h.quotes)
+    if (q) say(q.text, q.anim)
   }
 
   // ---- crash reactions ---------------------------------------------------

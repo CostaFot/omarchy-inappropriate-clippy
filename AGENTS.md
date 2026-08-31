@@ -333,6 +333,49 @@ Design rules that outrank any single feature:
     quickshell crash never replays old dumps; the follower only runs
     while `crashLines` is on. Test a crash with
     `sleep 30 & kill -SEGV $!`.
+  - window reactions (`reactions`, default true, v1.47.0): instant book
+    lines when the focused window turns into a matching app or site —
+    the crash-reaction shape, agent-free on purpose. The source is a
+    derived `activeWinKey` (class + "\n" + title) off
+    `Hyprland.activeToplevel` (`lastIpcObject["class"]` first,
+    `wayland.appId` fallback; quickshell consumes `windowtitlev2`, so a
+    browser tab switch with no focus change updates `title` and fires
+    the change handler). One focus change is TWO updates (the title
+    lands first, the class follows from the async lastIpcObject
+    refresh, briefly pairing the old title with the new class — seen
+    live in the probe log), so the handler only restarts a 250 ms
+    settle Timer and the reaction reads the settled state; a fast tab
+    flip coalesces the same way. Patterns come from a `reactions` object in
+    quotes.json (regex string → lines; NOT in `quoteKeys` — a parallel
+    `reactionBook`/`extraReactionBook` pair rebuilt on every book load,
+    merged per pattern by concatenation, clean-filtered in the matcher
+    so an all-nsfw target under `clean` neither fires nor burns
+    cooldown), compiled lazily into a throw-proof cache — a bad
+    quotesFile regex warns once and is skipped, never crashes the
+    mount. Each regex is tested against class and title SEPARATELY,
+    case-insensitive (Steam anchors `^steam$` on the class; X anchors
+    on the title's "/ X" separator — bare "x" would match Xorg).
+    Pacing outranks the joke (the mostly-still rule, Costa: "we need to
+    really avoid him being chatty"): one line per pattern per 45 min
+    AND one reaction of any kind per 10 min, both constants
+    (`reactionCooldownMs`/`reactionGapMs` — the entranceChance rule:
+    on/off is the key, taste is ours), stamps written BEFORE the state
+    gates (crashLastAt discipline — a snoozed doomscroll must not bank
+    a line) except inside the global gap, where nothing is stamped so
+    the next quiet-window match lands fresh. Gate line is
+    crashReact's: `isSnoozed() || dragging || occupied || peeking`;
+    say() drops dead/asleep/listening itself. `reactionArmed` latches
+    away everything up to and including the first REAL (non-empty)
+    observation — layout writes remount us and must not re-fire at
+    whatever already has focus, and at a cold shell start the first
+    delivery is the empty null-toplevel state, so arming on that
+    would let the already-focused window read as a transition. Deliberately
+    NO `agentBrain.remember()`: the agent already sees the focused
+    window in clippy-ai's core facts, and switches would flood the
+    5-deep ring. Menu row: the "Window reactions" ●/○ toggle (unlike
+    crashLines' IPC-only precedent — "make him shut up about my tabs"
+    is a row a user reaches for). Test with
+    `alacritty --title "Hacker News"`.
 - `ClippySprite.qml` — port of clippy.js `src/animator.js`. The full sheet
   is one `Image` inside a `clip: true` 124×93 viewport, translated to the
   cell (`x = -cell.x`) — the CSS background-position approach, so a frame
@@ -573,10 +616,14 @@ Design rules that outrank any single feature:
   ("NOOOO", "FUUUU"), clone voices read them as garbage (v1.29.1 rewrote
   every `flung` line for this; nothing enforces it) — and a count
   placeholder is phrased "kill number {kills}" / "{slaps} so far", never
-  "{kills} times", which reads "1 times". `quotesFile` is
+  "{kills} times", which reads "1 times". A `reactions` object (regex →
+  lines array, same entry shape) rides in the same file but outside
+  `quoteKeys` — see the window-reactions bullet; grudge placeholders
+  don't belong in it (kills can be 0). `quotesFile` is
   merged in (same shape, or a bare array): quotes are two books, `book` +
   `extraBook`, merged per key in `pool(key)` so FileView load order
-  doesn't matter. Bad JSON or a missing path falls back to the built-in
+  doesn't matter (reactions merge per pattern the same way). Bad JSON or
+  a missing path falls back to the built-in
   book.
 - `assets/clippy/{map.png,agent.json}` — from clippy.js via
   `scripts/fetch-assets` (dev-time only, results are committed). map.png

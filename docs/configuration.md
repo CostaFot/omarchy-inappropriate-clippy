@@ -45,6 +45,7 @@ into the bar himself, settings and all.
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |
 | `crashLines` | `true` | When one of your programs dumps core he has a line about it, on the spot. `false` and crashes pass without comment |
+| `reactions` | `true` | When the focused window — or the browser tab, read off the window title — turns into one of the famous time-sinks (X, Reddit, YouTube, Hacker News, TikTok, Instagram, Facebook, ChatGPT, Steam) he has a line about it. Paced hard: one line per site per 45 minutes, one reaction of any kind per 10. `false` and he lets you doomscroll in peace |
 | `tts` | `false` | `true` and he says every line out loud through `espeak-ng` (install that yourself); a shell command as a string gets each line on stdin instead. See [voice](voice.md) |
 | `ttsVoice` | `en+m3` | The built-in voice — any name from `espeak-ng --voices`. Death still whispers |
 | `ttsSpeed` | `155` | Words per minute for the built-in voice (espeak-ng `-s`, 80–450) |
@@ -74,3 +75,9 @@ a `crashed` line becomes the program that just dumped core. `{kills}` and
 `{slaps}` work in any line and become his running tally (the one `stats`
 prints — it resets with the shell, so does his grudge); a death in progress
 counts itself, so his last words can call it murder number nine.
+
+The object may also carry a `reactions` map: a case-insensitive regex per key,
+an array of lines (same shape) per value, matched against the focused window's
+class and title — `"reactions": { "krita": ["Oh, we're an artist now."] }`
+adds a target, and a regex that matches a built-in target's windows adds lines
+to it. A regex that doesn't compile is skipped with a note in the journal.
