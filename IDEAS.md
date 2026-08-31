@@ -30,9 +30,17 @@ could join a random entrance roll rather than replace the tumble:
   fling's revenge), 720° spin, an 82° face-plant, gets up shaking
   himself off. Coin-flipped against the tumble on revives; `gag lob`
   forces it.
-- **The looming shrink** — appears huge mid-screen (the `peekGrown`
-  blow-up, `Greeting`), shrinks down and slides onto his bar spot.
-  Reads as "I was always here, you just couldn't see me."
+- ~~**The looming shrink**~~ — built and reverted 2026-08-31 (don't
+  re-pitch): materialized huge mid-screen (the peek's bulk worn as
+  `actor.scale`, the Greeting flicker-in), loomed 1.5 s, shrank onto
+  his bar spot. Worked mechanically, but the loom was silent — the
+  comeback line only came after landing — and a giant Clippy standing
+  quietly mid-screen is a special effect, not a joke. Costa: "not
+  funny enough." A speaking loom (the line delivered WHILE huge, which
+  needs the peek's flag-not-mood trick since say() refuses in
+  "reviving") was floated but not tried; that'd be the angle if this
+  territory is ever revisited. The entrance roll stays a coin flip:
+  tumble or lob.
 
 Still parked,
 much bigger: **true free 2D roaming** — walking anywhere on screen would
