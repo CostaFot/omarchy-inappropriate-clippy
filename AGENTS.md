@@ -168,6 +168,46 @@ Design rules that outrank any single feature:
     and grudge lines need kills ≥ 1). Menu row: the "Full-screen gags"
     ●/○ toggle (v1.43.0 — it shipped row-less; Costa asked for the row).
     The fling's long drop lives in the fling bullet below.
+    The corner peek (v1.44.0): he slides in from a far-edge corner
+    (the two corners opposite the bar, 50/50 — a bar-edge corner would
+    just read as standing at the end of the bar) to 90% visible — a
+    half-in peek was mathematically unswipeable: the swipe judge wants
+    a travel of 60% of his full width and the pointer only reports over
+    him — blown up to `peekSize`
+    (`spriteSize` ×5, clamped 140-400 — a constant multiplier, the
+    entranceChance rule; at bar size he was an unslappable speck, Costa:
+    "he is fat to small to slap!"; `peekGrown` is its own flag, not
+    `peeking`, so a mid-peek death stays giant through the choreography
+    and `finishDeath()` clears it like gagDy), says a `quotes`-pool
+    line via `nextQuote()`, dwells while the bubble lives, slides back
+    out and restores his exact bar spot. Rolled in `decide()` with
+    `peekChance` (a settings key, 0.04 default, dodge-shaped reader;
+    free-number → no menu row) on the existing idle beats — no new
+    trigger timers (`peekDwell` is only the say-failed fallback) — and
+    forced by IPC `gag peek` (which DOES speak, unlike the forced
+    entrance: its line is the ordinary quotes pool). Unlike the skyfall
+    it can NOT ride `mood = "reviving"` — say() and slap() both refuse
+    there, and the peek needs both — so `peeking` (a flag, mood stays
+    idle→talking) is the truth, gating decide/unprompted/crashReact/
+    grab/flingOff/look/listen/reply/gag. gagDy never animates: it's set
+    to the far edge while he's fully off-stage, both legs are one
+    `peekAnim` on `actor.x`, and the dwell is the bubble's lifecycle —
+    `hideBubble()` and the out-leg's `done` are a two-sided rendezvous
+    into exactly one `peekFinish()`. A mid-peek slap counts normally
+    (tally, leaderboard, knockout window) but skips the dodge roll and
+    the shove (both would write a corner x into `persisted.lastX` — the
+    peek never writes lastX, `peekReturnX` is plain state) and recoils
+    him out at once, the bubble riding the live bindings and speaking
+    clamped at the corner, the fling pattern. The bubble flips to his
+    bar side while peeking (the instance's `aboveHim` binding) —
+    without the flip the vertical clamp parks it ON him at the far
+    edge and the dwell is a bubble with no Clippy (seen live, top
+    bar, bottom corner). A knockout/kill mid-peek
+    lets him die hanging: `peekCancel(false)` keeps x/gagDy,
+    `finishDeath()` zeroes gagDy and `placeGrave()` clamps — the
+    fling-grave behavior, no new grave code. Sleep, remount and stage
+    resize run `peekCancel(true)` (restore); a fling mid-peek is
+    refused (`flingFall.from = 0` would snap gagDy out from under him).
   - `IpcHandler { target: "costafot.clippy" }` — string args only, no
     optional params. `set key value` / `get key` / `settings` are the
     config surface (keys from `settingDefaults` — keep it equal to the

@@ -14,6 +14,7 @@ omarchy-shell costafot.clippy fling left  # off that end of the bar; fatal
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
 omarchy-shell costafot.clippy gag entrance  # the skyfall: in from the far screen edge, bounced onto the bar
+omarchy-shell costafot.clippy gag peek      # in from a far screen corner, huge, one line, back out (slappable meanwhile)
 omarchy-shell costafot.clippy epitaph     # poke the grave while he's dead: an epitaph in the bubble
 omarchy-shell costafot.clippy unsnooze    # wakes him early
 omarchy-shell costafot.clippy hide
@@ -21,7 +22,7 @@ omarchy-shell costafot.clippy show        # brings him back, from hidden or dead
 omarchy-shell costafot.clippy toggle
 omarchy-shell costafot.clippy showMenu    # the menu, no pointer needed
 omarchy-shell costafot.clippy hideMenu
-omarchy-shell costafot.clippy state      # idle | walking | talking | dying | dead | snoozed | hidden | asleep
+omarchy-shell costafot.clippy state      # idle | walking | talking | peeking | dying | dead | snoozed | hidden | asleep
 omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"
 omarchy-shell costafot.clippy voice      # off, "espeak-ng: ready", "espeak-ng: not installed — silent (...)", or the custom command
 omarchy-shell costafot.clippy voices     # every voice installed on this machine, and where new ones come from
@@ -62,7 +63,7 @@ that turns it on), `already`, `alive`, `dying`/`reviving`, `busy — …` (a
 look or a comeback in flight), `not snoozed`, `no grave`, `no ears — …`
 (no voxtype). `gag` answers `no such gag — the set: <names>` for a stunt
 it doesn't know. `slap` answers `ok`, `dodged`, `not now` or `off`; `toggle`
-answers `shown` or `hidden`; `state` answers one of its eight words;
+answers `shown` or `hidden`; `state` answers one of its nine words;
 `kill`, `shutUp`, `snooze`, `showMenu` and `hideMenu` always answer `ok`.
 `set` and `get` answer `unknown key <k>; one of …` for a key that isn't in
 [configuration.md](configuration.md), `no — <the rule>` for a value that
