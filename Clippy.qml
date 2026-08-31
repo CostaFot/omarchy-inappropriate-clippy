@@ -1983,6 +1983,11 @@ Item {
   // Fallback dwell only for the say-that-failed corner (empty pool): no
   // bubble will ever hide to end the peek, so this does.
   Timer { id: peekDwell; onTriggered: root.peekOut(350) }
+  // A bubble can die right into the restore (a mid-peek slap's line
+  // outlives the recoil) and its 140 ms fade rides the actor bindings —
+  // restoring x while it fades drags the ghost to the bar for a blink.
+  // peekFinish() parks here until the fade is truly over.
+  Timer { id: peekGhost; interval: 200; onTriggered: root.peekFinish() }
 
   function gagPeek() {
     walkAnim.stop()
@@ -2033,6 +2038,10 @@ Item {
   // Deliberately does NOT write persisted.lastX — peekReturnX came from a
   // spot lastX already knows.
   function peekFinish() {
+    // Still-fading bubble ghost: wait it out (it anchors to him, and the
+    // x restore below would snap it to the bar mid-fade).
+    if (bubble.visible) { peekGhost.restart(); return }
+    peekGhost.stop()
     peeking = false
     peekLeaving = false
     peekGrown = false // back to bar size before the x clamp reads his width
@@ -2058,6 +2067,7 @@ Item {
     peekAnim.done = null
     peekAnim.stop()
     peekDwell.stop()
+    peekGhost.stop()
     peeking = false
     peekLeaving = false
     if (restore) {

@@ -194,7 +194,11 @@ Design rules that outrank any single feature:
     to the far edge while he's fully off-stage, both legs are one
     `peekAnim` on `actor.x`, and the dwell is the bubble's lifecycle —
     `hideBubble()` and the out-leg's `done` are a two-sided rendezvous
-    into exactly one `peekFinish()`. A mid-peek slap counts normally
+    into exactly one `peekFinish()`, which parks in `peekGhost` (200 ms,
+    re-armed until `bubble.visible` drops) while the bubble's fade is
+    still running — the fade rides the actor bindings, so restoring x
+    under it dragged the ghost to the bar for a blink (seen live on the
+    mid-peek slap, whose line outlives the recoil). A mid-peek slap counts normally
     (tally, leaderboard, knockout window) but skips the dodge roll and
     the shove (both would write a corner x into `persisted.lastX` — the
     peek never writes lastX, `peekReturnX` is plain state) and recoils
