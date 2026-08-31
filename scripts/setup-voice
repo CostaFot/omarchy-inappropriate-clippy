@@ -337,6 +337,15 @@ if os.path.exists(raw):
 else:
     sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "clippy-voice.sock")
     here = os.path.dirname(os.path.realpath(__file__))
+    BUSY = ("speak-clone: the daemon is still working after 2 minutes — a first"
+            " run downloads the ~3 GB model, and a slow connection takes longer"
+            " than that. It keeps going in the background; try again in a few"
+            " minutes (log: ~/.cache/clippy-voice/daemon.log)")
+    def logtail():
+        try:
+            return open(f"{cache}/daemon.log", errors="replace").read().strip().splitlines()[-1]
+        except (OSError, IndexError):
+            return ""
     def ask():
         c = socket.socket(socket.AF_UNIX)
         c.settimeout(120)
@@ -345,11 +354,15 @@ else:
                                "cfg": a.cfg, "out": raw}) + "\n").encode())
         r = c.makefile().readline().strip()
         c.close()
+        if not r:
+            # EOF: the daemon died with our request in hand — same as a reset,
+            # so raise the same thing and let the caller respawn or report
+            raise ConnectionResetError
         if r != "ok":
             sys.exit(f"speak-clone: {r}")
     try:
         ask()
-    except (FileNotFoundError, ConnectionRefusedError):
+    except (FileNotFoundError, ConnectionRefusedError, ConnectionResetError):
         log = open(f"{cache}/daemon.log", "wb")  # one daemon's worth, not forever
         subprocess.Popen([f"{here}/daemon.py"], start_new_session=True, stdout=log, stderr=log)
         for _ in range(240):  # first start loads the model, ~20 s
@@ -357,17 +370,19 @@ else:
             try:
                 ask()
                 break
-            except (FileNotFoundError, ConnectionRefusedError):
+            # a reset here is the daemon dying mid-load under us; the retries
+            # then collapse into refused-connects and the report below
+            except (FileNotFoundError, ConnectionRefusedError, ConnectionResetError):
                 continue
+            except TimeoutError:
+                sys.exit(BUSY)
         else:
-            why = ""
-            try:  # the crash's last line, so the cause is in the error itself
-                why = open(f"{cache}/daemon.log", errors="replace").read().strip().splitlines()[-1]
-            except (OSError, IndexError):
-                pass
+            why = logtail()
             sys.exit("speak-clone: daemon never came up"
                      + (f" — {why}" if why else "")
                      + " (full log: ~/.cache/clippy-voice/daemon.log)")
+    except TimeoutError:
+        sys.exit(BUSY)
 out = raw
 if a.pitch != 1.0 or a.tempo != 1.0:
     out = f"{cache}/{key}" + (f"-p{a.pitch:g}" if a.pitch != 1.0 else "") \

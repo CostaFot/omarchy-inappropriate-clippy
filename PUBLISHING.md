@@ -203,4 +203,8 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   the re-run button, a comment triggers nothing — and the bots re-ran:
   compatibility ✅ at `1e2bb79`, baseline 🟡 identical but for
   `setup-voice:174` → `:180`; noted for the maintainer in a comment.
-  Next: maintainer applies `approved-and-verified` at `1e2bb79`.
+  Later that day: v1.49.2 (speak-clone's daemon-death and slow-download
+  error paths, prompted by the same reporter's next traceback) released
+  and #3903 retargeted a second time to its commit, same
+  edit-the-body procedure. Next: maintainer applies
+  `approved-and-verified` at the v1.49.2 commit.

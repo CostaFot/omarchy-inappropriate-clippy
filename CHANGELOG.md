@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.49.2
+
+- A voice daemon that dies while a line waits on it (e.g. the model download failing) now reports "daemon never came up" with the crash's last log line, instead of a raw ConnectionResetError traceback — and the next line respawns it.
+- A first run on a slow connection no longer hits a TimeoutError traceback at 2 minutes: it says the daemon is still downloading and keeps the download running for the next try.
+
 ## v1.49.1
 
 - `setup-voice` now detects a broken chatterbox venv (an interrupted first install) and rebuilds it, instead of every later run failing with "daemon never came up".
