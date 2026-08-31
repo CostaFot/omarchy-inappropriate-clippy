@@ -50,6 +50,7 @@ into the bar himself, settings and all.
 | `ttsSaved` | — | Where a custom `tts` command parks while the voice is toggled off, so toggling doesn't lose it. Managed for you; `set ttsSaved unset` forgets it |
 | `cloneTempo` | `1` | How fast a cloned voice talks, pitch untouched — `1.1` is a little brisker, `0.9` slower (0.5–2). Instant: derived from the line cache, never the GPU |
 | `clonePitch` | `1` | Pitch for a cloned voice, tempo untouched — `0.85` deeper, `1.2` lighter (0.5–2). Set both knobs the same for the full chipmunk |
+| `voiceCacheMb` | `500` | Size cap in MB for the cloned-voice line cache (`~/.cache/clippy-voice`) — least-recently-played renders go first, so the warmed book stays. `0` means no cap. Applies from the voice daemon's next start |
 | `duck` | `0.8` | The fraction of volume everything else keeps while he talks (0–1). `0.5` halves your music, `1` or `false` turns ducking off. The menu only toggles; the ratio is IPC-only |
 | `duckSaved` | — | Where a custom `duck` ratio parks while ducking is toggled off, so toggling doesn't lose it. Managed for you |
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See [ai](ai.md) |

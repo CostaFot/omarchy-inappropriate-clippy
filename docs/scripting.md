@@ -64,7 +64,8 @@ answers `shown` or `hidden`; `state` answers one of its eight words;
 `kill`, `shutUp`, `snooze`, `showMenu` and `hideMenu` always answer `ok`.
 `set` and `get` answer `unknown key <k>; one of …` for a key that isn't in
 [configuration.md](configuration.md), `no — <the rule>` for a value that
-doesn't fit (`duck` outside 0–1, a handle with capitals), and `can't write
+doesn't fit (`duck` outside 0–1, a handle with capitals, a `voiceCacheMb`
+that isn't a number of MB), and `can't write
 shell.json` when the write fails. `qs ipc -n -p "$OMARCHY_PATH/shell" show`
 lists every method with its arguments.
 

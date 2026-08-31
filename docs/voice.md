@@ -102,8 +102,12 @@ becomes his voice (a new clone, a switch in the picker, a shell start)
 he renders the whole book into the cache in the background, silently —
 10-20 minutes of GPU for the built-in book, once per voice; `voice` says
 while it's running. He's usable meanwhile, and a voice warmed once stays
-warm — the cache is keyed by the sample's contents and never thrown away,
-so on every later start this is a half-second check. The same job by
+warm — the cache is keyed by the sample's contents, and the book is what
+it keeps: the cache is capped (500 MB — `set voiceCacheMb` changes it,
+`0` uncaps) and trims least-recently-*played* lines first, so the book,
+re-touched on every play and every warm, outlives agent one-offs and the
+renders of a sample you've since replaced. On every later start this is a
+half-second check. The same job by
 hand is `scripts/warm-voice`, for after changing the delivery knobs.
 Agent lines are freshly written every
 time, so the cache can never have them in advance — instead the plugin

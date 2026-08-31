@@ -115,7 +115,7 @@ Item {
     respawn: 300, screen: "", quotesFile: "", promptFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10, dodge: 0.1, dodgeSound: null,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
-    ttsSaved: "", cloneTempo: 1, clonePitch: 1, duck: 0.8, duckSaved: "",
+    ttsSaved: "", cloneTempo: 1, clonePitch: 1, voiceCacheMb: 500, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true,
     greeted: false, leaderboard: "", leaderboardSaved: ""
@@ -261,6 +261,17 @@ Item {
   readonly property real cloneTempo: clamp(Number(setting("cloneTempo", 1)) || 1, 0.5, 2)
   readonly property real clonePitch: clamp(Number(setting("clonePitch", 1)) || 1, 0.5, 2)
   readonly property bool cloneKnobsApply: typeof ttsSetting === "string" && ttsSetting.indexOf("speak-clone") !== -1
+  // MB the clone line cache may hold; the daemon prunes least-recently-played
+  // renders past it, 0 = no cap. Reaches the daemon through the environment
+  // of whichever of our processes spawns it (a spoken line or a warm), so a
+  // change applies from the daemon's next start (it exits after 15 idle
+  // minutes). Sanitized to a clean integer here — the env string must never
+  // be something the daemon's int() would choke on.
+  readonly property int voiceCacheMb: {
+    var n = Number(setting("voiceCacheMb", 500))
+    return isNaN(n) ? 500 : Math.max(0, Math.round(n))
+  }
+  readonly property var voiceCacheEnv: ({ CLIPPY_VOICE_CACHE_MB: String(voiceCacheMb) })
   // Ducking: every *other* audio stream drops to `duck` of its volume
   // while he speaks and comes back after. Works with any engine: the
   // snapshot is taken before the engine spawns (see scripts/duck).
@@ -1568,6 +1579,7 @@ Item {
   }
   Process {
     id: ttsProc
+    environment: root.voiceCacheEnv // the voice daemon inherits its cache cap
     // Belt and braces for a real unload (plugin disable, shell exit):
     // nothing else kills the child there, and running=false wouldn't either.
     Component.onDestruction: signal(15)
@@ -1661,8 +1673,9 @@ Item {
   // live voice becomes a speak-clone command (mount, useVoice, set tts,
   // setup-voice's set) the whole book is rendered into the cache in the
   // background, so a fresh clone's slap reaction doesn't land 2 s late.
-  // The cache is keyed by the sample's contents and never pruned, so a
-  // voice warmed once stays warm; with a full cache this is a ~0.3 s
+  // The cache is keyed by the sample's contents and pruned least-recently-
+  // played-first (voiceCacheMb), with every warm pass counting as a play,
+  // so a voice warmed once stays warm; with a full cache this is a ~0.3 s
   // no-op, which is why it can run on every mount without a flag. The
   // command is handed over explicitly (--tts) so the warm can't race the
   // settings write, and a warm in flight for the previous voice is killed
@@ -1679,6 +1692,7 @@ Item {
   }
   Process {
     id: warmBookProc
+    environment: root.voiceCacheEnv // a warm may be what spawns the daemon
     stderr: StdioCollector { id: warmBookErr }
     stdout: StdioCollector { id: warmBookOut }
     onExited: function (code) {
@@ -1693,6 +1707,7 @@ Item {
   }
   Process {
     id: warmProc
+    environment: root.voiceCacheEnv // a warm may be what spawns the daemon
     stderr: StdioCollector { id: warmErr }
     onExited: function (code) {
       // Not-a-speak-clone is gated before the spawn, so nonzero is real.
@@ -2317,7 +2332,13 @@ Item {
         return "ok — other audio drops to " + Math.round(duckVal * 100) + "% of its volume while he talks"
           + (root.ttsOn ? "" : " (tts is off, so nothing talks yet)")
       }
+      if (key === "voiceCacheMb" && parsed !== undefined && (typeof parsed !== "number" || parsed < 0))
+        return "no — voiceCacheMb is a size in MB, 0 for no cap"
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
+      if (key === "voiceCacheMb" && parsed !== undefined)
+        return (parsed === 0 ? "ok — no cap; the voice line cache grows unpruned"
+          : "ok — the voice line cache trims least-recently-played renders past " + Math.round(parsed) + " MB")
+          + " (applies from the voice daemon's next start; it exits after 15 idle minutes)"
       if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
         if (typeof root.ttsSetting === "string") return "ok — but tts is a custom command, which ignores the built-in tuning (a clone bends with cloneTempo/clonePitch instead)"
         if (root.ttsEngineMissing) return "ok — but espeak-ng isn't installed, so he stays silent until it is"

@@ -684,8 +684,24 @@ is one opaque string and ignores all three (clones bend via
   path, ref contents hash, knobs, text) — repeats instant, fresh line
   ~2-5 s warm, ~25 s cold. The contents hash (v1.28.0) is what makes a
   re-clone under the same name safe: before it, a re-cut sample kept
-  replaying every line rendered from the old one. Orphaned files are
-  never pruned; the whole dir is disposable.
+  replaying every line rendered from the old one. The daemon, as the raw
+  renders' only writer, bounds it (v1.41.0): after every render and once on
+  start it deletes least-recently-played `.wav`s until the dir is under the
+  cap — the `voiceCacheMb` key (500; 0 = no cap), which rides into the
+  daemon's environment as `CLIPPY_VOICE_CACHE_MB` via the `environment`
+  property on ttsProc and both warm Processes (whichever spawns the daemon
+  first wins its 15-minute lifetime, so a change applies from the next
+  daemon start; the QML property sanitizes to a clean integer so a garbage
+  value can never crash the daemon's `int()`, and the set reply for a
+  non-number is a refusal, the duck idiom). speak-clone and warm-voice
+  touch mtime on
+  every hit (guarded — a file pruned in the exists/utime gap must not
+  kill a warm), so a warmed book (~85 MB, ×2 with a tempo derivative) stays
+  while agent one-offs and lines keyed to a superseded sample age out —
+  before this the dir only grew (Costa found 1 GB: 2,461 files for a
+  342-line book, five re-key waves plus every AI line ever said). The
+  daemon.log is truncated per daemon start and tqdm is silenced
+  (`TQDM_DISABLE`). The whole dir is still disposable.
   `--pitch`/`--tempo` derive from the cached raw take via ffmpeg
   (asetrate*P shifts pitch and tempo together, one atempo of T/P lands
   the final tempo on T; atempo's 0.5 floor handled by chaining) into
@@ -947,8 +963,8 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.40.10 (2026-08-30): everything above is live and
-verified on Costa's machine. On GitHub at the README install URL; Pages is
+Everything above is live and verified on Costa's machine (the manifest
+names the current version). On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `git log`.

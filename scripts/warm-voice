@@ -96,6 +96,10 @@ for text in lines:
     key = key_of(text)
     out = f"{cache}/{key}.wav"
     if os.path.exists(out):
+        try:
+            os.utime(out)  # counts as played: the daemon prunes least-recent first
+        except OSError:
+            pass  # pruned in the exists/utime gap — don't let it kill the warm
         skipped += 1
         continue
     for attempt in range(2):
@@ -104,7 +108,7 @@ for text in lines:
             done += 1
             break
         except (FileNotFoundError, ConnectionRefusedError):
-            log = open(f"{cache}/daemon.log", "ab")
+            log = open(f"{cache}/daemon.log", "wb")
             subprocess.Popen([daemon], start_new_session=True, stdout=log, stderr=log)
             deadline = time.time() + 120
             while time.time() < deadline:

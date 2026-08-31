@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "costafot.clippy",
   "name": "Inappropriate Clippy",
-  "version": "1.40.11",
+  "version": "1.41.0",
   "author": "CostaFot",
   "license": "MIT",
   "description": "Clippy as-a-plugin, on the Omarchy bar. He walks, parks between your widgets, and mouths off every few minutes.",
