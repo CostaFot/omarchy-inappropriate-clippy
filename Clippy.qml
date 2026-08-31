@@ -2727,30 +2727,53 @@ Item {
           onReleased: root.drop()
           onCanceled: root.drop()
 
-          // Swipe slap: the pointer only reports while it is over him, so
-          // judge the crossing from where it came in to where it left. Fast
-          // and mostly sideways across most of his width is a slap; a
-          // pointer wandering over him on the way to the tray is not.
+          // Swipe slap: the pointer only reports while it is over him.
+          // Fast and mostly sideways across him is a slap; a pointer
+          // wandering over him on the way to the tray is not. Judged on
+          // every motion event, not just on exit — a grown Clippy (the
+          // corner peek, big sizes) is wider than a 200 ms flick can
+          // traverse, so waiting for the pointer to leave his bounds
+          // made him unslappable. The anchor rolls: when the window
+          // ages out or the motion reverses it re-anchors to the last
+          // event, so a flick that starts while already hovering over
+          // him counts too (the enter-anchored judge made the natural
+          // aim-then-swipe on a peeking Clippy invisible). The travel
+          // wanted is capped at 100 px for the same reason — 60% of a
+          // 500 px body is a marathon, and the speed gate still filters
+          // drive-bys.
           property real enterX: 0
           property real enterY: 0
           property real enterT: 0
           property real lastX: 0
           property real lastY: 0
-          onEntered: { enterX = mouseX; enterY = mouseY; lastX = mouseX; lastY = mouseY; enterT = Date.now() }
+          property real lastT: 0
+          property real swipeSlapAt: 0
+          onEntered: { enterX = mouseX; enterY = mouseY; lastX = mouseX; lastY = mouseY; enterT = Date.now(); lastT = enterT }
           onPositionChanged: function (mouse) {
-            lastX = mouse.x; lastY = mouse.y
-            if (root.dragging) root.dragTo(mouse.x)
+            var now = Date.now()
+            if (now - enterT > 200 || (mouse.x - lastX) * (lastX - enterX) < 0) {
+              enterX = lastX; enterY = lastY; enterT = lastT
+            }
+            lastX = mouse.x; lastY = mouse.y; lastT = now
+            if (root.dragging) { root.dragTo(mouse.x); return }
+            // Mid-motion judging only when the travel cap binds (he is
+            // too wide to demand an exit); at bar sizes the exit judge
+            // alone keeps a fast aim-and-click from reading as a slap.
+            if (width * 0.6 > 100) judgeSwipe()
           }
-          onExited: {
+          function judgeSwipe() {
             if (!root.slapEnabled || !root.slapSwipe || pressed) return
+            if (Date.now() - swipeSlapAt < 500) return // one slap per swipe: the rolling anchor would re-arm mid-crossing
             var dx = lastX - enterX
             var dy = lastY - enterY
             var dt = Date.now() - enterT
             if (dt <= 0 || dt > 200) return
-            if (Math.abs(dx) < width * 0.6 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+            if (Math.abs(dx) < Math.min(width * 0.6, 100) || Math.abs(dx) < Math.abs(dy) * 1.5) return
             if (Math.abs(dx) / dt < 1.2) return
+            swipeSlapAt = Date.now()
             root.slap(dx > 0 ? 1 : -1)
           }
+          onExited: judgeSwipe()
 
           onClicked: function (mouse) {
             if (mouse.button === Qt.RightButton) { root.showMenu(); return }

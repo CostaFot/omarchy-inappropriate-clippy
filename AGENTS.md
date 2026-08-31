@@ -171,9 +171,10 @@ Design rules that outrank any single feature:
     The corner peek (v1.44.0): he slides in from a far-edge corner
     (the two corners opposite the bar, 50/50 — a bar-edge corner would
     just read as standing at the end of the bar) to 90% visible — a
-    half-in peek was mathematically unswipeable: the swipe judge wants
-    a travel of 60% of his full width and the pointer only reports over
-    him — blown up to `peekSize`
+    half-in peek was mathematically unswipeable under the original
+    exit-anchored swipe judge, and even 90%-in the judge stayed near
+    impossible on a grown body until v1.44.1 reworked it (see the slap
+    bullet) — blown up to `peekSize`
     (`spriteSize` ×5, clamped 140-400 — a constant multiplier, the
     entranceChance rule; at bar size he was an unslappable speck, Costa:
     "he is fat to small to slap!"; `peekGrown` is its own flag, not
@@ -554,10 +555,21 @@ Design rules that outrank any single feature:
 ## Slap, drag, fling (in Clippy.qml)
 
 - Slapping: `slap(dir)` — middle-click (side hit decides direction) or a
-  pointer fling across him, judged in the actor `MouseArea` from
-  `onEntered` to `onExited` (the input mask means motion is only
-  reported over him): ≤200 ms, ≥60 % of his width, mostly horizontal,
-  ≥1.2 px/ms. A `SoundEffect` per file via an `Instantiator`
+  pointer fling across him, judged in the actor `MouseArea` (the input
+  mask means motion is only reported over him): ≤200 ms, ≥60 % of his
+  width capped at 100 px, mostly horizontal, ≥1.2 px/ms. Since v1.44.1
+  the anchor rolls (re-anchored to the last motion event when the
+  200 ms window ages out or the direction reverses — the enter-anchored
+  judge made the natural aim-then-flick invisible: a pointer resting on
+  him >200 ms could never slap without leaving and re-entering), and
+  when the 100 px cap binds (width > ~167 px — every peek, huge `size`
+  values) `judgeSwipe()` runs on every motion event, not just
+  `onExited`, because a body wider than a 200 ms flick can traverse
+  made the exit requirement mathematically unslappable; at bar sizes
+  the exit-only judge is kept deliberately so a fast aim-and-click
+  never reads as a slap, and `swipeSlapAt` (500 ms cooldown) keeps the
+  rolling anchor from re-arming one swipe into two slaps.
+  A `SoundEffect` per file via an `Instantiator`
   (`assets/sounds/slap-*.wav`, mono 44.1 kHz — SoundEffect wants WAV), a
   `shoveAnim` on `actor.x`, a `wobble` on `actor.rotation` (pivot
   `Item.Bottom`), then `say()` with a `slapped` line — silent while the
