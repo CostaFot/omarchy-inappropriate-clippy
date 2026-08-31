@@ -47,6 +47,9 @@ someone off-screen lobs him back in on an arc and he lands face-first
 he also peeks in from a far corner of the screen to say something — and
 yes, you can slap him back into it.
 
+<!-- TODO gif placeholder: screen recording of the stunts — gag entrance, gag lob, gag peek over IPC on an empty workspace, trimmed, 20 fps through palettegen like slap.gif -->
+<img src="assets/screenshots/gags.gif" width="700" alt="Reports of my death were, frankly, your fault.">
+
 <!-- shot: epitaph over IPC (a click on the grave), {back} filled in -->
 <img src="assets/screenshots/tombstone.png" width="700" alt="Back in 5 minutes. Start apologizing.">
 
@@ -56,6 +59,15 @@ yes, you can slap him back into it.
 <img src="assets/screenshots/crash.png" width="700" alt="There goes brave. It fought your bullshit as long as it could.">
 
 Reads off the local crash journal. He has an opinion.
+
+He also notices the tab. YouTube, Reddit, TikTok, Hacker News, Steam —
+open one and once in a while he has something to say about it. Yes, *those*
+sites too (`set clean true` mutes that whole register). It's all matched on
+your machine and goes nowhere; `set reactions false` — or the menu row — if
+you'd rather doomscroll in peace.
+
+<!-- TODO gif placeholder: screen recording of a real tab switch to YouTube firing a reaction — or react youtube over IPC, trimmed, 20 fps -->
+<img src="assets/screenshots/reactions.gif" width="700" alt="YouTube. One video, you said. Famous last words.">
 
 ### He sleeps when you're away
 
