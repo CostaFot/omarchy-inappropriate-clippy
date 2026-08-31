@@ -23,7 +23,7 @@ and verb; `omarchy-shell costafot.clippy help`.
 | Middle-click | slap! |
 | Fling the pointer across him | also a slap. Quite funnier |
 | Hold left-click, then drag | picks him up. Drop him anywhere on the bar |
-| Let go mid-fast-fling | throws him off the end of the bar. Fatal, but he gets a last word in |
+| Let go mid-fast-fling | throws him off the end of the bar — off a top bar he plummets the whole screen. Fatal, but he gets a last word in |
 | Right-click | the menu: say something, snooze, kill him, common settings |
 | Click his tombstone | an epitaph, from beyond |
 | Click the paperclip on the bar | the same menu |
@@ -40,7 +40,15 @@ Ten slaps in six seconds knocks him out. Sometimes the fucker dodges.
 <!-- shot: kill over IPC, the last words before he goes -->
 <img src="assets/screenshots/last-words.png" width="700" alt="Oh, you're KILLING me? Real mature.">
 
-Either way a tombstone marks the spot until he respawns.
+Either way a tombstone marks the spot until he respawns — and sometimes
+the respawn is a stunt: he rolls in along the bar like a dropped coin, or
+someone off-screen lobs him back in on an arc and he lands face-first
+(`set gags false` if you like your paperclips dignified). Once in a while
+he also peeks in from a far corner of the screen to say something — and
+yes, you can slap him back into it.
+
+<!-- shot: screen recording of a gag peek slapped mid-peek (bottom-right corner region), 20 fps through palettegen like slap.gif -->
+<img src="assets/screenshots/gags.gif" width="700" alt="Fine! Fuck you too!">
 
 <!-- shot: epitaph over IPC (a click on the grave), {back} filled in -->
 <img src="assets/screenshots/tombstone.png" width="700" alt="Back in 5 minutes. Start apologizing.">
@@ -51,6 +59,15 @@ Either way a tombstone marks the spot until he respawns.
 <img src="assets/screenshots/crash.png" width="700" alt="There goes brave. It fought your bullshit as long as it could.">
 
 Reads off the local crash journal. He has an opinion.
+
+He also notices the tab. YouTube, Reddit, TikTok, Hacker News, Steam —
+open one and once in a while he has something to say about it. Yes, *those*
+sites too (`set clean true` mutes that whole register). It's all matched on
+your machine and goes nowhere; `set reactions false` — or the menu row — if
+you'd rather doomscroll in peace.
+
+<!-- shot: bar-strip crop of a real X tab focused in Brave firing the reaction (or react x over IPC) -->
+<img src="assets/screenshots/reactions.png" width="700" alt="Ah, X. Where your opinions go to get worse in public.">
 
 ### He sleeps when you're away
 

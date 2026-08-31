@@ -211,8 +211,43 @@ setup_clone() {
   cat > "$base/daemon.py" <<'PY'
 #!VENV_PYTHON
 # Keeps the chatterbox model on the GPU; speak-clone talks to it over a unix
-# socket. Exits after 15 idle minutes so the VRAM comes back.
+# socket. Exits after 15 idle minutes so the VRAM comes back. As the raw
+# renders' only writer it also keeps the cache bounded: after every render
+# (and once on start) the oldest-played lines go until the dir is under
+# CACHE_MB — the plugin's voiceCacheMb key, handed over as the
+# CLIPPY_VOICE_CACHE_MB env var by whichever of its processes spawned us;
+# 0 means no cap. speak-clone/warm-voice touch a file's mtime on every hit,
+# so "oldest" is least-recently-played, not first-rendered — a warmed book
+# stays put while agent one-offs and lines from a superseded sample age out.
 import json, os, socket, sys
+os.environ.setdefault("TQDM_DISABLE", "1")  # no progress bars in daemon.log
+try:
+    CACHE_MB = int(os.environ.get("CLIPPY_VOICE_CACHE_MB", "500"))
+except ValueError:
+    CACHE_MB = 500  # a garbage env var must not kill the voice
+
+def prune(cache, keep=None):
+    if CACHE_MB <= 0:  # 0 = no cap, the pre-cap behaviour
+        return
+    files, total = [], 0
+    for n in os.listdir(cache):
+        if not n.endswith(".wav"):
+            continue
+        try:
+            st = os.stat(os.path.join(cache, n))
+        except OSError:
+            continue
+        total += st.st_size
+        if n != keep:  # the line just rendered counts but never goes
+            files.append((st.st_mtime, st.st_size, n))
+    for _, sz, n in sorted(files):
+        if total <= CACHE_MB * 1024 * 1024:
+            break
+        try:
+            os.unlink(os.path.join(cache, n))
+            total -= sz
+        except OSError:
+            pass
 RUN = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
 SOCK = os.path.join(RUN, "clippy-voice.sock")
 s = socket.socket(socket.AF_UNIX)
@@ -232,6 +267,7 @@ s.settimeout(900)
 import torchaudio
 from chatterbox.tts import ChatterboxTTS
 model = ChatterboxTTS.from_pretrained(device="cuda")
+prune(os.path.expanduser("~/.cache/clippy-voice"))
 while True:
     try:
         c, _ = s.accept()
@@ -244,6 +280,7 @@ while True:
         tmp = req["out"] + ".tmp.wav"
         torchaudio.save(tmp, wav.cpu(), model.sr)
         os.replace(tmp, req["out"])
+        prune(os.path.dirname(req["out"]), keep=os.path.basename(req["out"]))
         c.sendall(b"ok\n")
     except Exception as e:
         try:
@@ -266,6 +303,8 @@ PY
 # --pitch shifts after synthesis (ffmpeg, tempo kept): <1 deeper, >1 higher.
 # --tempo speeds up (>1) or slows (<1) playback, pitch kept. Both are
 # derived from the cached raw take, so neither ever touches the GPU.
+# Every hit touches the file's mtime: the daemon prunes least-recently-played
+# first, so a line that keeps getting said keeps its render.
 import argparse, hashlib, json, os, socket, subprocess, sys, time
 p = argparse.ArgumentParser()
 p.add_argument("--ref", required=True)
@@ -284,7 +323,12 @@ key = hashlib.sha256(f"{ref}|{refhash}|{a.exag}|{a.cfg}|{text}".encode()).hexdig
 cache = os.path.expanduser("~/.cache/clippy-voice")
 os.makedirs(cache, exist_ok=True)
 raw = f"{cache}/{key}.wav"
-if not os.path.exists(raw):
+if os.path.exists(raw):
+    try:
+        os.utime(raw)
+    except OSError:
+        pass  # pruned in the exists/utime gap; the next call re-renders it
+else:
     sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "clippy-voice.sock")
     here = os.path.dirname(os.path.realpath(__file__))
     def ask():
@@ -300,7 +344,7 @@ if not os.path.exists(raw):
     try:
         ask()
     except (FileNotFoundError, ConnectionRefusedError):
-        log = open(f"{cache}/daemon.log", "ab")
+        log = open(f"{cache}/daemon.log", "wb")  # one daemon's worth, not forever
         subprocess.Popen([f"{here}/daemon.py"], start_new_session=True, stdout=log, stderr=log)
         for _ in range(240):  # first start loads the model, ~20 s
             time.sleep(0.5)
@@ -315,7 +359,12 @@ out = raw
 if a.pitch != 1.0 or a.tempo != 1.0:
     out = f"{cache}/{key}" + (f"-p{a.pitch:g}" if a.pitch != 1.0 else "") \
         + (f"-t{a.tempo:g}" if a.tempo != 1.0 else "") + ".wav"
-    if not os.path.exists(out):
+    if os.path.exists(out):
+        try:
+            os.utime(out)
+        except OSError:
+            pass
+    else:
         # asetrate*P shifts pitch AND tempo by P; one atempo of T/P lands the
         # final tempo on T. When T == P no atempo is needed (that's the
         # chipmunk chain), and atempo refuses factors under 0.5, so extreme

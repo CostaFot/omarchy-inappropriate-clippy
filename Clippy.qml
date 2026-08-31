@@ -115,9 +115,10 @@ Item {
     respawn: 300, screen: "", quotesFile: "", promptFile: "",
     slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10, dodge: 0.1, dodgeSound: null,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
-    ttsSaved: "", cloneTempo: 1, clonePitch: 1, duck: 0.8, duckSaved: "",
+    ttsSaved: "", cloneTempo: 1, clonePitch: 1, voiceCacheMb: 500, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
-    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true,
+    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true, reactions: true,
+    reactionCooldown: 2700, reactionGap: 600, gags: true, peekChance: 0.04,
     greeted: false, leaderboard: "", leaderboardSaved: ""
   })
   function defaultFor(key) { return key === "flingSound" || key === "dodgeSound" ? slapSoundSetting : settingDefaults[key] }
@@ -132,7 +133,7 @@ Item {
     if (!isNaN(Number(s))) return Number(s)
     return s
   }
-  readonly property real spriteSize: clamp(Number(setting("size", 30)) || 30, 20, 200)
+  readonly property real spriteSize: clamp(Number(setting("size", 30)) || 30, 20, 400)
   readonly property int intervalMin: Math.max(5, Number(setting("intervalMin", 90)) || 90)
   readonly property int intervalMax: Math.max(intervalMin, Number(setting("intervalMax", 420)) || 420)
   readonly property real speed: clamp(Number(setting("speed", 40)) || 40, 5, 500)
@@ -144,6 +145,9 @@ Item {
   // A headstone at the death spot until the respawn. It is never part of
   // the window's input mask, so it cannot block a click on the bar.
   readonly property bool tombstoneEnabled: setting("tombstone", true) !== false
+  // Scripted stunts (the tumble entrance, the corner peek, the fling's
+  // long drop).
+  readonly property bool gagsEnabled: setting("gags", true) !== false
 
   // Writes inline keys on our shell.json entry (undefined removes a key).
   // The shell rewrites shell.json and remounts us; persisted state carries
@@ -205,6 +209,9 @@ Item {
   // Letting go of him mid-fling throws him off the bar, fatally.
   readonly property bool flingEnabled: setting("fling", true) !== false
   readonly property bool crashLinesOn: setting("crashLines", true) !== false
+  // Instant book lines when the focused window — or the browser tab, read
+  // off the window title — turns into a matching app or site.
+  readonly property bool reactionsOn: setting("reactions", true) !== false
   // `ai: true` has his unprompted and clicked lines come from the user's
   // default coding agent (scripts/clippy-ai), reacting to what's on screen,
   // battery, the hour. The book stays the fallback. `aiAgent` overrides
@@ -261,6 +268,17 @@ Item {
   readonly property real cloneTempo: clamp(Number(setting("cloneTempo", 1)) || 1, 0.5, 2)
   readonly property real clonePitch: clamp(Number(setting("clonePitch", 1)) || 1, 0.5, 2)
   readonly property bool cloneKnobsApply: typeof ttsSetting === "string" && ttsSetting.indexOf("speak-clone") !== -1
+  // MB the clone line cache may hold; the daemon prunes least-recently-played
+  // renders past it, 0 = no cap. Reaches the daemon through the environment
+  // of whichever of our processes spawns it (a spoken line or a warm), so a
+  // change applies from the daemon's next start (it exits after 15 idle
+  // minutes). Sanitized to a clean integer here — the env string must never
+  // be something the daemon's int() would choke on.
+  readonly property int voiceCacheMb: {
+    var n = Number(setting("voiceCacheMb", 500))
+    return isNaN(n) ? 500 : Math.max(0, Math.round(n))
+  }
+  readonly property var voiceCacheEnv: ({ CLIPPY_VOICE_CACHE_MB: String(voiceCacheMb) })
   // Ducking: every *other* audio stream drops to `duck` of its volume
   // while he speaks and comes back after. Works with any engine: the
   // snapshot is taken before the engine spawns (see scripts/duck).
@@ -461,7 +479,6 @@ Item {
   readonly property bool barHidden: shell && shell.bar ? shell.bar.barHidden === true : false
   readonly property int defaultBarSize: barVertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
   readonly property int barSize: shell && shell.bar ? Math.max(0, shell.bar.barSize) : defaultBarSize
-  readonly property int bubbleReserve: 150
   readonly property bool shown: opened && !barVertical && !barHidden && !asleep
 
   // Asleep while nobody can see him: the session is locked, the shell's idle
@@ -547,6 +564,7 @@ Item {
   function fallAsleep() {
     console.log("clippy: asleep, " + awayReason())
     abortListen()
+    peekCancel(true) // before the lastX write below: store the bar spot, not a corner
     asleepSince = Date.now()
     walkAnim.stop()
     shoveAnim.stop()
@@ -609,9 +627,15 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun", "noBrain", "heardNothing", "dodged"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "slappedPeek", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun", "noBrain", "heardNothing", "dodged"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
+  // The window reactions ride in the same JSON files under a "reactions"
+  // key (regex string -> lines array) but OUTSIDE quoteKeys — a parallel
+  // book pair, merged per pattern at match time the way pool() merges
+  // per key. The key loop below never touches it.
+  property var reactionBook: ({})
+  property var extraReactionBook: ({})
   function emptyBook() {
     var b = {}
     for (var i = 0; i < quoteKeys.length; i++) b[quoteKeys[i]] = []
@@ -634,8 +658,18 @@ Item {
     var raw = Array.isArray(data) ? { quotes: data } : (data || {})
     var b = {}
     for (var i = 0; i < quoteKeys.length; i++) b[quoteKeys[i]] = normalizeQuotes(raw[quoteKeys[i]])
-    if (extra) extraBook = b
-    else book = b
+    // Always rebuilt, so a quotesFile edit that drops "reactions" resets
+    // the extra map too (the emptyBook discipline).
+    var rb = {}
+    var rr = raw.reactions
+    if (rr && typeof rr === "object" && !Array.isArray(rr)) {
+      for (var p in rr) {
+        var lines = normalizeQuotes(rr[p])
+        if (lines.length) rb[p] = lines
+      }
+    }
+    if (extra) { extraBook = b; extraReactionBook = rb }
+    else { book = b; reactionBook = rb }
   }
   function pool(key) {
     var all = book[key].concat(extraBook[key])
@@ -691,6 +725,7 @@ Item {
     if (!opened) return "hidden"
     if (asleep) return "asleep"
     if (mood === "dead" || mood === "dying" || mood === "reviving") return "dead — he judges nothing from the grave; respawn first"
+    if (peeking) return "not now" // mid-peek; the verdict-say would tangle the dwell
     if (!aiEnabled) return "off — the look runs through your coding agent; set ai true first"
     if (listening || replying) return "busy — he's mid-conversation; wait for the comeback"
     if (lookProc.running) return "busy — already looking; the verdict lands in his bubble"
@@ -784,6 +819,7 @@ Item {
     if (!opened) return "hidden"
     if (asleep) return "asleep"
     if (mood === "dead" || mood === "dying" || mood === "reviving") return "dead — he hears nothing from the grave; respawn first"
+    if (peeking) return "not now" // listen hides the bubble, which would fire the out-leg mid-record
     if (!aiEnabled) { sayNoBrain(); return "off — the comeback runs through your coding agent; set ai true first (he told you himself)" }
     if (voxtypeMissing) return "no ears — voxtype isn't installed; `reply <text>` talks back without a mic"
     if (looking) return "busy — he's judging the screen; wait for the verdict"
@@ -925,6 +961,112 @@ Item {
     }
   }
 
+  // ---- window reactions --------------------------------------------------
+  // Instant book lines when the focused window turns into a matching app
+  // or site — the crash-reaction shape: no agent call, nothing leaves the
+  // machine, works with `ai` off. Browser tabs count: the Hyprland window
+  // title carries the page title, and quickshell consumes windowtitlev2
+  // internally, so activeToplevel.title updates on a tab switch with no
+  // focus change and the derived key below reevaluates. Patterns are
+  // tested against class and title SEPARATELY, case-insensitive (Steam
+  // anchors ^steam$ on the class; X anchors on the title's "/ X"
+  // separator). Pacing outranks the joke (the mostly-still rule): one
+  // line per pattern per 45 min AND one reaction of any kind per 10 min
+  // by default — `reactionCooldown`/`reactionGap`, seconds, 0 disables
+  // a gate. Deliberately no agentBrain.remember(): the agent
+  // already sees the focused window in clippy-ai's core facts, and
+  // window switches would flood the 5-deep ring.
+  property var reactionRegexCache: ({}) // pattern -> RegExp | null (null = bad, warned once)
+  function reactionRegex(p) {
+    if (p in reactionRegexCache) return reactionRegexCache[p]
+    var re = null
+    try { re = new RegExp(p, "i") }
+    catch (e) { console.warn("clippy: bad reactions regex \"" + p + "\": " + e) }
+    reactionRegexCache[p] = re
+    return re
+  }
+  function matchReactions(cls, title) {
+    var seen = {}, hits = []
+    var books = [reactionBook, extraReactionBook]
+    for (var b = 0; b < books.length; b++)
+      for (var p in books[b]) {
+        if (seen[p]) continue
+        seen[p] = true
+        var re = reactionRegex(p)
+        if (!re || (!re.test(cls) && !re.test(title))) continue
+        var q = (reactionBook[p] || []).concat(extraReactionBook[p] || [])
+        if (clean) q = q.filter(function (x) { return !x.nsfw })
+        if (q.length) hits.push({ pattern: p, quotes: q })
+      }
+    return hits
+  }
+  readonly property string activeWinClass: {
+    var t = Hyprland.activeToplevel
+    if (!t) return ""
+    var ipc = t.lastIpcObject
+    if (ipc && ipc["class"]) return String(ipc["class"])
+    return t.wayland && t.wayland.appId ? String(t.wayland.appId) : ""
+  }
+  readonly property string activeWinTitle: {
+    var t = Hyprland.activeToplevel
+    return t ? String(t.title || "") : ""
+  }
+  readonly property string activeWinKey: activeWinClass + "\n" + activeWinTitle
+  // The first delivery after a mount is state, not a transition — layout
+  // writes to shell.json remount us, and a remount must not re-fire a
+  // reaction at whatever already has focus. And one focus change is TWO
+  // property updates (title lands first, the class follows from the async
+  // lastIpcObject refresh), briefly pairing the old title with the new
+  // class — reacting on the raw signal could jab you for the window you
+  // just left. The settle timer coalesces the burst (a fast tab flip
+  // too) into one look at the settled state.
+  property bool reactionArmed: false
+  onActiveWinKeyChanged: {
+    // Arm only on a real observation: at a cold shell start the first
+    // delivery is the empty null-toplevel state, and eating just that
+    // would let the already-focused window read as a transition.
+    if (!reactionArmed) { if (activeWinKey !== "\n") reactionArmed = true; return }
+    reactionSettle.restart()
+  }
+  Timer {
+    id: reactionSettle
+    interval: 250
+    onTriggered: {
+      if (!root.reactionsOn || root.activeWinKey === "\n") return
+      root.reactionReact(root.activeWinClass, root.activeWinTitle)
+    }
+  }
+  property var reactionLastAt: ({})
+  property real reactionGlobalAt: 0
+  // Pacing, in seconds like every other time key. 0 turns a gate off.
+  readonly property int reactionCooldownMs: reactionPaceMs("reactionCooldown", 2700)
+  readonly property int reactionGapMs: reactionPaceMs("reactionGap", 600)
+  function reactionPaceMs(key, defSecs) {
+    var n = Number(setting(key, defSecs))
+    return Math.max(0, isNaN(n) ? defSecs : n) * 1000
+  }
+  function reactionReact(cls, title) {
+    var hits = matchReactions(cls, title)
+    if (!hits.length) return
+    var now = Date.now()
+    // Inside the global gap nothing is stamped, so the next quiet-window
+    // match still lands fresh.
+    if (now - reactionGlobalAt < reactionGapMs) return
+    var live = hits.filter(function (h) {
+      return !(reactionLastAt[h.pattern] && now - reactionLastAt[h.pattern] < reactionCooldownMs)
+    })
+    if (!live.length) return
+    var h = randomFrom(live)
+    // Stamped BEFORE the state gates (the crashLastAt discipline): a
+    // snoozed doomscroll must not bank a reaction for later. Every
+    // matched pattern is stamped so one page can't queue two lines.
+    reactionGlobalAt = now
+    for (var i = 0; i < hits.length; i++) reactionLastAt[hits[i].pattern] = now
+    if (isSnoozed() || dragging || occupied || peeking) return
+    var q = randomFrom(h.quotes)
+    if (q) say(q.text, q.anim)
+  }
+
   // ---- crash reactions ---------------------------------------------------
   // systemd-coredump journals every dump under a fixed MESSAGE_ID with
   // structured COREDUMP_* fields — the same stream omarchy-crash-watch
@@ -959,7 +1101,7 @@ Item {
     if (crashLastAt[name] && now - crashLastAt[name] < 60000) return
     crashLastAt[name] = now
     agentBrain.remember(name + " crashed on them")
-    if (isSnoozed() || dragging || occupied) return
+    if (isSnoozed() || dragging || occupied || peeking) return
     var q = randomQuoteFrom("crashed")
     if (q) say(q.text.replace(/\{app\}/g, name), q.anim)
   }
@@ -1009,6 +1151,12 @@ Item {
   function maybeBoot() {
     if (booted || stage.width <= 0) return
     booted = true
+    gagAnim.stop()
+    lobAnim.stop()
+    lobSplat.stop()
+    peekCancel(false) // a remount reset the flags anyway; the fresh gagDy = 0 lands him
+    peekGrown = false
+    gagDy = 0
     if (persisted.deadUntil === -1 || persisted.deadUntil > Date.now()) {
       mood = "dead"
       armRespawn()
@@ -1063,7 +1211,10 @@ Item {
   }
 
   function decide() {
-    if (mood !== "idle" || dragging || asleep || occupied) return
+    if (mood !== "idle" || dragging || asleep || occupied || peeking) return
+    // A beat can be the corner peek instead of a walk (needs gags on; not
+    // while snoozed — a peek speaks). Same beat, no new timers.
+    if (gagsEnabled && peekChance > 0 && !isSnoozed() && Math.random() < peekChance) { gagPeek(); return }
     // Parked on a widget (drag-drop, or one appeared under him): itchier
     // feet, but still the normal walk on the normal beat — no new timers.
     var urge = onWidget() ? Math.max(restless, 0.8) : restless
@@ -1242,16 +1393,23 @@ Item {
     bubble.shown = false
     if (mood === "talking") {
       mood = "idle"
-      if (!dragging) schedule(800)
+      if (!dragging && !peeking) schedule(800) // mid-peek the gag owns the beat
     }
     if (!quoteTimer.running && mood !== "dead") scheduleQuote()
+    // The peek dwells exactly as long as its bubble lives: any bubble
+    // death starts the out-leg. After a slap the recoil already ran, so
+    // this side of the rendezvous finishes when the recoil beat the voice.
+    if (peeking) {
+      if (!peekLeaving) peekOut(350)
+      else if (!peekAnim.running) peekFinish()
+    }
   }
 
   function unprompted() {
     if (asleep) return  // wakeUp() reschedules
     scheduleQuote()
     if (mood !== "idle" && mood !== "walking") return
-    if (isSnoozed() || dragging || occupied) return
+    if (isSnoozed() || dragging || occupied || peeking) return
     var q = nextQuote()
     if (q) say(q.text, q.anim, q.ai)
   }
@@ -1271,6 +1429,7 @@ Item {
   function kill(lineKey) {
     if (mood === "dead" || mood === "dying") return
     abortListen()
+    peekCancel(false) // dies where he hangs; finishDeath zeroes gagDy, placeGrave clamps
     walkAnim.stop()
     shoveAnim.stop()
     brain.stop()
@@ -1290,6 +1449,8 @@ Item {
 
   function finishDeath() {
     mood = "dead"
+    gagDy = 0 // a fling's long drop ends here; the grave stands on the bar
+    peekGrown = false // a mid-peek death stayed giant until now
     persisted.killCount++
     bumpLeaderboard(1, 0)
     placeGrave()
@@ -1318,16 +1479,31 @@ Item {
 
   function revive() {
     respawnTimer.stop()
+    gagAnim.stop()
+    lobAnim.stop()
+    lobSplat.stop()
+    peekCancel(false) // belt-and-braces: the kill already cleared it
+    peekGrown = false
+    gagDy = 0
     if (mood !== "dead") return
     persisted.deadUntil = 0
     if (actor.x < 0 || actor.x > stage.width - actor.width)
       actor.x = Math.round(randomSpot(Math.max(0, stage.width - actor.width)))
     actor.rotation = 0
-    mood = "reviving"
-    sprite.play("Greeting", false, function () {
+    var comeback = function (anim) {
       root.mood = "idle"
-      root.say(root.randomLine("comeback", "I'm back. Don't act like you didn't miss me."))
-    })
+      root.say(root.randomLine("comeback", "I'm back. Don't act like you didn't miss me."), anim)
+    }
+    if (gagsEnabled && !asleep && Math.random() < entranceChance) {
+      // Coin flip between the entrances. The dizzy head-scratch is the
+      // tumble's button, the shake-off the lob's; the sprite's onDone
+      // calls with no args, so the plain Greeting path stays random.
+      if (Math.random() < 0.5) gagEntrance(function () { comeback("IdleHeadScratch") })
+      else gagLob(function () { comeback("EmptyTrash") })
+      return
+    }
+    mood = "reviving"
+    sprite.play("Greeting", false, comeback)
   }
 
   // Clicking the grave gets you the epitaph, spoken from beyond. Not
@@ -1369,7 +1545,9 @@ Item {
     if (!slapEnabled || dragging) return false
     if (mood === "dead" || mood === "dying" || mood === "reviving") return false
     dir = Number(dir) < 0 ? -1 : 1
-    if (dodgeChance > 0 && Math.random() < dodgeChance) return dodge(dir)
+    // Mid-peek every swing lands: there is no room to sidestep at a
+    // corner, and the dodge's shove writes persisted.lastX.
+    if (!peeking && dodgeChance > 0 && Math.random() < dodgeChance) return dodge(dir)
     var now = Date.now()
     var recent = slapTimes.filter(function (t) { return now - t < root.slapWindowMs })
     recent.push(now)
@@ -1385,12 +1563,14 @@ Item {
     bubble.shown = false
     if (mood === "walking") sprite.exit()
 
-    var maxX = Math.max(0, stage.width - actor.width)
-    var distance = rand(50, 120) * (spriteSize / 30)
-    shoveAnim.stop()
-    shoveAnim.duration = 380
-    shoveAnim.to = Math.round(clamp(actor.x + dir * distance, 0, maxX))
-    shoveAnim.start()
+    if (!peeking) { // the recoil replaces the shove (whose finish writes lastX)
+      var maxX = Math.max(0, stage.width - actor.width)
+      var distance = rand(50, 120) * (spriteSize / 30)
+      shoveAnim.stop()
+      shoveAnim.duration = 380
+      shoveAnim.to = Math.round(clamp(actor.x + dir * distance, 0, maxX))
+      shoveAnim.start()
+    }
     wobble.stop()
     wobble.dir = dir
     wobble.start()
@@ -1400,9 +1580,17 @@ Item {
       kill("knockedOut")
       return true
     }
-    var q = randomQuoteFrom("slapped")
+    // Mid-peek the full slapped pool drags: the peek's exit rendezvous
+    // waits on the bubble, so a long rant (450 ms/word) pins him clamped
+    // at the corner. Short yelps instead; an empty slappedPeek pool
+    // (quotesFile without the key, clean with no survivors) falls back.
+    var q = (peeking ? randomQuoteFrom("slappedPeek") : null) || randomQuoteFrom("slapped")
     say(q ? q.text : "Ow.", q && q.anim ? q.anim : "Alert", false, !!fx)
     if (fx) { slapWaitFx = fx; slapVoiceCap.restart() }
+    // Swatted back into his corner: the recoil starts at once and the
+    // bubble rides the live bindings, speaking clamped at the corner
+    // until it dies and the rendezvous in hideBubble() restores him.
+    if (peeking) peekOut(250)
     return true
   }
 
@@ -1568,6 +1756,7 @@ Item {
   }
   Process {
     id: ttsProc
+    environment: root.voiceCacheEnv // the voice daemon inherits its cache cap
     // Belt and braces for a real unload (plugin disable, shell exit):
     // nothing else kills the child there, and running=false wouldn't either.
     Component.onDestruction: signal(15)
@@ -1661,8 +1850,9 @@ Item {
   // live voice becomes a speak-clone command (mount, useVoice, set tts,
   // setup-voice's set) the whole book is rendered into the cache in the
   // background, so a fresh clone's slap reaction doesn't land 2 s late.
-  // The cache is keyed by the sample's contents and never pruned, so a
-  // voice warmed once stays warm; with a full cache this is a ~0.3 s
+  // The cache is keyed by the sample's contents and pruned least-recently-
+  // played-first (voiceCacheMb), with every warm pass counting as a play,
+  // so a voice warmed once stays warm; with a full cache this is a ~0.3 s
   // no-op, which is why it can run on every mount without a flag. The
   // command is handed over explicitly (--tts) so the warm can't race the
   // settings write, and a warm in flight for the previous voice is killed
@@ -1679,6 +1869,7 @@ Item {
   }
   Process {
     id: warmBookProc
+    environment: root.voiceCacheEnv // a warm may be what spawns the daemon
     stderr: StdioCollector { id: warmBookErr }
     stdout: StdioCollector { id: warmBookOut }
     onExited: function (code) {
@@ -1693,6 +1884,7 @@ Item {
   }
   Process {
     id: warmProc
+    environment: root.voiceCacheEnv // a warm may be what spawns the daemon
     stderr: StdioCollector { id: warmErr }
     onExited: function (code) {
       // Not-a-speak-clone is gated before the spawn, so nonzero is real.
@@ -1847,6 +2039,302 @@ Item {
     NumberAnimation { target: actor; property: "rotation"; to: 0; duration: 160; easing.type: Easing.OutQuad }
   }
 
+  // ---- gags --------------------------------------------------------------
+  // Scripted stunts on the full-screen stage. All y motion is this one
+  // additive offset on the actor's feet-line binding (the Tombstone thud
+  // pattern): a gag that leaves the bar (the peek, the lob's arc, the
+  // fling's long drop) sets or animates gagDy and ends — or is aborted —
+  // at 0, which is the return-to-the-bar guarantee. Nothing persists it,
+  // so a remount lands him back on the feet line for free. The tumble
+  // entrance never touches it — the roll stays on the bar line.
+  property real gagDy: 0
+  // How often a revive turns into an entrance gag (then a coin flip picks
+  // the tumble or the lob). A constant, not a setting: the on/off taste
+  // call is the `gags` key, the odds are ours.
+  readonly property real entranceChance: 0.35
+
+  // The tumble (v1.45.0, replacing v1.42.0's skyfall — Costa never warmed
+  // to it): both leans of one roll, ending together. Runs inside
+  // "reviving", so every existing gate (say, slap, grab, decide, fling)
+  // refuses for free. No gagDy — he rolls in along the bar line.
+  ParallelAnimation {
+    id: gagAnim
+    property var landed: null
+    NumberAnimation { id: gagSlide; target: actor; property: "x"; easing.type: Easing.OutCubic }
+    NumberAnimation { id: gagSpin; target: actor; property: "rotation"; easing.type: Easing.OutCubic }
+    // stopped() fires on interrupts too: whatever cut the roll short must
+    // not leave him pivoting around his middle.
+    onStopped: actor.transformOrigin = Item.Bottom
+    onFinished: {
+      actor.transformOrigin = Item.Bottom
+      actor.rotation = 0 // three full turns: 1080 ≡ 0, the snap is invisible
+      var f = landed
+      landed = null
+      if (root.mood !== "reviving") return // a mid-roll kill owns him now
+      root.mood = "idle"
+      // Tips the way he was rolling before settling: momentum, sold.
+      wobble.dir = gagSpin.to > 0 ? 1 : -1
+      wobble.restart()
+      if (f) f()
+    }
+  }
+
+  // The tumble: he rolls in along the bar line from the nearest screen
+  // edge like a dropped coin — the slide and the spin decelerate together
+  // — tips upright and scratches his head. `onLanded` runs after mood is
+  // back to idle; null settles him into the idle loop quietly (the IPC
+  // test path — no line, see the gag verb).
+  function gagEntrance(onLanded) {
+    walkAnim.stop()
+    shoveAnim.stop()
+    wobble.stop()
+    brain.stop()
+    quoteTimer.stop()
+    mood = "reviving"
+    gagAnim.stop()
+    var target = Math.round(clamp(actor.x, 0, Math.max(0, stage.width - actor.width)))
+    var fromLeft = target + actor.width / 2 < stage.width / 2
+    actor.x = fromLeft ? -actor.width : stage.width
+    actor.rotation = 0
+    // A roll pivots his middle; the wobble's Bottom pivot would sweep him
+    // through the screen edge. Every way out of gagAnim restores it.
+    actor.transformOrigin = Item.Center
+    gagSlide.to = target
+    gagSpin.from = 0
+    gagSpin.to = (fromLeft ? 1 : -1) * 1080
+    var d = Math.round(clamp(Math.abs(target - actor.x) * 0.55, 500, 1100))
+    gagSlide.duration = d
+    gagSpin.duration = d
+    gagAnim.landed = function () {
+      if (onLanded) onLanded()
+      else sprite.play("IdleHeadScratch", false, function () { root.idleAnim(); root.scheduleQuote() })
+    }
+    sprite.play("RestPose", true)
+    gagAnim.start()
+  }
+
+  // The lob (v1.46.0): someone off-screen threw him back — the fling's
+  // revenge. Linear x from the nearest side edge under an arced gagDy: a
+  // flat parabola over a bottom bar, or a decelerating toss up from the
+  // bottom edge on a top bar (the mirror of the fling's long drop —
+  // gagDy is set to the full drop while he is off-stage, the peek's
+  // invisible-teleport trick), with a lazy two-turn spin on the tumble's
+  // Center-pivot discipline. Ends at gagDy 0 on every path: the flight's
+  // own endpoint is 0, so even an abandoned run (mid-air kill) lands the
+  // offset. Runs inside "reviving" like the tumble.
+  ParallelAnimation {
+    id: lobAnim
+    property var landed: null
+    NumberAnimation { id: lobSlide; target: actor; property: "x"; easing.type: Easing.Linear }
+    NumberAnimation { id: lobSpin; target: actor; property: "rotation"; easing.type: Easing.Linear }
+    SequentialAnimation {
+      NumberAnimation { id: lobRise; target: root; property: "gagDy"; easing.type: Easing.OutQuad }
+      NumberAnimation { id: lobFall; target: root; property: "gagDy"; to: 0; easing.type: Easing.InQuad }
+    }
+    // stopped() fires on interrupts too — same rule as the tumble's.
+    onStopped: actor.transformOrigin = Item.Bottom
+    onFinished: {
+      actor.transformOrigin = Item.Bottom
+      actor.rotation = 0 // two full turns: 720 ≡ 0, the snap is invisible
+      if (root.mood !== "reviving") { landed = null; return } // a mid-air kill owns him now
+      lobSplat.dir = lobSpin.to > 0 ? 1 : -1
+      lobSplat.start()
+    }
+  }
+  // The face-plant: he slams over his feet the way he was flying, lies
+  // there a beat, springs back up. Bottom pivot (restored above), so the
+  // landing tips inward — the entry edge is always the near one.
+  SequentialAnimation {
+    id: lobSplat
+    property int dir: 1
+    NumberAnimation { target: actor; property: "rotation"; to: lobSplat.dir * 82; duration: 110; easing.type: Easing.InQuad }
+    PauseAnimation { duration: 450 }
+    NumberAnimation { target: actor; property: "rotation"; to: 0; duration: 300; easing.type: Easing.OutBack }
+    onStopped: actor.rotation = 0 // an interrupt must not leave him planted
+    onFinished: {
+      var f = lobAnim.landed
+      lobAnim.landed = null
+      if (root.mood !== "reviving") return
+      root.mood = "idle"
+      if (f) f()
+    }
+  }
+
+  // The lob: thrown back in on an arc, face-plant, gets up and shakes
+  // himself off. `onLanded` runs after mood is back to idle; null settles
+  // him into the idle loop via the shake alone (the IPC test path — no
+  // line, see the gag verb).
+  function gagLob(onLanded) {
+    walkAnim.stop()
+    shoveAnim.stop()
+    wobble.stop()
+    brain.stop()
+    quoteTimer.stop()
+    mood = "reviving"
+    gagAnim.stop()
+    lobAnim.stop()
+    lobSplat.stop()
+    var target = Math.round(clamp(actor.x, 0, Math.max(0, stage.width - actor.width)))
+    var fromLeft = target + actor.width / 2 < stage.width / 2
+    actor.x = fromLeft ? -actor.width : stage.width
+    actor.rotation = 0
+    // The spin pivots his middle, the tumble's rule; every way out of
+    // lobAnim restores Bottom before the splat needs it.
+    actor.transformOrigin = Item.Center
+    lobSlide.to = target
+    lobSpin.from = 0
+    lobSpin.to = (fromLeft ? 1 : -1) * 720
+    if (barBottom) {
+      gagDy = 0
+      lobRise.to = -clamp(stage.height * 0.22, 60, 260)
+    } else {
+      gagDy = stage.height - actor.height
+      lobRise.to = 0 // the toss just barely clears the ledge
+    }
+    var dist = Math.max(Math.abs(target - actor.x), Math.abs(gagDy))
+    var d = Math.round(clamp(dist * 0.45, 550, 1000))
+    lobSlide.duration = d
+    lobSpin.duration = d
+    lobRise.duration = barBottom ? d / 2 : d
+    lobFall.duration = barBottom ? d / 2 : 0
+    lobAnim.landed = function () {
+      if (onLanded) onLanded()
+      else sprite.play("EmptyTrash", false, function () { root.idleAnim(); root.scheduleQuote() })
+    }
+    sprite.play("RestPose", true)
+    lobAnim.start()
+  }
+
+  // The corner peek (v1.44.0): he slides half-in from a far-edge corner,
+  // says a line, dwells while the bubble lives, slides back out. `peeking`
+  // — not mood — is the truth here: mood goes idle→talking when he speaks
+  // mid-peek (the entrance's "reviving" trick would make say() and slap()
+  // refuse, and the peek needs both). The vertical never animates: gagDy
+  // is set to the far edge while he is fully off-stage (the teleport is
+  // invisible), and both legs are one NumberAnimation on actor.x.
+  property bool peeking: false
+  property bool peekLeaving: false // the out-leg has started
+  property real peekReturnX: 0     // his bar spot, restored after — never a corner x
+  // He peeks in BIG — at bar size he was an unslappable speck in the
+  // corner. A separate flag (not `peeking ? …` on the sprite) so a
+  // mid-peek death keeps the giant through the whole choreography;
+  // finishDeath() clears it the way it zeroes gagDy. The multiplier is
+  // ours, the entranceChance rule.
+  property bool peekGrown: false
+  readonly property real peekSize: clamp(spriteSize * 5, 140, 400)
+  // Chance an idle beat turns into a peek (the dodge reader: 0 = never,
+  // true = every beat, a non-number falls back to the default).
+  readonly property real peekChance: {
+    var v = setting("peekChance", 0.04)
+    var n = v === true ? 1 : Number(v)
+    return clamp(isNaN(n) ? 0.04 : n, 0, 1)
+  }
+
+  NumberAnimation {
+    id: peekAnim
+    target: actor
+    property: "x"
+    property var done: null
+    onFinished: { var f = done; done = null; if (f) f() }
+  }
+  // Fallback dwell only for the say-that-failed corner (empty pool): no
+  // bubble will ever hide to end the peek, so this does.
+  Timer { id: peekDwell; onTriggered: root.peekOut(350) }
+  // A bubble can die right into the restore (a mid-peek slap's line
+  // outlives the recoil) and its 140 ms fade rides the actor bindings —
+  // restoring x while it fades drags the ghost to the bar for a blink.
+  // peekFinish() parks here until the fade is truly over.
+  Timer { id: peekGhost; interval: 200; onTriggered: root.peekFinish() }
+
+  function gagPeek() {
+    walkAnim.stop()
+    shoveAnim.stop()
+    wobble.stop()
+    brain.stop()
+    quoteTimer.stop()
+    peeking = true
+    peekLeaving = false
+    peekReturnX = actor.x // a bar coordinate: only reachable from idle
+    peekGrown = true      // before the geometry below: it reads the big dims
+    var left = Math.random() < 0.5
+    gagDy = (barBottom ? -1 : 1) * (stage.height - actor.height)
+    actor.x = left ? -actor.width : stage.width
+    // The vertical Look reads right from either far corner and sidesteps
+    // the character-mirroring question the side Looks raise (IDEAS.md).
+    var look = barBottom ? "LookDown" : "LookUp"
+    sprite.play(sprite.has(look) ? look : "RestPose", true)
+    peekAnim.stop()
+    peekAnim.duration = 450
+    peekAnim.easing.type = Easing.OutCubic
+    // Nearly all the way out (a corner still bites his last 10%): the
+    // swipe judge wants a travel of 60% of his width, so a half-in peek
+    // was mathematically unswipeable — the pointer only reports over him.
+    peekAnim.to = left ? Math.round(-actor.width * 0.10) : Math.round(stage.width - actor.width * 0.90)
+    peekAnim.done = function () {
+      var q = root.nextQuote()
+      if (!q || !root.say(q.text, look, q.ai)) { peekDwell.interval = 2500; peekDwell.restart() }
+    }
+    peekAnim.start()
+  }
+
+  // The dwell is the bubble's lifecycle — hideBubble() starts this leg
+  // when the line dies (timer, click dismissal, shutUp). A slap recoils
+  // through here too, faster, with the bubble still up: the restore then
+  // waits for the bubble (the two-sided rendezvous with hideBubble).
+  function peekOut(ms) {
+    peekLeaving = true
+    peekDwell.stop()
+    peekAnim.stop()
+    peekAnim.duration = ms
+    peekAnim.easing.type = Easing.InCubic
+    peekAnim.to = actor.x + actor.width / 2 < stage.width / 2 ? -actor.width : stage.width
+    peekAnim.done = function () { if (!bubble.shown) root.peekFinish() }
+    peekAnim.start()
+  }
+
+  // Deliberately does NOT write persisted.lastX — peekReturnX came from a
+  // spot lastX already knows.
+  function peekFinish() {
+    // Still-fading bubble ghost: wait it out (it anchors to him, and the
+    // x restore below would snap it to the bar mid-fade).
+    if (bubble.visible) { peekGhost.restart(); return }
+    peekGhost.stop()
+    peeking = false
+    peekLeaving = false
+    peekGrown = false // back to bar size before the x clamp reads his width
+    peekAnim.done = null
+    peekAnim.stop()
+    peekDwell.stop()
+    gagDy = 0
+    actor.x = Math.round(clamp(peekReturnX, 0, Math.max(0, stage.width - actor.width)))
+    wobble.stop() // a mid-peek slap's wobble may still be settling
+    actor.rotation = 0
+    sprite.exit()
+    mood = "idle"
+    schedule(rand(400, 1500))
+    if (!quoteTimer.running) scheduleQuote()
+  }
+
+  // Interrupt teardown (sleep, kill, remount, screen change). restore=false
+  // leaves x and gagDy for a death choreography in progress: he dies where
+  // he hangs, finishDeath() zeroes gagDy and placeGrave() clamps — the
+  // fling-grave behavior.
+  function peekCancel(restore) {
+    if (!peeking) return
+    peekAnim.done = null
+    peekAnim.stop()
+    peekDwell.stop()
+    peekGhost.stop()
+    peeking = false
+    peekLeaving = false
+    if (restore) {
+      peekGrown = false // restore=false keeps the giant: he dies the size he was slapped at
+      gagDy = 0
+      actor.x = Math.round(clamp(peekReturnX, 0, Math.max(0, stage.width - actor.width)))
+      actor.rotation = 0
+    }
+  }
+
   // ---- dragging ----------------------------------------------------------
   // Hold left on him and he comes along with the pointer, leaning away from
   // the direction he's pulled and complaining the whole way. `grabX` is where
@@ -1859,7 +2347,7 @@ Item {
   property real dragLastT: 0
 
   function grab(atX) {
-    if (!dragEnabled || dragging) return false
+    if (!dragEnabled || dragging || peeking) return false // drop() writes lastX
     if (mood === "dead" || mood === "dying" || mood === "reviving") return false
     walkAnim.stop()
     shoveAnim.stop()
@@ -1929,7 +2417,9 @@ Item {
   // `flingEchoMs`. Lands in the normal dead state, so respawn and the bar
   // icon work as usual.
   function flingOff(dir) {
-    if (mood === "dead" || mood === "dying" || mood === "reviving") return false
+    // Mid-peek refused: flingFall.from = 0 would snap gagDy out from
+    // under him, and the only route here then is IPC (drag is refused).
+    if (mood === "dead" || mood === "dying" || mood === "reviving" || peeking) return false
     abortListen()
     dir = Number(dir) < 0 ? -1 : 1
     dragging = false
@@ -1954,6 +2444,8 @@ Item {
     flingAnim.stop()
     flingX.to = to
     flingSpin.to = dir * 540
+    flingFall.from = 0
+    flingFall.to = !barBottom && gagsEnabled ? stage.height : 0
     flingAnim.duration = Math.round(clamp(Math.abs(to - actor.x) / 1.4, 600, 1600))
     flingAnim.start()
     return true
@@ -1987,6 +2479,10 @@ Item {
     property int duration: 400
     NumberAnimation { id: flingX; target: actor; property: "x"; duration: flingAnim.duration; easing.type: Easing.Linear }
     NumberAnimation { id: flingSpin; target: actor; property: "rotation"; duration: flingAnim.duration; easing.type: Easing.Linear }
+    // The long drop (gags): a throw off a top bar also plummets the whole
+    // screen. Bottom bar or gags off leaves to at 0 — a no-op, the flat
+    // sideways exit. finishDeath() zeroes gagDy either way.
+    NumberAnimation { id: flingFall; target: root; property: "gagDy"; duration: flingAnim.duration; easing.type: Easing.InQuad }
     onFinished: if (root.mood === "dying") flingHold.start()
   }
 
@@ -2051,6 +2547,8 @@ Item {
         "reply <text> — the typed version of listen; same comeback, no mic",
         "slap left|right — hit him (answers dodged when he slips it); fling left|right — off the bar, fatal",
         "kill / respawn — the deliberate versions",
+        "gag entrance|lob|peek — the tumble: rolls in along the bar; the lob: thrown back in on an arc, face-plant; the corner peek: half-in from a far corner, one line, back out (revives coin-flip tumble or lob; idle beats roll the peek at peekChance)",
+        "react <text> — a window reaction on demand: <text> stands in for the focused window's class or title (try react youtube); cooldowns bypassed",
         "epitaph — poke the grave while he's dead",
         "snooze <minutes> / unsnooze",
         "show / hide / toggle — show also revives him",
@@ -2081,6 +2579,7 @@ Item {
       if (!root.opened) return "hidden"
       if (root.asleep) return "asleep"
       if (root.mood === "dead" || root.mood === "dying" || root.mood === "reviving") return "dead — he hears nothing from the grave; respawn first"
+      if (root.peeking) return "not now"
       if (!root.aiEnabled) { root.sayNoBrain(); return "off — the comeback runs through your coding agent; set ai true first (he told you himself)" }
       if (root.looking) return "busy — he's judging the screen; wait for the verdict"
       if (root.listening) return "busy — the mic is live; he's listening, not reading"
@@ -2115,6 +2614,44 @@ Item {
       var dir = d === "left" ? -1 : (d === "right" ? 1 : (Math.random() < 0.5 ? -1 : 1))
       var r = root.slap(dir)
       return r === "dodged" ? "dodged" : r ? "ok" : (root.slapEnabled ? "not now" : "off")
+    }
+    // `gag entrance|lob|peek`: the stunts on demand — the organic rolls
+    // aren't pointer-testable and an agent should get to run one at will.
+    // The forced entrance and lob say no line on landing (the comeback
+    // book assumes a death happened); the forced peek speaks like the
+    // organic one — its line is the ordinary quotes pool, always valid.
+    function gag(name: string): string {
+      var n = String(name || "").toLowerCase()
+      if (n !== "entrance" && n !== "lob" && n !== "peek") return "no such gag — the set: entrance, lob, peek"
+      if (!root.gagsEnabled) return "off — set gags true first"
+      if (!root.opened) return "hidden"
+      if (root.asleep) return "asleep"
+      if (root.mood === "dead")
+        return n === "peek"
+          ? "dead — respawn him first"
+          : "dead — respawn does it: a " + Math.round(root.entranceChance * 100) + "% chance, then a coin flip between tumble and lob"
+      if (root.mood !== "idle" || root.dragging || root.occupied || root.peeking) return "not now"
+      if (n === "entrance") root.gagEntrance(null)
+      else if (n === "lob") root.gagLob(null)
+      else root.gagPeek()
+      return "ok"
+    }
+    // `react <text>`: fire a window reaction as if <text> were the
+    // focused window's class or title — the slap/fling non-pointer-
+    // testing idiom (a matching window isn't scriptable without opening
+    // real apps). Cooldowns are bypassed AND left unstamped: a forced
+    // run is the user asking for the bit, and it must not eat the
+    // organic 45-minute slot.
+    function react(text: string): string {
+      if (!root.reactionsOn) return "off — set reactions true first"
+      if (!root.opened) return "hidden"
+      if (root.asleep) return "asleep"
+      var t = String(text || "")
+      var hits = root.matchReactions(t, t)
+      if (!hits.length) return "no such target — nothing in the reactions map matches (built-ins: x, twitter, hacker news, chatgpt, facebook, instagram, tiktok, reddit, youtube, steam, plus the adult sites — pornhub, onlyfans, the big tube and cam sites — muted entirely under clean; a quotesFile reactions map adds more)"
+      var h = root.randomFrom(hits)
+      var q = root.randomFrom(h.quotes)
+      return q && root.say(q.text, q.anim) ? root.ipcOkVoice() : "not now"
     }
     // `fling left|right`: throws him off that end of the bar. Fatal.
     function fling(direction: string): string {
@@ -2207,6 +2744,7 @@ Item {
       if (root.asleep) return "asleep"
       if (root.mood === "dead") return "dead"
       if (root.isSnoozed()) return "snoozed"
+      if (root.peeking) return "peeking"
       return root.mood
     }
     // What the menu's footer shows.
@@ -2317,7 +2855,13 @@ Item {
         return "ok — other audio drops to " + Math.round(duckVal * 100) + "% of its volume while he talks"
           + (root.ttsOn ? "" : " (tts is off, so nothing talks yet)")
       }
+      if (key === "voiceCacheMb" && parsed !== undefined && (typeof parsed !== "number" || parsed < 0))
+        return "no — voiceCacheMb is a size in MB, 0 for no cap"
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
+      if (key === "voiceCacheMb" && parsed !== undefined)
+        return (parsed === 0 ? "ok — no cap; the voice line cache grows unpruned"
+          : "ok — the voice line cache trims least-recently-played renders past " + Math.round(parsed) + " MB")
+          + " (applies from the voice daemon's next start; it exits after 15 idle minutes)"
       if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
         if (typeof root.ttsSetting === "string") return "ok — but tts is a custom command, which ignores the built-in tuning (a clone bends with cloneTempo/clonePitch instead)"
         if (root.ttsEngineMissing) return "ok — but espeak-ng isn't installed, so he stays silent until it is"
@@ -2398,16 +2942,18 @@ Item {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
+    // Full-screen, like ClippyMenu's window: four anchors, no size. The
+    // gags need the whole screen to fall through; his feet line is still
+    // the bar edge (actor.y below), so nothing else moved.
     anchors {
       left: true
       right: true
-      top: !root.barBottom
-      bottom: root.barBottom
+      top: true
+      bottom: true
     }
-    implicitHeight: root.barSize + root.bubbleReserve
 
-    // Only Clippy and his bubble take input; the rest of the strip is
-    // click-through so the bar underneath keeps working.
+    // Only Clippy and his bubble take input; the rest of the screen is
+    // click-through so everything underneath keeps working.
     mask: Region {
       item: actor
       regions: [
@@ -2431,20 +2977,26 @@ Item {
     Item {
       id: stage
       anchors.fill: parent
-      onWidthChanged: root.maybeBoot()
+      // A resolution or monitor change invalidates a live peek's gagDy:
+      // cancel-and-restore beats a mid-air hang.
+      onWidthChanged: { if (root.peeking) root.peekCancel(true); root.maybeBoot() }
+      onHeightChanged: if (root.peeking) root.peekCancel(true)
 
       Item {
         id: actor
         width: sprite.implicitWidth
         height: sprite.implicitHeight
-        y: root.barBottom ? stage.height - height : 0
+        // The feet line stays a binding; gags ride the additive gagDy
+        // offset (the Tombstone thud pattern) so nothing ever assigns y
+        // and the binding can't be destroyed.
+        y: (root.barBottom ? stage.height - height : 0) + root.gagDy
         visible: root.mood !== "dead"
         transformOrigin: Item.Bottom
 
         ClippySprite {
           id: sprite
           assetsDir: root.pluginDir + "/assets/clippy"
-          size: root.spriteSize
+          size: root.peekGrown ? root.peekSize : root.spriteSize
         }
 
         MouseArea {
@@ -2461,30 +3013,53 @@ Item {
           onReleased: root.drop()
           onCanceled: root.drop()
 
-          // Swipe slap: the pointer only reports while it is over him, so
-          // judge the crossing from where it came in to where it left. Fast
-          // and mostly sideways across most of his width is a slap; a
-          // pointer wandering over him on the way to the tray is not.
+          // Swipe slap: the pointer only reports while it is over him.
+          // Fast and mostly sideways across him is a slap; a pointer
+          // wandering over him on the way to the tray is not. Judged on
+          // every motion event, not just on exit — a grown Clippy (the
+          // corner peek, big sizes) is wider than a 200 ms flick can
+          // traverse, so waiting for the pointer to leave his bounds
+          // made him unslappable. The anchor rolls: when the window
+          // ages out or the motion reverses it re-anchors to the last
+          // event, so a flick that starts while already hovering over
+          // him counts too (the enter-anchored judge made the natural
+          // aim-then-swipe on a peeking Clippy invisible). The travel
+          // wanted is capped at 100 px for the same reason — 60% of a
+          // 500 px body is a marathon, and the speed gate still filters
+          // drive-bys.
           property real enterX: 0
           property real enterY: 0
           property real enterT: 0
           property real lastX: 0
           property real lastY: 0
-          onEntered: { enterX = mouseX; enterY = mouseY; lastX = mouseX; lastY = mouseY; enterT = Date.now() }
+          property real lastT: 0
+          property real swipeSlapAt: 0
+          onEntered: { enterX = mouseX; enterY = mouseY; lastX = mouseX; lastY = mouseY; enterT = Date.now(); lastT = enterT }
           onPositionChanged: function (mouse) {
-            lastX = mouse.x; lastY = mouse.y
-            if (root.dragging) root.dragTo(mouse.x)
+            var now = Date.now()
+            if (now - enterT > 200 || (mouse.x - lastX) * (lastX - enterX) < 0) {
+              enterX = lastX; enterY = lastY; enterT = lastT
+            }
+            lastX = mouse.x; lastY = mouse.y; lastT = now
+            if (root.dragging) { root.dragTo(mouse.x); return }
+            // Mid-motion judging only when the travel cap binds (he is
+            // too wide to demand an exit); at bar sizes the exit judge
+            // alone keeps a fast aim-and-click from reading as a slap.
+            if (width * 0.6 > 100) judgeSwipe()
           }
-          onExited: {
+          function judgeSwipe() {
             if (!root.slapEnabled || !root.slapSwipe || pressed) return
+            if (Date.now() - swipeSlapAt < 500) return // one slap per swipe: the rolling anchor would re-arm mid-crossing
             var dx = lastX - enterX
             var dy = lastY - enterY
             var dt = Date.now() - enterT
             if (dt <= 0 || dt > 200) return
-            if (Math.abs(dx) < width * 0.6 || Math.abs(dx) < Math.abs(dy) * 1.5) return
+            if (Math.abs(dx) < Math.min(width * 0.6, 100) || Math.abs(dx) < Math.abs(dy) * 1.5) return
             if (Math.abs(dx) / dt < 1.2) return
+            swipeSlapAt = Date.now()
             root.slap(dx > 0 ? 1 : -1)
           }
+          onExited: judgeSwipe()
 
           onClicked: function (mouse) {
             if (mouse.button === Qt.RightButton) { root.showMenu(); return }
@@ -2527,10 +3102,17 @@ Item {
         // paths; a silent line landing mid-speech still cuts the old line
         // (syncSpeech falls through to the stop).
         property bool silent: false
-        above: root.barBottom
+        // Mid-peek he hangs at the far edge, so the bubble flips to his
+        // bar side — otherwise the vertical clamp parks it on top of him
+        // and the dwell is a bubble with no Clippy. A grave never shows
+        // while peeking (the kill clears the peek), so the grave branch
+        // is unaffected.
+        readonly property bool aboveHim: root.peeking ? !root.barBottom : root.barBottom
+        above: aboveHim
         x: Math.round(root.clamp(stage.mouthX - width / 2, 4, Math.max(4, stage.width - width - 4)))
-        y: root.barBottom ? (grave.shown ? grave.y : actor.y) - height - 2
-                          : (grave.shown ? grave.y + grave.height : actor.y + actor.height) + 2
+        y: Math.round(root.clamp(aboveHim ? (grave.shown ? grave.y : actor.y) - height - 2
+                                          : (grave.shown ? grave.y + grave.height : actor.y + actor.height) + 2,
+                                 4, Math.max(4, stage.height - height - 4)))
         tailX: stage.mouthX - x
         onDismissed: root.hideBubble()
         // The voice rides on the bubble: whatever shows it speaks, whatever

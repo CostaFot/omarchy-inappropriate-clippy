@@ -3,6 +3,53 @@
 Pitched 2026-08-28, in rough order of payoff-to-effort. (The short list
 that used to live in AGENTS.md was merged in here 2026-08-29.)
 
+## More gags (parked from v1.42.0)
+
+The full-screen window and the `gagDy` offset (2026-08-31) make new
+stunts cheap — each is one animation on `gagDy` ending at 0. (The
+**corner peek** parked here shipped in v1.44.0 as `gag peek` /
+`peekChance`.)
+
+Alternate entrances, pitched 2026-08-31 when Costa retired the skyfall
+(don't re-pitch that one — he never liked the falling): the **tumble**
+won and shipped as v1.45.0's `gagEntrance()`. The rest, parked — each
+could join a random entrance roll rather than replace the tumble:
+
+- ~~**The rise from the grave**~~ — built and reverted 2026-08-31
+  (don't re-pitch): three jerky OutCubic pulls on gagDy from below the
+  screen edge, `LookUp` looping, `Wave` on landing. Costa watched the
+  forced run live and called it off — "hmm i dont like it".
+- ~~**The materialize**~~ — built and reverted 2026-08-31 (don't
+  re-pitch): the sheet's `Show` flicker-in under a 550 ms OutBack scale
+  pop on the actor. Worked, but at bar size the whole thing is a blink
+  on a 24 px sprite — Costa: "he is too small to notice the animation.
+  not worth it." An entrance that reads at bar size needs travel (the
+  tumble) or bulk (the peekGrown blow-up), not an in-place pop.
+- **The lob** — shipped as v1.46.0's `gagLob()`: in from a side edge on
+  a flat parabolic arc (up from the bottom edge on a top bar — the
+  fling's revenge), 720° spin, an 82° face-plant, gets up shaking
+  himself off. Coin-flipped against the tumble on revives; `gag lob`
+  forces it.
+- ~~**The looming shrink**~~ — built and reverted 2026-08-31 (don't
+  re-pitch): materialized huge mid-screen (the peek's bulk worn as
+  `actor.scale`, the Greeting flicker-in), loomed 1.5 s, shrank onto
+  his bar spot. Worked mechanically, but the loom was silent — the
+  comeback line only came after landing — and a giant Clippy standing
+  quietly mid-screen is a special effect, not a joke. Costa: "not
+  funny enough." A speaking loom (the line delivered WHILE huge, which
+  needs the peek's flag-not-mood trick since say() refuses in
+  "reviving") was floated but not tried; that'd be the angle if this
+  territory is ever revisited. The entrance roll stays a coin flip:
+  tumble or lob.
+
+Still parked,
+much bigger: **true free 2D roaming** — walking anywhere on screen would
+need the six 1D avoidance functions rewritten as rect math (the
+`mapToItem(null,…)` y is NOT screen y for a bottom bar), 2D drag/fling
+vectors, `lastY`/`graveY` persistence, and a design answer for what a
+walking paperclip mid-screen even reads as. The gag tier was chosen
+instead on purpose; revisit only if a gag genuinely needs free movement.
+
 ## Talk-back leftovers
 
 What v1.35.0's `listen`/`reply` didn't cover: a clipboard-roast verb
@@ -52,14 +99,6 @@ journal stream), for battery, CPU, hour of the day:
 are reachable from a panel — see ~/Work/omarchy-navbar-cat for how it
 listens to Hyprland/MPRIS/UPower. Or feed more of that into `clippy-ai`'s
 facts: notifications, the workspace.
-
-## Window-class reactions
-
-A step past the reactive-lines idea above: a `reactions` key in
-quotes.json mapping window-class regex → lines, fired on Hyprland
-`activewindow` (navbar-cat shows the event wiring). Steam opens → instant
-mockery, no agent call, no latency. The agent path stays for the clever
-stuff; this covers the obvious stuff instantly.
 
 ## Battery panic as behavior, not just a line
 

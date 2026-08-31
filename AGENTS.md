@@ -44,7 +44,9 @@ OUTSIDE `docs/` must be an absolute GitHub URL, since Pages serves only
 plugin clone,
 which is what keeps the agent connection: `help` ends with
 `<pluginDir>/docs/`, not a README path. Marketplace state is
-`PUBLISHING.md`.
+`PUBLISHING.md`. `CHANGELOG.md` is release notes: one entry per release,
+terse user-facing bullets — Costa's shape ("just put the next version.
+bullet points of the changes"), not a per-commit or per-version journal.
 
 Clippy walks the Omarchy bar and insults you. The repo root IS the plugin
 (`manifest.json`, id `costafot.clippy`, kinds `panel` + `bar-widget`,
@@ -117,10 +119,14 @@ Design rules that outrank any single feature:
   defaults). `opened` + `open()`/`close()` are the `shell
   summon|hide|toggle` contract. Owns:
   - a single `PanelWindow` on `WlrLayer.Overlay` (the bar is `Top`),
-    anchored left+right and top (or bottom), height `barSize + 150`,
-    transparent, `ExclusionMode.Ignore`. Input `mask: Region { item:
+    anchored on all four sides — a full-screen transparent surface (the
+    gags fall through the whole screen; it was a `barSize + 150` strip
+    until v1.42.0), `ExclusionMode.Ignore`. Input `mask: Region { item:
     actor; regions: [bubble rect, tombstone rect] }` so everything except
-    Clippy, his bubble and a standing grave is click-through.
+    Clippy, his bubble and a standing grave is click-through. His feet
+    line is still the bar edge: `actor.y` is one binding, feet-line `+
+    gagDy` (the additive gag offset — see gags below), and `size` runs
+    20-400 since the surface no longer clips him.
   - the brain: `mood` ∈ idle | walking | talking | dying | dead |
     reviving, a `brain` Timer for idle→walk decisions, `quoteTimer` for
     unprompted lines, `bubbleTimer`, `respawnTimer`, `dieTimer`. Walking
@@ -146,6 +152,108 @@ Design rules that outrank any single feature:
     beat's walk chance to 0.8. Boot/revive placement uses `randomSpot()`
     (also gap-preferring). Null `shell.bar`, no `moduleSlots`, or no gap
     he fits in fall back to raw targets.
+  - gags (`gags`, default true, v1.42.0): scripted full-screen stunts.
+    All y motion in the plugin is one additive offset, `gagDy`, on the
+    actor's feet-line binding (the Tombstone-thud pattern — nothing ever
+    assigns `actor.y`, so the binding can't be destroyed); a gag that
+    leaves the bar sets or animates `gagDy` and ends at 0, plain state,
+    zeroed in `revive()`, `maybeBoot()` and `finishDeath()` — that's its
+    whole lifecycle. The tumble (`gagEntrance()`, v1.45.0 — it shipped
+    as the skyfall in v1.42.0, a fall in from the far screen edge; Costa
+    never warmed to it and picked the tumble from a pitched set, the
+    rest parked in IDEAS.md): he rolls in along the bar line from the
+    nearest screen edge like a dropped coin — one `ParallelAnimation`
+    (`gagAnim`: x slide + three full rotation turns, both OutCubic, so
+    the roll decelerates to a stop), pivoting `transformOrigin:
+    Item.Center` for the duration (the wobble's Bottom pivot would sweep
+    him through the screen edge; `onStopped` restores Bottom on every
+    way out, interrupts included), then rotation snaps 1080→0
+    (invisible), the slap `wobble` tips him upright the way he was
+    rolling, and the comeback line plays `IdleHeadScratch` (the dizzy
+    button — `comeback` takes an optional anim; the sprite's onDone
+    calls with no args so the plain Greeting path stays random). Never
+    touches gagDy. Runs inside `mood == "reviving"` so every existing
+    gate refuses for free, and rides that mood's sleep contract
+    (finishes on its own, ≤1.1 s — `gagAnim.onFinished` refuses to
+    flip mood to idle unless still reviving, so a mid-roll IPC kill
+    keeps its death). Triggers: `revive()` rolls an entrance with
+    `entranceChance` (0.35, a constant — the on/off taste call is the
+    `gags` key, the odds are ours; no new timers, the mostly-still rule)
+    then coin-flips tumble or lob,
+    and IPC `gag entrance` forces the tumble (the slap/fling
+    non-pointer-testing
+    idiom; says no line on landing — the comeback book assumes a death,
+    and grudge lines need kills ≥ 1 — and settles into idle via a lone
+    head-scratch).
+    The lob (`gagLob()`, v1.46.0 — the fling's revenge, from the parked
+    entrance set): someone off-screen threw him back — linear `actor.x`
+    from the nearest side edge under an arced gagDy (one SequentialAnimation
+    inside `lobAnim`: OutQuad up, InQuad down — a flat parabola apexing at
+    22 % of screen height on a bottom bar; on a top bar a single
+    decelerating toss up from the bottom edge, gagDy pre-set to the full
+    drop while he is off-stage, the peek's invisible-teleport trick, so
+    the mirror of the fling's long drop), a lazy 720° Linear spin on the
+    tumble's Center-pivot discipline (`lobAnim.onStopped` restores
+    Bottom), then `lobSplat`: an 82° face-plant the way he was flying, a
+    450 ms lie-there, an OutBack spring back up (`onStopped` zeroes
+    rotation, both stages mood-guarded like the tumble's). gagDy's own
+    endpoint is 0, so even a mid-air kill's abandoned flight lands the
+    offset before `finishDeath()` re-zeroes it. The comeback button is
+    `EmptyTrash` (the trash-shake, read as dusting himself off) — spoken
+    on the organic path, wordless via IPC `gag lob` (same
+    no-comeback-book reasoning as the forced tumble). `revive()` and
+    `maybeBoot()` stop `lobAnim`/`lobSplat` beside `gagAnim`.
+    Menu row: the "Full-screen gags"
+    ●/○ toggle (v1.43.0 — it shipped row-less; Costa asked for the row).
+    The fling's long drop lives in the fling bullet below.
+    The corner peek (v1.44.0): he slides in from a far-edge corner
+    (the two corners opposite the bar, 50/50 — a bar-edge corner would
+    just read as standing at the end of the bar) to 90% visible — a
+    half-in peek was mathematically unswipeable under the original
+    exit-anchored swipe judge, and even 90%-in the judge stayed near
+    impossible on a grown body until v1.44.1 reworked it (see the slap
+    bullet) — blown up to `peekSize`
+    (`spriteSize` ×5, clamped 140-400 — a constant multiplier, the
+    entranceChance rule; at bar size he was an unslappable speck, Costa:
+    "he is fat to small to slap!"; `peekGrown` is its own flag, not
+    `peeking`, so a mid-peek death stays giant through the choreography
+    and `finishDeath()` clears it like gagDy), says a `quotes`-pool
+    line via `nextQuote()`, dwells while the bubble lives, slides back
+    out and restores his exact bar spot. Rolled in `decide()` with
+    `peekChance` (a settings key, 0.04 default, dodge-shaped reader;
+    free-number → no menu row) on the existing idle beats — no new
+    trigger timers (`peekDwell` is only the say-failed fallback) — and
+    forced by IPC `gag peek` (which DOES speak, unlike the forced
+    entrance: its line is the ordinary quotes pool). Unlike the entrance
+    it can NOT ride `mood = "reviving"` — say() and slap() both refuse
+    there, and the peek needs both — so `peeking` (a flag, mood stays
+    idle→talking) is the truth, gating decide/unprompted/crashReact/
+    grab/flingOff/look/listen/reply/gag. gagDy never animates: it's set
+    to the far edge while he's fully off-stage, both legs are one
+    `peekAnim` on `actor.x`, and the dwell is the bubble's lifecycle —
+    `hideBubble()` and the out-leg's `done` are a two-sided rendezvous
+    into exactly one `peekFinish()`, which parks in `peekGhost` (200 ms,
+    re-armed until `bubble.visible` drops) while the bubble's fade is
+    still running — the fade rides the actor bindings, so restoring x
+    under it dragged the ghost to the bar for a blink (seen live on the
+    mid-peek slap, whose line outlives the recoil). A mid-peek slap counts normally
+    (tally, leaderboard, knockout window) but skips the dodge roll and
+    the shove (both would write a corner x into `persisted.lastX` — the
+    peek never writes lastX, `peekReturnX` is plain state) and recoils
+    him out at once, the bubble riding the live bindings and speaking
+    clamped at the corner, the fling pattern — its line comes from
+    `slappedPeek` (v1.49.0, short yelps: the exit rendezvous waits on
+    the bubble, so a long `slapped` rant at 450 ms/word pinned him
+    hanging at the corner; an empty pool falls back to `slapped`). The bubble flips to his
+    bar side while peeking (the instance's `aboveHim` binding) —
+    without the flip the vertical clamp parks it ON him at the far
+    edge and the dwell is a bubble with no Clippy (seen live, top
+    bar, bottom corner). A knockout/kill mid-peek
+    lets him die hanging: `peekCancel(false)` keeps x/gagDy,
+    `finishDeath()` zeroes gagDy and `placeGrave()` clamps — the
+    fling-grave behavior, no new grave code. Sleep, remount and stage
+    resize run `peekCancel(true)` (restore); a fling mid-peek is
+    refused (`flingFall.from = 0` would snap gagDy out from under him).
   - `IpcHandler { target: "costafot.clippy" }` — string args only, no
     optional params. `set key value` / `get key` / `settings` are the
     config surface (keys from `settingDefaults` — keep it equal to the
@@ -230,6 +338,59 @@ Design rules that outrank any single feature:
     quickshell crash never replays old dumps; the follower only runs
     while `crashLines` is on. Test a crash with
     `sleep 30 & kill -SEGV $!`.
+  - window reactions (`reactions`, default true, v1.47.0): instant book
+    lines when the focused window turns into a matching app or site —
+    the crash-reaction shape, agent-free on purpose. The source is a
+    derived `activeWinKey` (class + "\n" + title) off
+    `Hyprland.activeToplevel` (`lastIpcObject["class"]` first,
+    `wayland.appId` fallback; quickshell consumes `windowtitlev2`, so a
+    browser tab switch with no focus change updates `title` and fires
+    the change handler). One focus change is TWO updates (the title
+    lands first, the class follows from the async lastIpcObject
+    refresh, briefly pairing the old title with the new class — seen
+    live in the probe log), so the handler only restarts a 250 ms
+    settle Timer and the reaction reads the settled state; a fast tab
+    flip coalesces the same way. Patterns come from a `reactions` object in
+    quotes.json (regex string → lines; NOT in `quoteKeys` — a parallel
+    `reactionBook`/`extraReactionBook` pair rebuilt on every book load,
+    merged per pattern by concatenation, clean-filtered in the matcher
+    so an all-nsfw target under `clean` neither fires nor burns
+    cooldown — the adult-site targets (pornhub, onlyfans, the merged
+    tube and cam patterns, v1.47.2) lean on exactly that: every line
+    nsfw on purpose, subtle "Ahem." beats mixed with full jabs, and
+    `clean` mutes the whole set), compiled lazily into a throw-proof
+    cache — a bad
+    quotesFile regex warns once and is skipped, never crashes the
+    mount. Each regex is tested against class and title SEPARATELY,
+    case-insensitive (Steam anchors `^steam$` on the class; X anchors
+    on the title's "/ X" separator — bare "x" would match Xorg).
+    Pacing outranks the joke (the mostly-still rule, Costa: "we need to
+    really avoid him being chatty"): one line per pattern per 45 min
+    AND one reaction of any kind per 10 min by default — both settings
+    keys since v1.48.0 (`reactionCooldown`/`reactionGap`, seconds like
+    every other time key, 0 disables a gate; they started as constants
+    under the entranceChance rule until Costa asked for them —
+    free-number keys, so no menu row), stamps written BEFORE the state
+    gates (crashLastAt discipline — a snoozed doomscroll must not bank
+    a line) except inside the global gap, where nothing is stamped so
+    the next quiet-window match lands fresh. Gate line is
+    crashReact's: `isSnoozed() || dragging || occupied || peeking`;
+    say() drops dead/asleep/listening itself. `reactionArmed` latches
+    away everything up to and including the first REAL (non-empty)
+    observation — layout writes remount us and must not re-fire at
+    whatever already has focus, and at a cold shell start the first
+    delivery is the empty null-toplevel state, so arming on that
+    would let the already-focused window read as a transition. Deliberately
+    NO `agentBrain.remember()`: the agent already sees the focused
+    window in clippy-ai's core facts, and switches would flood the
+    5-deep ring. Menu row: the "Window reactions" ●/○ toggle (unlike
+    crashLines' IPC-only precedent — "make him shut up about my tabs"
+    is a row a user reaches for). IPC `react <text>` (v1.47.1) forces
+    one — the text stands in for the focused window's class AND title,
+    cooldowns bypassed and left unstamped (a forced run is the user
+    asking for the bit and must not eat the organic 45-minute slot) —
+    the slap/fling non-pointer-testing idiom. Organic test with
+    `alacritty --title "Hacker News"` (or a real browser tab).
 - `ClippySprite.qml` — port of clippy.js `src/animator.js`. The full sheet
   is one `Image` inside a `clip: true` 124×93 viewport, translated to the
   cell (`x = -cell.x`) — the CSS background-position approach, so a frame
@@ -263,9 +424,9 @@ Design rules that outrank any single feature:
   `cloneKnobsApply`, since the keys do nothing for non-clone voices; a
   QtQuick Column skips invisible children so they collapse without a
   gap; an off-preset IPC value highlights the nearest chip, the Size
-  row's rule); ●/○ `Entry` toggles for Sounds, "Duck other audio" (the
-duck ratio itself is IPC-only) and the leaderboard; `Entry` rows take
-an optional `hint` (dim second line,
+  row's rule); ●/○ `Entry` toggles for Sounds, "Full-screen gags",
+  "Duck other audio" (the duck ratio itself is IPC-only) and the
+  leaderboard; `Entry` rows take an optional `hint` (dim second line,
   fontSize−2, only sized when non-empty). Footer: the dim tally, "· #N
   as <handle>" from `lbCache` when joined, and stranded-audience hints
   (setup-voice under Voice only in the `!needs && !custom` state; the
@@ -461,19 +622,23 @@ an optional `hint` (dim second line,
   exchange `remember()`s itself. Ai off → both verbs say a `noBrain`
   book line themselves. No new settings key — the gesture is the opt-in.
   Test without a mic: `reply "<text>"` over IPC.
-- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut,
-  dragged, dropped, flung, crashed, welcomeBack, epitaph, firstRun,
-  noBrain, heardNothing, dodged }` (the
+- `quotes.json` — `{ quotes, lastWords, comeback, slapped, slappedPeek,
+  knockedOut, dragged, dropped, flung, crashed, welcomeBack, epitaph,
+  firstRun, noBrain, heardNothing, dodged }` (the
   key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. Content rules:
   lines must be speakable — no elongation gags or repeated letters
   ("NOOOO", "FUUUU"), clone voices read them as garbage (v1.29.1 rewrote
   every `flung` line for this; nothing enforces it) — and a count
   placeholder is phrased "kill number {kills}" / "{slaps} so far", never
-  "{kills} times", which reads "1 times". `quotesFile` is
+  "{kills} times", which reads "1 times". A `reactions` object (regex →
+  lines array, same entry shape) rides in the same file but outside
+  `quoteKeys` — see the window-reactions bullet; grudge placeholders
+  don't belong in it (kills can be 0). `quotesFile` is
   merged in (same shape, or a bare array): quotes are two books, `book` +
   `extraBook`, merged per key in `pool(key)` so FileView load order
-  doesn't matter. Bad JSON or a missing path falls back to the built-in
+  doesn't matter (reactions merge per pattern the same way). Bad JSON or
+  a missing path falls back to the built-in
   book.
 - `assets/clippy/{map.png,agent.json}` — from clippy.js via
   `scripts/fetch-assets` (dev-time only, results are committed). map.png
@@ -492,10 +657,21 @@ an optional `hint` (dim second line,
 ## Slap, drag, fling (in Clippy.qml)
 
 - Slapping: `slap(dir)` — middle-click (side hit decides direction) or a
-  pointer fling across him, judged in the actor `MouseArea` from
-  `onEntered` to `onExited` (the input mask means motion is only
-  reported over him): ≤200 ms, ≥60 % of his width, mostly horizontal,
-  ≥1.2 px/ms. A `SoundEffect` per file via an `Instantiator`
+  pointer fling across him, judged in the actor `MouseArea` (the input
+  mask means motion is only reported over him): ≤200 ms, ≥60 % of his
+  width capped at 100 px, mostly horizontal, ≥1.2 px/ms. Since v1.44.1
+  the anchor rolls (re-anchored to the last motion event when the
+  200 ms window ages out or the direction reverses — the enter-anchored
+  judge made the natural aim-then-flick invisible: a pointer resting on
+  him >200 ms could never slap without leaving and re-entering), and
+  when the 100 px cap binds (width > ~167 px — every peek, huge `size`
+  values) `judgeSwipe()` runs on every motion event, not just
+  `onExited`, because a body wider than a 200 ms flick can traverse
+  made the exit requirement mathematically unslappable; at bar sizes
+  the exit-only judge is kept deliberately so a fast aim-and-click
+  never reads as a slap, and `swipeSlapAt` (500 ms cooldown) keeps the
+  rolling anchor from re-arming one swipe into two slaps.
+  A `SoundEffect` per file via an `Instantiator`
   (`assets/sounds/slap-*.wav`, mono 44.1 kHz — SoundEffect wants WAV), a
   `shoveAnim` on `actor.x`, a `wobble` on `actor.rotation` (pivot
   `Item.Bottom`), then `say()` with a `slapped` line — silent while the
@@ -542,7 +718,11 @@ an optional `hint` (dim second line,
   event inside the last 100 ms → `flingOff(dir)`: mood `dying`, a
   `flung` line in the bubble (it clamps to the stage, so it stays at the
   edge he left by), `flingAnim` carries `actor.x` past the edge at ~1.4
-  px/ms (600-1600 ms) and spins `rotation` 540°; when it finishes the
+  px/ms (600-1600 ms) and spins `rotation` 540° — and on a top bar with
+  `gags` on, a parallel `flingFall` drops `gagDy` the whole screen
+  (InQuad), so he plummets diagonally and the bubble rides its live
+  `actor.y` binding down to the bottom corner (a bottom bar keeps the
+  flat sideways exit: `flingFall.to` stays 0); when it finishes the
   bubble lingers at the edge at full opacity for `flingHoldMs` (1500,
   `flingHold`), then is hidden with `Bubble.fadeMs` stretched to
   `flingEchoMs` (1500) so it trails off, then `flingEcho` restores
@@ -684,8 +864,24 @@ is one opaque string and ignores all three (clones bend via
   path, ref contents hash, knobs, text) — repeats instant, fresh line
   ~2-5 s warm, ~25 s cold. The contents hash (v1.28.0) is what makes a
   re-clone under the same name safe: before it, a re-cut sample kept
-  replaying every line rendered from the old one. Orphaned files are
-  never pruned; the whole dir is disposable.
+  replaying every line rendered from the old one. The daemon, as the raw
+  renders' only writer, bounds it (v1.41.0): after every render and once on
+  start it deletes least-recently-played `.wav`s until the dir is under the
+  cap — the `voiceCacheMb` key (500; 0 = no cap), which rides into the
+  daemon's environment as `CLIPPY_VOICE_CACHE_MB` via the `environment`
+  property on ttsProc and both warm Processes (whichever spawns the daemon
+  first wins its 15-minute lifetime, so a change applies from the next
+  daemon start; the QML property sanitizes to a clean integer so a garbage
+  value can never crash the daemon's `int()`, and the set reply for a
+  non-number is a refusal, the duck idiom). speak-clone and warm-voice
+  touch mtime on
+  every hit (guarded — a file pruned in the exists/utime gap must not
+  kill a warm), so a warmed book (~85 MB, ×2 with a tempo derivative) stays
+  while agent one-offs and lines keyed to a superseded sample age out —
+  before this the dir only grew (Costa found 1 GB: 2,461 files for a
+  342-line book, five re-key waves plus every AI line ever said). The
+  daemon.log is truncated per daemon start and tqdm is silenced
+  (`TQDM_DISABLE`). The whole dir is still disposable.
   `--pitch`/`--tempo` derive from the cached raw take via ffmpeg
   (asetrate*P shifts pitch and tempo together, one atempo of T/P lands
   the final tempo on T; atempo's 0.5 floor handled by chaining) into
@@ -905,6 +1101,11 @@ stays free text — IPC and agent only.
   [args]` — no `ipc call` subcommand; that form prints "Target not
   found". IpcHandler has no optional params — every arg is required.
 - Logs: `journalctl --user -o cat | grep -iE 'clippy|WARN.*scene'`.
+- The window has been full-screen (four-anchored, Overlay) since
+  v1.42.0. Watch item: a transparent Overlay surface covering the whole
+  output could in principle affect Hyprland's fullscreen direct-scanout
+  (games); pre-existing in kind (the strip already overlaid the bar),
+  not observed, but it's the first suspect if someone reports it.
 - One quickshell SIGSEGV was seen during development, right after
   "Exiting due to IPC request" while plugins were still incubating
   asynchronously — it looked like an `omarchy restart shell` landing on
@@ -947,8 +1148,8 @@ stays free text — IPC and agent only.
 
 ## Status
 
-Feature-complete at v1.40.10 (2026-08-30): everything above is live and
-verified on Costa's machine. On GitHub at the README install URL; Pages is
+Everything above is live and verified on Costa's machine (the manifest
+names the current version). On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); not on
 the marketplace — `PUBLISHING.md` has the flow, prior submissions and
 the gap list. Future work: `IDEAS.md`. How we got here: `git log`.

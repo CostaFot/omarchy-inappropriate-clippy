@@ -68,12 +68,20 @@ else:
             if isinstance(extra, list):
                 extra = {"quotes": extra}
             for k, v in extra.items():
-                book.setdefault(k, []).extend(
-                    {"text": e} if isinstance(e, str) else e for e in v)
+                if isinstance(v, dict):  # a reactions map: merge per pattern
+                    b = book.setdefault(k, {})
+                    for pat, lns in v.items():
+                        b[pat] = b.get(pat, []) + lns
+                else:
+                    book.setdefault(k, []).extend(
+                        {"text": e} if isinstance(e, str) else e for e in v)
         except (ValueError, OSError):
             pass  # the plugin ignores a broken quotesFile too
     clean = setting("clean") == "true"
-    lines = [e["text"] for v in book.values() for e in v
+    # reactions is a map of regex -> lines, not a list — flatten its values
+    flat = [{"text": e} if isinstance(e, str) else e for v in book.values()
+            for e in (sum(v.values(), []) if isinstance(v, dict) else v)]
+    lines = [e["text"] for e in flat
              if "{" not in e["text"] and not (clean and e.get("nsfw"))]
 
 cache = os.path.expanduser("~/.cache/clippy-voice")
@@ -96,6 +104,10 @@ for text in lines:
     key = key_of(text)
     out = f"{cache}/{key}.wav"
     if os.path.exists(out):
+        try:
+            os.utime(out)  # counts as played: the daemon prunes least-recent first
+        except OSError:
+            pass  # pruned in the exists/utime gap — don't let it kill the warm
         skipped += 1
         continue
     for attempt in range(2):
@@ -104,7 +116,7 @@ for text in lines:
             done += 1
             break
         except (FileNotFoundError, ConnectionRefusedError):
-            log = open(f"{cache}/daemon.log", "ab")
+            log = open(f"{cache}/daemon.log", "wb")
             subprocess.Popen([daemon], start_new_session=True, stdout=log, stderr=log)
             deadline = time.time() + 120
             while time.time() < deadline:
