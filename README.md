@@ -66,8 +66,8 @@ sites too (`set clean true` mutes that whole register). It's all matched on
 your machine and goes nowhere; `set reactions false` — or the menu row — if
 you'd rather doomscroll in peace.
 
-<!-- TODO gif placeholder: screen recording of a real tab switch to YouTube firing a reaction — or react youtube over IPC, trimmed, 20 fps -->
-<img src="assets/screenshots/reactions.gif" width="700" alt="YouTube. One video, you said. Famous last words.">
+<!-- shot: bar-strip crop of a real X tab focused in Brave firing the reaction (or react x over IPC) -->
+<img src="assets/screenshots/reactions.png" width="700" alt="Ah, X. Where your opinions go to get worse in public.">
 
 ### He sleeps when you're away
 
