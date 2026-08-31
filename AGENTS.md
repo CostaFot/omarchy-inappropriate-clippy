@@ -374,8 +374,12 @@ Design rules that outrank any single feature:
     window in clippy-ai's core facts, and switches would flood the
     5-deep ring. Menu row: the "Window reactions" ●/○ toggle (unlike
     crashLines' IPC-only precedent — "make him shut up about my tabs"
-    is a row a user reaches for). Test with
-    `alacritty --title "Hacker News"`.
+    is a row a user reaches for). IPC `react <text>` (v1.47.1) forces
+    one — the text stands in for the focused window's class AND title,
+    cooldowns bypassed and left unstamped (a forced run is the user
+    asking for the bit and must not eat the organic 45-minute slot) —
+    the slap/fling non-pointer-testing idiom. Organic test with
+    `alacritty --title "Hacker News"` (or a real browser tab).
 - `ClippySprite.qml` — port of clippy.js `src/animator.js`. The full sheet
   is one `Image` inside a `clip: true` 124×93 viewport, translated to the
   cell (`x = -cell.x`) — the CSS background-position approach, so a frame

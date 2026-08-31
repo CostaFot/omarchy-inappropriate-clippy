@@ -2538,6 +2538,7 @@ Item {
         "slap left|right — hit him (answers dodged when he slips it); fling left|right — off the bar, fatal",
         "kill / respawn — the deliberate versions",
         "gag entrance|lob|peek — the tumble: rolls in along the bar; the lob: thrown back in on an arc, face-plant; the corner peek: half-in from a far corner, one line, back out (revives coin-flip tumble or lob; idle beats roll the peek at peekChance)",
+        "react <text> — a window reaction on demand: <text> stands in for the focused window's class or title (try react youtube); cooldowns bypassed",
         "epitaph — poke the grave while he's dead",
         "snooze <minutes> / unsnooze",
         "show / hide / toggle — show also revives him",
@@ -2624,6 +2625,23 @@ Item {
       else if (n === "lob") root.gagLob(null)
       else root.gagPeek()
       return "ok"
+    }
+    // `react <text>`: fire a window reaction as if <text> were the
+    // focused window's class or title — the slap/fling non-pointer-
+    // testing idiom (a matching window isn't scriptable without opening
+    // real apps). Cooldowns are bypassed AND left unstamped: a forced
+    // run is the user asking for the bit, and it must not eat the
+    // organic 45-minute slot.
+    function react(text: string): string {
+      if (!root.reactionsOn) return "off — set reactions true first"
+      if (!root.opened) return "hidden"
+      if (root.asleep) return "asleep"
+      var t = String(text || "")
+      var hits = root.matchReactions(t, t)
+      if (!hits.length) return "no such target — nothing in the reactions map matches (built-ins: x, twitter, hacker news, chatgpt, facebook, instagram, tiktok, reddit, youtube, steam; a quotesFile reactions map adds more)"
+      var h = root.randomFrom(hits)
+      var q = root.randomFrom(h.quotes)
+      return q && root.say(q.text, q.anim) ? root.ipcOkVoice() : "not now"
     }
     // `fling left|right`: throws him off that end of the bar. Fatal.
     function fling(direction: string): string {
