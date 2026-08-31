@@ -361,9 +361,11 @@ Design rules that outrank any single feature:
     on the title's "/ X" separator — bare "x" would match Xorg).
     Pacing outranks the joke (the mostly-still rule, Costa: "we need to
     really avoid him being chatty"): one line per pattern per 45 min
-    AND one reaction of any kind per 10 min, both constants
-    (`reactionCooldownMs`/`reactionGapMs` — the entranceChance rule:
-    on/off is the key, taste is ours), stamps written BEFORE the state
+    AND one reaction of any kind per 10 min by default — both settings
+    keys since v1.48.0 (`reactionCooldown`/`reactionGap`, seconds like
+    every other time key, 0 disables a gate; they started as constants
+    under the entranceChance rule until Costa asked for them —
+    free-number keys, so no menu row), stamps written BEFORE the state
     gates (crashLastAt discipline — a snoozed doomscroll must not bank
     a line) except inside the global gap, where nothing is stamped so
     the next quiet-window match lands fresh. Gate line is

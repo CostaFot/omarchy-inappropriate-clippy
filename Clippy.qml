@@ -117,7 +117,8 @@ Item {
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
     ttsSaved: "", cloneTempo: 1, clonePitch: 1, voiceCacheMb: 500, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
-    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true, reactions: true, gags: true, peekChance: 0.04,
+    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true, reactions: true,
+    reactionCooldown: 2700, reactionGap: 600, gags: true, peekChance: 0.04,
     greeted: false, leaderboard: "", leaderboardSaved: ""
   })
   function defaultFor(key) { return key === "flingSound" || key === "dodgeSound" ? slapSoundSetting : settingDefaults[key] }
@@ -970,9 +971,9 @@ Item {
   // tested against class and title SEPARATELY, case-insensitive (Steam
   // anchors ^steam$ on the class; X anchors on the title's "/ X"
   // separator). Pacing outranks the joke (the mostly-still rule): one
-  // line per pattern per 45 min AND one reaction of any kind per 10 min,
-  // both constants — the on/off taste call is the `reactions` key, the
-  // odds are ours. Deliberately no agentBrain.remember(): the agent
+  // line per pattern per 45 min AND one reaction of any kind per 10 min
+  // by default — `reactionCooldown`/`reactionGap`, seconds, 0 disables
+  // a gate. Deliberately no agentBrain.remember(): the agent
   // already sees the focused window in clippy-ai's core facts, and
   // window switches would flood the 5-deep ring.
   property var reactionRegexCache: ({}) // pattern -> RegExp | null (null = bad, warned once)
@@ -1037,8 +1038,13 @@ Item {
   }
   property var reactionLastAt: ({})
   property real reactionGlobalAt: 0
-  readonly property int reactionCooldownMs: 45 * 60000
-  readonly property int reactionGapMs: 10 * 60000
+  // Pacing, in seconds like every other time key. 0 turns a gate off.
+  readonly property int reactionCooldownMs: reactionPaceMs("reactionCooldown", 2700)
+  readonly property int reactionGapMs: reactionPaceMs("reactionGap", 600)
+  function reactionPaceMs(key, defSecs) {
+    var n = Number(setting(key, defSecs))
+    return Math.max(0, isNaN(n) ? defSecs : n) * 1000
+  }
   function reactionReact(cls, title) {
     var hits = matchReactions(cls, title)
     if (!hits.length) return

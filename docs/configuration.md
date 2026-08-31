@@ -45,7 +45,9 @@ into the bar himself, settings and all.
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |
 | `crashLines` | `true` | When one of your programs dumps core he has a line about it, on the spot. `false` and crashes pass without comment |
-| `reactions` | `true` | When the focused window — or the browser tab, read off the window title — turns into one of the famous time-sinks (X, Reddit, YouTube, Hacker News, TikTok, Instagram, Facebook, ChatGPT, Steam) he has a line about it. The famous adult sites are targets too — mostly a pointed "Ahem." — and those lines are all nsfw, so `clean: true` mutes them entirely. Paced hard: one line per site per 45 minutes, one reaction of any kind per 10. `false` and he lets you doomscroll in peace |
+| `reactions` | `true` | When the focused window — or the browser tab, read off the window title — turns into one of the famous time-sinks (X, Reddit, YouTube, Hacker News, TikTok, Instagram, Facebook, ChatGPT, Steam) he has a line about it. The famous adult sites are targets too — mostly a pointed "Ahem." — and those lines are all nsfw, so `clean: true` mutes them entirely. Paced hard by default: one line per site per 45 minutes, one reaction of any kind per 10 (`reactionCooldown` / `reactionGap`). `false` and he lets you doomscroll in peace |
+| `reactionCooldown` | `2700` | Seconds before the same site can get another window-reaction line. `0` = no per-site cooldown |
+| `reactionGap` | `600` | Fewest seconds between window reactions of any kind. `0` = no gap |
 | `tts` | `false` | `true` and he says every line out loud through `espeak-ng` (install that yourself); a shell command as a string gets each line on stdin instead. See [voice](voice.md) |
 | `ttsVoice` | `en+m3` | The built-in voice — any name from `espeak-ng --voices`. Death still whispers |
 | `ttsSpeed` | `155` | Words per minute for the built-in voice (espeak-ng `-s`, 80–450) |
