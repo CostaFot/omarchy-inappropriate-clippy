@@ -47,8 +47,8 @@ someone off-screen lobs him back in on an arc and he lands face-first
 he also peeks in from a far corner of the screen to say something — and
 yes, you can slap him back into it.
 
-<!-- TODO gif placeholder: screen recording of the stunts — gag entrance, gag lob, gag peek over IPC on an empty workspace, trimmed, 20 fps through palettegen like slap.gif -->
-<img src="assets/screenshots/gags.gif" width="700" alt="Reports of my death were, frankly, your fault.">
+<!-- shot: screen recording of a gag peek over IPC (bottom-right corner region), trimmed before the recorder overlay, 20 fps through palettegen like slap.gif -->
+<img src="assets/screenshots/gags.gif" width="700" alt="Your uptime is impressive. Your output is not.">
 
 <!-- shot: epitaph over IPC (a click on the grave), {back} filled in -->
 <img src="assets/screenshots/tombstone.png" width="700" alt="Back in 5 minutes. Start apologizing.">
