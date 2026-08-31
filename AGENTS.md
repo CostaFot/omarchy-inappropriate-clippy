@@ -174,13 +174,34 @@ Design rules that outrank any single feature:
     gate refuses for free, and rides that mood's sleep contract
     (finishes on its own, ≤1.1 s — `gagAnim.onFinished` refuses to
     flip mood to idle unless still reviving, so a mid-roll IPC kill
-    keeps its death). Triggers: `revive()` rolls it with
+    keeps its death). Triggers: `revive()` rolls an entrance with
     `entranceChance` (0.35, a constant — the on/off taste call is the
-    `gags` key, the odds are ours; no new timers, the mostly-still rule),
-    and IPC `gag entrance` forces it (the slap/fling non-pointer-testing
+    `gags` key, the odds are ours; no new timers, the mostly-still rule)
+    then coin-flips tumble or lob,
+    and IPC `gag entrance` forces the tumble (the slap/fling
+    non-pointer-testing
     idiom; says no line on landing — the comeback book assumes a death,
     and grudge lines need kills ≥ 1 — and settles into idle via a lone
-    head-scratch). Menu row: the "Full-screen gags"
+    head-scratch).
+    The lob (`gagLob()`, v1.46.0 — the fling's revenge, from the parked
+    entrance set): someone off-screen threw him back — linear `actor.x`
+    from the nearest side edge under an arced gagDy (one SequentialAnimation
+    inside `lobAnim`: OutQuad up, InQuad down — a flat parabola apexing at
+    22 % of screen height on a bottom bar; on a top bar a single
+    decelerating toss up from the bottom edge, gagDy pre-set to the full
+    drop while he is off-stage, the peek's invisible-teleport trick, so
+    the mirror of the fling's long drop), a lazy 720° Linear spin on the
+    tumble's Center-pivot discipline (`lobAnim.onStopped` restores
+    Bottom), then `lobSplat`: an 82° face-plant the way he was flying, a
+    450 ms lie-there, an OutBack spring back up (`onStopped` zeroes
+    rotation, both stages mood-guarded like the tumble's). gagDy's own
+    endpoint is 0, so even a mid-air kill's abandoned flight lands the
+    offset before `finishDeath()` re-zeroes it. The comeback button is
+    `EmptyTrash` (the trash-shake, read as dusting himself off) — spoken
+    on the organic path, wordless via IPC `gag lob` (same
+    no-comeback-book reasoning as the forced tumble). `revive()` and
+    `maybeBoot()` stop `lobAnim`/`lobSplat` beside `gagAnim`.
+    Menu row: the "Full-screen gags"
     ●/○ toggle (v1.43.0 — it shipped row-less; Costa asked for the row).
     The fling's long drop lives in the fling bullet below.
     The corner peek (v1.44.0): he slides in from a far-edge corner

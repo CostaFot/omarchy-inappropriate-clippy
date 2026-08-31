@@ -1026,6 +1026,8 @@ Item {
     if (booted || stage.width <= 0) return
     booted = true
     gagAnim.stop()
+    lobAnim.stop()
+    lobSplat.stop()
     peekCancel(false) // a remount reset the flags anyway; the fresh gagDy = 0 lands him
     peekGrown = false
     gagDy = 0
@@ -1352,6 +1354,8 @@ Item {
   function revive() {
     respawnTimer.stop()
     gagAnim.stop()
+    lobAnim.stop()
+    lobSplat.stop()
     peekCancel(false) // belt-and-braces: the kill already cleared it
     peekGrown = false
     gagDy = 0
@@ -1365,9 +1369,11 @@ Item {
       root.say(root.randomLine("comeback", "I'm back. Don't act like you didn't miss me."), anim)
     }
     if (gagsEnabled && !asleep && Math.random() < entranceChance) {
-      // The dizzy head-scratch is the tumble's button; the sprite's onDone
+      // Coin flip between the entrances. The dizzy head-scratch is the
+      // tumble's button, the shake-off the lob's; the sprite's onDone
       // calls with no args, so the plain Greeting path stays random.
-      gagEntrance(function () { comeback("IdleHeadScratch") })
+      if (Math.random() < 0.5) gagEntrance(function () { comeback("IdleHeadScratch") })
+      else gagLob(function () { comeback("EmptyTrash") })
       return
     }
     mood = "reviving"
@@ -1906,14 +1912,15 @@ Item {
   // ---- gags --------------------------------------------------------------
   // Scripted stunts on the full-screen stage. All y motion is this one
   // additive offset on the actor's feet-line binding (the Tombstone thud
-  // pattern): a gag that leaves the bar (the peek, the fling's long drop)
-  // sets or animates gagDy and ends — or is aborted — at 0, which is the
-  // return-to-the-bar guarantee. Nothing persists it, so a remount lands
-  // him back on the feet line for free. The tumble entrance never touches
-  // it — the roll stays on the bar line.
+  // pattern): a gag that leaves the bar (the peek, the lob's arc, the
+  // fling's long drop) sets or animates gagDy and ends — or is aborted —
+  // at 0, which is the return-to-the-bar guarantee. Nothing persists it,
+  // so a remount lands him back on the feet line for free. The tumble
+  // entrance never touches it — the roll stays on the bar line.
   property real gagDy: 0
-  // How often a revive turns into the tumble. A constant, not a setting:
-  // the on/off taste call is the `gags` key, the odds are ours.
+  // How often a revive turns into an entrance gag (then a coin flip picks
+  // the tumble or the lob). A constant, not a setting: the on/off taste
+  // call is the `gags` key, the odds are ours.
   readonly property real entranceChance: 0.35
 
   // The tumble (v1.45.0, replacing v1.42.0's skyfall — Costa never warmed
@@ -1974,6 +1981,98 @@ Item {
     }
     sprite.play("RestPose", true)
     gagAnim.start()
+  }
+
+  // The lob (v1.46.0): someone off-screen threw him back — the fling's
+  // revenge. Linear x from the nearest side edge under an arced gagDy: a
+  // flat parabola over a bottom bar, or a decelerating toss up from the
+  // bottom edge on a top bar (the mirror of the fling's long drop —
+  // gagDy is set to the full drop while he is off-stage, the peek's
+  // invisible-teleport trick), with a lazy two-turn spin on the tumble's
+  // Center-pivot discipline. Ends at gagDy 0 on every path: the flight's
+  // own endpoint is 0, so even an abandoned run (mid-air kill) lands the
+  // offset. Runs inside "reviving" like the tumble.
+  ParallelAnimation {
+    id: lobAnim
+    property var landed: null
+    NumberAnimation { id: lobSlide; target: actor; property: "x"; easing.type: Easing.Linear }
+    NumberAnimation { id: lobSpin; target: actor; property: "rotation"; easing.type: Easing.Linear }
+    SequentialAnimation {
+      NumberAnimation { id: lobRise; target: root; property: "gagDy"; easing.type: Easing.OutQuad }
+      NumberAnimation { id: lobFall; target: root; property: "gagDy"; to: 0; easing.type: Easing.InQuad }
+    }
+    // stopped() fires on interrupts too — same rule as the tumble's.
+    onStopped: actor.transformOrigin = Item.Bottom
+    onFinished: {
+      actor.transformOrigin = Item.Bottom
+      actor.rotation = 0 // two full turns: 720 ≡ 0, the snap is invisible
+      if (root.mood !== "reviving") { landed = null; return } // a mid-air kill owns him now
+      lobSplat.dir = lobSpin.to > 0 ? 1 : -1
+      lobSplat.start()
+    }
+  }
+  // The face-plant: he slams over his feet the way he was flying, lies
+  // there a beat, springs back up. Bottom pivot (restored above), so the
+  // landing tips inward — the entry edge is always the near one.
+  SequentialAnimation {
+    id: lobSplat
+    property int dir: 1
+    NumberAnimation { target: actor; property: "rotation"; to: lobSplat.dir * 82; duration: 110; easing.type: Easing.InQuad }
+    PauseAnimation { duration: 450 }
+    NumberAnimation { target: actor; property: "rotation"; to: 0; duration: 300; easing.type: Easing.OutBack }
+    onStopped: actor.rotation = 0 // an interrupt must not leave him planted
+    onFinished: {
+      var f = lobAnim.landed
+      lobAnim.landed = null
+      if (root.mood !== "reviving") return
+      root.mood = "idle"
+      if (f) f()
+    }
+  }
+
+  // The lob: thrown back in on an arc, face-plant, gets up and shakes
+  // himself off. `onLanded` runs after mood is back to idle; null settles
+  // him into the idle loop via the shake alone (the IPC test path — no
+  // line, see the gag verb).
+  function gagLob(onLanded) {
+    walkAnim.stop()
+    shoveAnim.stop()
+    wobble.stop()
+    brain.stop()
+    quoteTimer.stop()
+    mood = "reviving"
+    gagAnim.stop()
+    lobAnim.stop()
+    lobSplat.stop()
+    var target = Math.round(clamp(actor.x, 0, Math.max(0, stage.width - actor.width)))
+    var fromLeft = target + actor.width / 2 < stage.width / 2
+    actor.x = fromLeft ? -actor.width : stage.width
+    actor.rotation = 0
+    // The spin pivots his middle, the tumble's rule; every way out of
+    // lobAnim restores Bottom before the splat needs it.
+    actor.transformOrigin = Item.Center
+    lobSlide.to = target
+    lobSpin.from = 0
+    lobSpin.to = (fromLeft ? 1 : -1) * 720
+    if (barBottom) {
+      gagDy = 0
+      lobRise.to = -clamp(stage.height * 0.22, 60, 260)
+    } else {
+      gagDy = stage.height - actor.height
+      lobRise.to = 0 // the toss just barely clears the ledge
+    }
+    var dist = Math.max(Math.abs(target - actor.x), Math.abs(gagDy))
+    var d = Math.round(clamp(dist * 0.45, 550, 1000))
+    lobSlide.duration = d
+    lobSpin.duration = d
+    lobRise.duration = barBottom ? d / 2 : d
+    lobFall.duration = barBottom ? d / 2 : 0
+    lobAnim.landed = function () {
+      if (onLanded) onLanded()
+      else sprite.play("EmptyTrash", false, function () { root.idleAnim(); root.scheduleQuote() })
+    }
+    sprite.play("RestPose", true)
+    lobAnim.start()
   }
 
   // The corner peek (v1.44.0): he slides half-in from a far-edge corner,
@@ -2318,7 +2417,7 @@ Item {
         "reply <text> — the typed version of listen; same comeback, no mic",
         "slap left|right — hit him (answers dodged when he slips it); fling left|right — off the bar, fatal",
         "kill / respawn — the deliberate versions",
-        "gag entrance|peek — the tumble re-entry: rolls in along the bar, or a corner peek: half-in from a far corner, one line, back out (revives roll the entrance; idle beats roll the peek at peekChance)",
+        "gag entrance|lob|peek — the tumble: rolls in along the bar; the lob: thrown back in on an arc, face-plant; the corner peek: half-in from a far corner, one line, back out (revives coin-flip tumble or lob; idle beats roll the peek at peekChance)",
         "epitaph — poke the grave while he's dead",
         "snooze <minutes> / unsnooze",
         "show / hide / toggle — show also revives him",
@@ -2385,23 +2484,24 @@ Item {
       var r = root.slap(dir)
       return r === "dodged" ? "dodged" : r ? "ok" : (root.slapEnabled ? "not now" : "off")
     }
-    // `gag entrance|peek`: the stunts on demand — the organic rolls aren't
-    // pointer-testable and an agent should get to run one at will. The
-    // forced entrance says no line on landing (the comeback book assumes a
-    // death happened); the forced peek speaks like the organic one — its
-    // line is the ordinary quotes pool, always valid.
+    // `gag entrance|lob|peek`: the stunts on demand — the organic rolls
+    // aren't pointer-testable and an agent should get to run one at will.
+    // The forced entrance and lob say no line on landing (the comeback
+    // book assumes a death happened); the forced peek speaks like the
+    // organic one — its line is the ordinary quotes pool, always valid.
     function gag(name: string): string {
       var n = String(name || "").toLowerCase()
-      if (n !== "entrance" && n !== "peek") return "no such gag — the set: entrance, peek"
+      if (n !== "entrance" && n !== "lob" && n !== "peek") return "no such gag — the set: entrance, lob, peek"
       if (!root.gagsEnabled) return "off — set gags true first"
       if (!root.opened) return "hidden"
       if (root.asleep) return "asleep"
       if (root.mood === "dead")
-        return n === "entrance"
-          ? "dead — respawn does it, with a " + Math.round(root.entranceChance * 100) + "% chance"
-          : "dead — respawn him first"
+        return n === "peek"
+          ? "dead — respawn him first"
+          : "dead — respawn does it: a " + Math.round(root.entranceChance * 100) + "% chance, then a coin flip between tumble and lob"
       if (root.mood !== "idle" || root.dragging || root.occupied || root.peeking) return "not now"
       if (n === "entrance") root.gagEntrance(null)
+      else if (n === "lob") root.gagLob(null)
       else root.gagPeek()
       return "ok"
     }

@@ -25,9 +25,11 @@ could join a random entrance roll rather than replace the tumble:
   on a 24 px sprite — Costa: "he is too small to notice the animation.
   not worth it." An entrance that reads at bar size needs travel (the
   tumble) or bulk (the peekGrown blow-up), not an in-place pop.
-- **The lob** — someone off-screen threw him back: in from a side edge
-  on a flat parabolic arc (linear x, parabolic gagDy), face-plant with
-  the wobble, gets up grumbling. The fling's revenge.
+- **The lob** — shipped as v1.46.0's `gagLob()`: in from a side edge on
+  a flat parabolic arc (up from the bottom edge on a top bar — the
+  fling's revenge), 720° spin, an 82° face-plant, gets up shaking
+  himself off. Coin-flipped against the tumble on revives; `gag lob`
+  forces it.
 - **The looming shrink** — appears huge mid-screen (the `peekGrown`
   blow-up, `Greeting`), shrinks down and slides onto his bar spot.
   Reads as "I was always here, you just couldn't see me."
