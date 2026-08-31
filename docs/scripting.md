@@ -13,6 +13,7 @@ omarchy-shell costafot.clippy slap left   # or right: the way he flies
 omarchy-shell costafot.clippy fling left  # off that end of the bar; fatal
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
+omarchy-shell costafot.clippy gag entrance  # the skyfall: in from the far screen edge, bounced onto the bar
 omarchy-shell costafot.clippy epitaph     # poke the grave while he's dead: an epitaph in the bubble
 omarchy-shell costafot.clippy unsnooze    # wakes him early
 omarchy-shell costafot.clippy hide
@@ -59,7 +60,8 @@ refusals name the state: `not now` (mid-animation, dragging, snoozed),
 `hidden`, `asleep`, `dead — …`, `off — …` (the feature is off, with the key
 that turns it on), `already`, `alive`, `dying`/`reviving`, `busy — …` (a
 look or a comeback in flight), `not snoozed`, `no grave`, `no ears — …`
-(no voxtype). `slap` answers `ok`, `dodged`, `not now` or `off`; `toggle`
+(no voxtype). `gag` answers `no such gag — the set: <names>` for a stunt
+it doesn't know. `slap` answers `ok`, `dodged`, `not now` or `off`; `toggle`
 answers `shown` or `hidden`; `state` answers one of its eight words;
 `kill`, `shutUp`, `snooze`, `showMenu` and `hideMenu` always answer `ok`.
 `set` and `get` answer `unknown key <k>; one of …` for a key that isn't in

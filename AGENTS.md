@@ -117,10 +117,14 @@ Design rules that outrank any single feature:
   defaults). `opened` + `open()`/`close()` are the `shell
   summon|hide|toggle` contract. Owns:
   - a single `PanelWindow` on `WlrLayer.Overlay` (the bar is `Top`),
-    anchored left+right and top (or bottom), height `barSize + 150`,
-    transparent, `ExclusionMode.Ignore`. Input `mask: Region { item:
+    anchored on all four sides — a full-screen transparent surface (the
+    gags fall through the whole screen; it was a `barSize + 150` strip
+    until v1.42.0), `ExclusionMode.Ignore`. Input `mask: Region { item:
     actor; regions: [bubble rect, tombstone rect] }` so everything except
-    Clippy, his bubble and a standing grave is click-through.
+    Clippy, his bubble and a standing grave is click-through. His feet
+    line is still the bar edge: `actor.y` is one binding, feet-line `+
+    gagDy` (the additive gag offset — see gags below), and `size` runs
+    20-400 since the surface no longer clips him.
   - the brain: `mood` ∈ idle | walking | talking | dying | dead |
     reviving, a `brain` Timer for idle→walk decisions, `quoteTimer` for
     unprompted lines, `bubbleTimer`, `respawnTimer`, `dieTimer`. Walking
@@ -146,6 +150,24 @@ Design rules that outrank any single feature:
     beat's walk chance to 0.8. Boot/revive placement uses `randomSpot()`
     (also gap-preferring). Null `shell.bar`, no `moduleSlots`, or no gap
     he fits in fall back to raw targets.
+  - gags (`gags`, default true, v1.42.0): scripted full-screen stunts.
+    All y motion in the plugin is one additive offset, `gagDy`, on the
+    actor's feet-line binding (the Tombstone-thud pattern — nothing ever
+    assigns `actor.y`, so the binding can't be destroyed); a gag animates
+    `gagDy` and ends at 0, plain state, zeroed in `revive()`,
+    `maybeBoot()` and `finishDeath()` — that's its whole lifecycle. The
+    skyfall (`gagEntrance()`): he enters from the far screen edge —
+    falls onto a bottom bar, shoots up at a top one — and OutBounce-lands
+    on the feet line, waving; runs inside `mood == "reviving"` so every
+    existing gate refuses for free, and rides that mood's sleep contract
+    (finishes on its own, ≤1.1 s). Triggers: `revive()` rolls it with
+    `entranceChance` (0.35, a constant — the on/off taste call is the
+    `gags` key, the odds are ours; no new timers, the mostly-still rule),
+    and IPC `gag entrance` forces it (the slap/fling non-pointer-testing
+    idiom; says no line on landing — the comeback book assumes a death,
+    and grudge lines need kills ≥ 1). No menu row — a taste toggle, the
+    duck-ratio call. The fling's long drop lives in the fling bullet
+    below.
   - `IpcHandler { target: "costafot.clippy" }` — string args only, no
     optional params. `set key value` / `get key` / `settings` are the
     config surface (keys from `settingDefaults` — keep it equal to the
@@ -542,7 +564,11 @@ an optional `hint` (dim second line,
   event inside the last 100 ms → `flingOff(dir)`: mood `dying`, a
   `flung` line in the bubble (it clamps to the stage, so it stays at the
   edge he left by), `flingAnim` carries `actor.x` past the edge at ~1.4
-  px/ms (600-1600 ms) and spins `rotation` 540°; when it finishes the
+  px/ms (600-1600 ms) and spins `rotation` 540° — and on a top bar with
+  `gags` on, a parallel `flingFall` drops `gagDy` the whole screen
+  (InQuad), so he plummets diagonally and the bubble rides its live
+  `actor.y` binding down to the bottom corner (a bottom bar keeps the
+  flat sideways exit: `flingFall.to` stays 0); when it finishes the
   bubble lingers at the edge at full opacity for `flingHoldMs` (1500,
   `flingHold`), then is hidden with `Bubble.fadeMs` stretched to
   `flingEchoMs` (1500) so it trails off, then `flingEcho` restores
@@ -921,6 +947,11 @@ stays free text — IPC and agent only.
   [args]` — no `ipc call` subcommand; that form prints "Target not
   found". IpcHandler has no optional params — every arg is required.
 - Logs: `journalctl --user -o cat | grep -iE 'clippy|WARN.*scene'`.
+- The window has been full-screen (four-anchored, Overlay) since
+  v1.42.0. Watch item: a transparent Overlay surface covering the whole
+  output could in principle affect Hyprland's fullscreen direct-scanout
+  (games); pre-existing in kind (the strip already overlaid the bar),
+  not observed, but it's the first suspect if someone reports it.
 - One quickshell SIGSEGV was seen during development, right after
   "Exiting due to IPC request" while plugins were still incubating
   asynchronously — it looked like an `omarchy restart shell` landing on

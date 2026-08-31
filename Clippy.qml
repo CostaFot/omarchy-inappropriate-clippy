@@ -117,7 +117,7 @@ Item {
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
     ttsSaved: "", cloneTempo: 1, clonePitch: 1, voiceCacheMb: 500, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
-    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true,
+    pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true, gags: true,
     greeted: false, leaderboard: "", leaderboardSaved: ""
   })
   function defaultFor(key) { return key === "flingSound" || key === "dodgeSound" ? slapSoundSetting : settingDefaults[key] }
@@ -132,7 +132,7 @@ Item {
     if (!isNaN(Number(s))) return Number(s)
     return s
   }
-  readonly property real spriteSize: clamp(Number(setting("size", 30)) || 30, 20, 200)
+  readonly property real spriteSize: clamp(Number(setting("size", 30)) || 30, 20, 400)
   readonly property int intervalMin: Math.max(5, Number(setting("intervalMin", 90)) || 90)
   readonly property int intervalMax: Math.max(intervalMin, Number(setting("intervalMax", 420)) || 420)
   readonly property real speed: clamp(Number(setting("speed", 40)) || 40, 5, 500)
@@ -144,6 +144,8 @@ Item {
   // A headstone at the death spot until the respawn. It is never part of
   // the window's input mask, so it cannot block a click on the bar.
   readonly property bool tombstoneEnabled: setting("tombstone", true) !== false
+  // Full-screen stunts (the skyfall entrance, the fling's long drop).
+  readonly property bool gagsEnabled: setting("gags", true) !== false
 
   // Writes inline keys on our shell.json entry (undefined removes a key).
   // The shell rewrites shell.json and remounts us; persisted state carries
@@ -472,7 +474,6 @@ Item {
   readonly property bool barHidden: shell && shell.bar ? shell.bar.barHidden === true : false
   readonly property int defaultBarSize: barVertical ? Style.bar.sizeVertical : Style.bar.sizeHorizontal
   readonly property int barSize: shell && shell.bar ? Math.max(0, shell.bar.barSize) : defaultBarSize
-  readonly property int bubbleReserve: 150
   readonly property bool shown: opened && !barVertical && !barHidden && !asleep
 
   // Asleep while nobody can see him: the session is locked, the shell's idle
@@ -1020,6 +1021,8 @@ Item {
   function maybeBoot() {
     if (booted || stage.width <= 0) return
     booted = true
+    gagAnim.stop()
+    gagDy = 0
     if (persisted.deadUntil === -1 || persisted.deadUntil > Date.now()) {
       mood = "dead"
       armRespawn()
@@ -1301,6 +1304,7 @@ Item {
 
   function finishDeath() {
     mood = "dead"
+    gagDy = 0 // a fling's long drop ends here; the grave stands on the bar
     persisted.killCount++
     bumpLeaderboard(1, 0)
     placeGrave()
@@ -1329,16 +1333,23 @@ Item {
 
   function revive() {
     respawnTimer.stop()
+    gagAnim.stop()
+    gagDy = 0
     if (mood !== "dead") return
     persisted.deadUntil = 0
     if (actor.x < 0 || actor.x > stage.width - actor.width)
       actor.x = Math.round(randomSpot(Math.max(0, stage.width - actor.width)))
     actor.rotation = 0
-    mood = "reviving"
-    sprite.play("Greeting", false, function () {
+    var comeback = function () {
       root.mood = "idle"
       root.say(root.randomLine("comeback", "I'm back. Don't act like you didn't miss me."))
-    })
+    }
+    if (gagsEnabled && !asleep && Math.random() < entranceChance) {
+      gagEntrance(comeback)
+      return
+    }
+    mood = "reviving"
+    sprite.play("Greeting", false, comeback)
   }
 
   // Clicking the grave gets you the epitaph, spoken from beyond. Not
@@ -1862,6 +1873,54 @@ Item {
     NumberAnimation { target: actor; property: "rotation"; to: 0; duration: 160; easing.type: Easing.OutQuad }
   }
 
+  // ---- gags --------------------------------------------------------------
+  // Vertical stunts on the full-screen stage. All y motion is this one
+  // additive offset on the actor's feet-line binding (the Tombstone thud
+  // pattern): a gag animates gagDy and ends — or is aborted — at 0, which
+  // is the return-to-the-bar guarantee. Nothing persists it, so a remount
+  // lands him back on the feet line for free.
+  property real gagDy: 0
+  // How often a revive turns into the skyfall. A constant, not a setting:
+  // the on/off taste call is the `gags` key, the odds are ours.
+  readonly property real entranceChance: 0.35
+
+  NumberAnimation {
+    id: gagAnim
+    target: root
+    property: "gagDy"
+    to: 0
+    // Never overshoots, so he can't clip through the far screen edge —
+    // and the landing bounce reads as hitting the bar either way up.
+    easing.type: Easing.OutBounce
+    property var landed: null
+    onFinished: { var f = landed; landed = null; if (f) f() }
+  }
+
+  // The skyfall: he enters from the far screen edge — falls the whole
+  // screen onto a bottom bar, shoots up at a top one — and bounces onto
+  // his feet line, waving the whole way. Runs inside "reviving", so every
+  // existing gate (say, slap, grab, decide, fling) refuses for free.
+  // `onLanded` runs after mood is back to idle; null settles him into the
+  // idle loop quietly (the IPC test path — no line, see the gag verb).
+  function gagEntrance(onLanded) {
+    walkAnim.stop()
+    shoveAnim.stop()
+    wobble.stop()
+    brain.stop()
+    quoteTimer.stop()
+    mood = "reviving"
+    gagAnim.stop()
+    gagDy = barBottom ? -stage.height : stage.height
+    gagAnim.duration = Math.round(clamp(stage.height * 0.7, 600, 1100))
+    gagAnim.landed = function () {
+      root.mood = "idle"
+      if (onLanded) onLanded()
+      else { root.idleAnim(); root.scheduleQuote() }
+    }
+    sprite.play("Wave", true)
+    gagAnim.start()
+  }
+
   // ---- dragging ----------------------------------------------------------
   // Hold left on him and he comes along with the pointer, leaning away from
   // the direction he's pulled and complaining the whole way. `grabX` is where
@@ -1969,6 +2028,8 @@ Item {
     flingAnim.stop()
     flingX.to = to
     flingSpin.to = dir * 540
+    flingFall.from = 0
+    flingFall.to = !barBottom && gagsEnabled ? stage.height : 0
     flingAnim.duration = Math.round(clamp(Math.abs(to - actor.x) / 1.4, 600, 1600))
     flingAnim.start()
     return true
@@ -2002,6 +2063,10 @@ Item {
     property int duration: 400
     NumberAnimation { id: flingX; target: actor; property: "x"; duration: flingAnim.duration; easing.type: Easing.Linear }
     NumberAnimation { id: flingSpin; target: actor; property: "rotation"; duration: flingAnim.duration; easing.type: Easing.Linear }
+    // The long drop (gags): a throw off a top bar also plummets the whole
+    // screen. Bottom bar or gags off leaves to at 0 — a no-op, the flat
+    // sideways exit. finishDeath() zeroes gagDy either way.
+    NumberAnimation { id: flingFall; target: root; property: "gagDy"; duration: flingAnim.duration; easing.type: Easing.InQuad }
     onFinished: if (root.mood === "dying") flingHold.start()
   }
 
@@ -2066,6 +2131,7 @@ Item {
         "reply <text> — the typed version of listen; same comeback, no mic",
         "slap left|right — hit him (answers dodged when he slips it); fling left|right — off the bar, fatal",
         "kill / respawn — the deliberate versions",
+        "gag entrance — the skyfall: he re-enters from the far screen edge and bounces onto the bar (a revive rolls it on its own)",
         "epitaph — poke the grave while he's dead",
         "snooze <minutes> / unsnooze",
         "show / hide / toggle — show also revives him",
@@ -2130,6 +2196,20 @@ Item {
       var dir = d === "left" ? -1 : (d === "right" ? 1 : (Math.random() < 0.5 ? -1 : 1))
       var r = root.slap(dir)
       return r === "dodged" ? "dodged" : r ? "ok" : (root.slapEnabled ? "not now" : "off")
+    }
+    // `gag entrance`: the skyfall on demand — the revive roll isn't
+    // pointer-testable and an agent should get to drop him in at will.
+    // No line on landing: the comeback book assumes a death happened.
+    function gag(name: string): string {
+      var n = String(name || "").toLowerCase()
+      if (n !== "entrance") return "no such gag — the set: entrance"
+      if (!root.gagsEnabled) return "off — set gags true first"
+      if (!root.opened) return "hidden"
+      if (root.asleep) return "asleep"
+      if (root.mood === "dead") return "dead — respawn does it, with a " + Math.round(root.entranceChance * 100) + "% chance"
+      if (root.mood !== "idle" || root.dragging || root.occupied) return "not now"
+      root.gagEntrance(null)
+      return "ok"
     }
     // `fling left|right`: throws him off that end of the bar. Fatal.
     function fling(direction: string): string {
@@ -2419,16 +2499,18 @@ Item {
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: WlrKeyboardFocus.None
     exclusionMode: ExclusionMode.Ignore
+    // Full-screen, like ClippyMenu's window: four anchors, no size. The
+    // gags need the whole screen to fall through; his feet line is still
+    // the bar edge (actor.y below), so nothing else moved.
     anchors {
       left: true
       right: true
-      top: !root.barBottom
-      bottom: root.barBottom
+      top: true
+      bottom: true
     }
-    implicitHeight: root.barSize + root.bubbleReserve
 
-    // Only Clippy and his bubble take input; the rest of the strip is
-    // click-through so the bar underneath keeps working.
+    // Only Clippy and his bubble take input; the rest of the screen is
+    // click-through so everything underneath keeps working.
     mask: Region {
       item: actor
       regions: [
@@ -2458,7 +2540,10 @@ Item {
         id: actor
         width: sprite.implicitWidth
         height: sprite.implicitHeight
-        y: root.barBottom ? stage.height - height : 0
+        // The feet line stays a binding; gags ride the additive gagDy
+        // offset (the Tombstone thud pattern) so nothing ever assigns y
+        // and the binding can't be destroyed.
+        y: (root.barBottom ? stage.height - height : 0) + root.gagDy
         visible: root.mood !== "dead"
         transformOrigin: Item.Bottom
 
@@ -2550,8 +2635,9 @@ Item {
         property bool silent: false
         above: root.barBottom
         x: Math.round(root.clamp(stage.mouthX - width / 2, 4, Math.max(4, stage.width - width - 4)))
-        y: root.barBottom ? (grave.shown ? grave.y : actor.y) - height - 2
-                          : (grave.shown ? grave.y + grave.height : actor.y + actor.height) + 2
+        y: Math.round(root.clamp(root.barBottom ? (grave.shown ? grave.y : actor.y) - height - 2
+                                                : (grave.shown ? grave.y + grave.height : actor.y + actor.height) + 2,
+                                 4, Math.max(4, stage.height - height - 4)))
         tailX: stage.mouthX - x
         onDismissed: root.hideBubble()
         // The voice rides on the bubble: whatever shows it speaks, whatever

@@ -3,6 +3,20 @@
 Pitched 2026-08-28, in rough order of payoff-to-effort. (The short list
 that used to live in AGENTS.md was merged in here 2026-08-29.)
 
+## More gags (parked from v1.42.0)
+
+The full-screen window and the `gagDy` offset (2026-08-31) make new
+stunts cheap — each is one animation on `gagDy` ending at 0. Parked from
+that build: a **corner peek** (he slides half-in from a screen corner,
+stares, slides back — deliberately not shipped; "keep him mostly still",
+and the entrance + long drop already prove the machinery). Also parked,
+much bigger: **true free 2D roaming** — walking anywhere on screen would
+need the six 1D avoidance functions rewritten as rect math (the
+`mapToItem(null,…)` y is NOT screen y for a bottom bar), 2D drag/fling
+vectors, `lastY`/`graveY` persistence, and a design answer for what a
+walking paperclip mid-screen even reads as. The gag tier was chosen
+instead on purpose; revisit only if a gag genuinely needs free movement.
+
 ## Talk-back leftovers
 
 What v1.35.0's `listen`/`reply` didn't cover: a clipboard-roast verb

@@ -23,7 +23,7 @@ and verb; `omarchy-shell costafot.clippy help`.
 | Middle-click | slap! |
 | Fling the pointer across him | also a slap. Quite funnier |
 | Hold left-click, then drag | picks him up. Drop him anywhere on the bar |
-| Let go mid-fast-fling | throws him off the end of the bar. Fatal, but he gets a last word in |
+| Let go mid-fast-fling | throws him off the end of the bar — off a top bar he plummets the whole screen. Fatal, but he gets a last word in |
 | Right-click | the menu: say something, snooze, kill him, common settings |
 | Click his tombstone | an epitaph, from beyond |
 | Click the paperclip on the bar | the same menu |
@@ -40,7 +40,10 @@ Ten slaps in six seconds knocks him out. Sometimes the fucker dodges.
 <!-- shot: kill over IPC, the last words before he goes -->
 <img src="assets/screenshots/last-words.png" width="700" alt="Oh, you're KILLING me? Real mature.">
 
-Either way a tombstone marks the spot until he respawns.
+Either way a tombstone marks the spot until he respawns — and sometimes
+the respawn is a skyfall: he drops in from the far edge of the screen and
+bounces onto the bar (`set gags false` if you like your paperclips
+grounded).
 
 <!-- shot: epitaph over IPC (a click on the grave), {back} filled in -->
 <img src="assets/screenshots/tombstone.png" width="700" alt="Back in 5 minutes. Start apologizing.">
