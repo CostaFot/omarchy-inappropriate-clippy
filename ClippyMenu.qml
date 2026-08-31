@@ -272,6 +272,13 @@ PanelWindow {
         active: on
         onTapped: menu.set("slapSound", !on)
       }
+      Entry {
+        readonly property bool on: menu.clippy ? menu.clippy.gagsEnabled : true
+        label: "Full-screen gags"
+        mark: on ? "●" : "○"
+        active: on
+        onTapped: menu.set("gags", !on)
+      }
       // On/off only — the ratio is set duck <0-1> by IPC, no chips
       // ("the ratio should be done via terminal/agent only").
       Entry {

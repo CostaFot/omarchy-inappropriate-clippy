@@ -165,9 +165,9 @@ Design rules that outrank any single feature:
     `gags` key, the odds are ours; no new timers, the mostly-still rule),
     and IPC `gag entrance` forces it (the slap/fling non-pointer-testing
     idiom; says no line on landing — the comeback book assumes a death,
-    and grudge lines need kills ≥ 1). No menu row — a taste toggle, the
-    duck-ratio call. The fling's long drop lives in the fling bullet
-    below.
+    and grudge lines need kills ≥ 1). Menu row: the "Full-screen gags"
+    ●/○ toggle (v1.43.0 — it shipped row-less; Costa asked for the row).
+    The fling's long drop lives in the fling bullet below.
   - `IpcHandler { target: "costafot.clippy" }` — string args only, no
     optional params. `set key value` / `get key` / `settings` are the
     config surface (keys from `settingDefaults` — keep it equal to the
@@ -285,9 +285,9 @@ Design rules that outrank any single feature:
   `cloneKnobsApply`, since the keys do nothing for non-clone voices; a
   QtQuick Column skips invisible children so they collapse without a
   gap; an off-preset IPC value highlights the nearest chip, the Size
-  row's rule); ●/○ `Entry` toggles for Sounds, "Duck other audio" (the
-duck ratio itself is IPC-only) and the leaderboard; `Entry` rows take
-an optional `hint` (dim second line,
+  row's rule); ●/○ `Entry` toggles for Sounds, "Full-screen gags",
+  "Duck other audio" (the duck ratio itself is IPC-only) and the
+  leaderboard; `Entry` rows take an optional `hint` (dim second line,
   fontSize−2, only sized when non-empty). Footer: the dim tally, "· #N
   as <handle>" from `lbCache` when joined, and stranded-audience hints
   (setup-voice under Voice only in the `!needs && !custom` state; the
