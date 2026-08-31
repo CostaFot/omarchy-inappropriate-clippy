@@ -167,8 +167,14 @@ setup_clone() {
     echo "install it first: sudo pacman -S uv" >&2
     exit 1
   }
-  if [ ! -x "$venv/bin/python" ]; then
+  # Probe the daemon's exact imports, not just the venv's python: an install
+  # interrupted mid-torch leaves venv/bin/python behind, every later run then
+  # skips this block, and the daemon dies on `import torchaudio` before
+  # binding its socket — "daemon never came up". A broken venv is rebuilt
+  # from scratch (uv's wheel cache makes that cheap); ~5 s on a healthy one.
+  if ! "$venv/bin/python" -c 'import torchaudio, chatterbox.tts' &>/dev/null; then
     echo "installing chatterbox into $venv (~6 GB of torch — be patient) ..."
+    rm -rf "$venv"
     uv venv "$venv" --python 3.12 >/dev/null
     # setuptools<81: chatterbox's perth watermarker still imports pkg_resources
     uv pip install --python "$venv/bin/python" --quiet chatterbox-tts "setuptools<81"
@@ -354,7 +360,14 @@ else:
             except (FileNotFoundError, ConnectionRefusedError):
                 continue
         else:
-            sys.exit("speak-clone: daemon never came up (see ~/.cache/clippy-voice/daemon.log)")
+            why = ""
+            try:  # the crash's last line, so the cause is in the error itself
+                why = open(f"{cache}/daemon.log", errors="replace").read().strip().splitlines()[-1]
+            except (OSError, IndexError):
+                pass
+            sys.exit("speak-clone: daemon never came up"
+                     + (f" — {why}" if why else "")
+                     + " (full log: ~/.cache/clippy-voice/daemon.log)")
 out = raw
 if a.pitch != 1.0 or a.tempo != 1.0:
     out = f"{cache}/{key}" + (f"-p{a.pitch:g}" if a.pitch != 1.0 else "") \

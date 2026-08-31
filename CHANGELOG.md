@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.49.1
+
+- `setup-voice` now detects a broken chatterbox venv (an interrupted first install) and rebuilds it, instead of every later run failing with "daemon never came up".
+- That error now includes the daemon's actual crash line instead of just pointing at the log file.
+
 ## v1.49.0
 
 - Full-screen stage: the window covers the whole screen (still click-through except him), `size` max raised to 400.
