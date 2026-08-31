@@ -15,11 +15,10 @@ Alternate entrances, pitched 2026-08-31 when Costa retired the skyfall
 won and shipped as v1.45.0's `gagEntrance()`. The rest, parked — each
 could join a random entrance roll rather than replace the tumble:
 
-- **The rise from the grave** — he claws up from below the screen's
-  bottom edge in two or three jerky pulls (a stepped gagDy easing, not
-  a smooth slide), `LookUp` while climbing, then `Wave`. Every entrance
-  IS a resurrection, so it's the thematically honest one; on a top bar
-  he climbs the whole screen.
+- ~~**The rise from the grave**~~ — built and reverted 2026-08-31
+  (don't re-pitch): three jerky OutCubic pulls on gagDy from below the
+  screen edge, `LookUp` looping, `Wave` on landing. Costa watched the
+  forced run live and called it off — "hmm i dont like it".
 - **The materialize** — the authentic clippy.js entrance: the sheet's
   `Show` animation starts hidden and materializes him in place, dressed
   with a scale pop (0 → overshoot → 1, the peek's grow machinery).
