@@ -8,7 +8,30 @@ that used to live in AGENTS.md was merged in here 2026-08-29.)
 The full-screen window and the `gagDy` offset (2026-08-31) make new
 stunts cheap — each is one animation on `gagDy` ending at 0. (The
 **corner peek** parked here shipped in v1.44.0 as `gag peek` /
-`peekChance`.) Still parked,
+`peekChance`.)
+
+Alternate entrances, pitched 2026-08-31 when Costa retired the skyfall
+(don't re-pitch that one — he never liked the falling): the **tumble**
+won and shipped as v1.45.0's `gagEntrance()`. The rest, parked — each
+could join a random entrance roll rather than replace the tumble:
+
+- **The rise from the grave** — he claws up from below the screen's
+  bottom edge in two or three jerky pulls (a stepped gagDy easing, not
+  a smooth slide), `LookUp` while climbing, then `Wave`. Every entrance
+  IS a resurrection, so it's the thematically honest one; on a top bar
+  he climbs the whole screen.
+- **The materialize** — the authentic clippy.js entrance: the sheet's
+  `Show` animation starts hidden and materializes him in place, dressed
+  with a scale pop (0 → overshoot → 1, the peek's grow machinery).
+  Cheapest of the lot, very "it's 1997 and he's back".
+- **The lob** — someone off-screen threw him back: in from a side edge
+  on a flat parabolic arc (linear x, parabolic gagDy), face-plant with
+  the wobble, gets up grumbling. The fling's revenge.
+- **The looming shrink** — appears huge mid-screen (the `peekGrown`
+  blow-up, `Greeting`), shrinks down and slides onto his bar spot.
+  Reads as "I was always here, you just couldn't see me."
+
+Still parked,
 much bigger: **true free 2D roaming** — walking anywhere on screen would
 need the six 1D avoidance functions rewritten as rect math (the
 `mapToItem(null,…)` y is NOT screen y for a bottom bar), 2D drag/fling

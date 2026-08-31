@@ -144,7 +144,8 @@ Item {
   // A headstone at the death spot until the respawn. It is never part of
   // the window's input mask, so it cannot block a click on the bar.
   readonly property bool tombstoneEnabled: setting("tombstone", true) !== false
-  // Full-screen stunts (the skyfall entrance, the fling's long drop).
+  // Scripted stunts (the tumble entrance, the corner peek, the fling's
+  // long drop).
   readonly property bool gagsEnabled: setting("gags", true) !== false
 
   // Writes inline keys on our shell.json entry (undefined removes a key).
@@ -1359,12 +1360,14 @@ Item {
     if (actor.x < 0 || actor.x > stage.width - actor.width)
       actor.x = Math.round(randomSpot(Math.max(0, stage.width - actor.width)))
     actor.rotation = 0
-    var comeback = function () {
+    var comeback = function (anim) {
       root.mood = "idle"
-      root.say(root.randomLine("comeback", "I'm back. Don't act like you didn't miss me."))
+      root.say(root.randomLine("comeback", "I'm back. Don't act like you didn't miss me."), anim)
     }
     if (gagsEnabled && !asleep && Math.random() < entranceChance) {
-      gagEntrance(comeback)
+      // The dizzy head-scratch is the tumble's button; the sprite's onDone
+      // calls with no args, so the plain Greeting path stays random.
+      gagEntrance(function () { comeback("IdleHeadScratch") })
       return
     }
     mood = "reviving"
@@ -1901,34 +1904,49 @@ Item {
   }
 
   // ---- gags --------------------------------------------------------------
-  // Vertical stunts on the full-screen stage. All y motion is this one
+  // Scripted stunts on the full-screen stage. All y motion is this one
   // additive offset on the actor's feet-line binding (the Tombstone thud
-  // pattern): a gag animates gagDy and ends — or is aborted — at 0, which
-  // is the return-to-the-bar guarantee. Nothing persists it, so a remount
-  // lands him back on the feet line for free.
+  // pattern): a gag that leaves the bar (the peek, the fling's long drop)
+  // sets or animates gagDy and ends — or is aborted — at 0, which is the
+  // return-to-the-bar guarantee. Nothing persists it, so a remount lands
+  // him back on the feet line for free. The tumble entrance never touches
+  // it — the roll stays on the bar line.
   property real gagDy: 0
-  // How often a revive turns into the skyfall. A constant, not a setting:
+  // How often a revive turns into the tumble. A constant, not a setting:
   // the on/off taste call is the `gags` key, the odds are ours.
   readonly property real entranceChance: 0.35
 
-  NumberAnimation {
+  // The tumble (v1.45.0, replacing v1.42.0's skyfall — Costa never warmed
+  // to it): both leans of one roll, ending together. Runs inside
+  // "reviving", so every existing gate (say, slap, grab, decide, fling)
+  // refuses for free. No gagDy — he rolls in along the bar line.
+  ParallelAnimation {
     id: gagAnim
-    target: root
-    property: "gagDy"
-    to: 0
-    // Never overshoots, so he can't clip through the far screen edge —
-    // and the landing bounce reads as hitting the bar either way up.
-    easing.type: Easing.OutBounce
     property var landed: null
-    onFinished: { var f = landed; landed = null; if (f) f() }
+    NumberAnimation { id: gagSlide; target: actor; property: "x"; easing.type: Easing.OutCubic }
+    NumberAnimation { id: gagSpin; target: actor; property: "rotation"; easing.type: Easing.OutCubic }
+    // stopped() fires on interrupts too: whatever cut the roll short must
+    // not leave him pivoting around his middle.
+    onStopped: actor.transformOrigin = Item.Bottom
+    onFinished: {
+      actor.transformOrigin = Item.Bottom
+      actor.rotation = 0 // three full turns: 1080 ≡ 0, the snap is invisible
+      var f = landed
+      landed = null
+      if (root.mood !== "reviving") return // a mid-roll kill owns him now
+      root.mood = "idle"
+      // Tips the way he was rolling before settling: momentum, sold.
+      wobble.dir = gagSpin.to > 0 ? 1 : -1
+      wobble.restart()
+      if (f) f()
+    }
   }
 
-  // The skyfall: he enters from the far screen edge — falls the whole
-  // screen onto a bottom bar, shoots up at a top one — and bounces onto
-  // his feet line, waving the whole way. Runs inside "reviving", so every
-  // existing gate (say, slap, grab, decide, fling) refuses for free.
-  // `onLanded` runs after mood is back to idle; null settles him into the
-  // idle loop quietly (the IPC test path — no line, see the gag verb).
+  // The tumble: he rolls in along the bar line from the nearest screen
+  // edge like a dropped coin — the slide and the spin decelerate together
+  // — tips upright and scratches his head. `onLanded` runs after mood is
+  // back to idle; null settles him into the idle loop quietly (the IPC
+  // test path — no line, see the gag verb).
   function gagEntrance(onLanded) {
     walkAnim.stop()
     shoveAnim.stop()
@@ -1937,14 +1955,24 @@ Item {
     quoteTimer.stop()
     mood = "reviving"
     gagAnim.stop()
-    gagDy = barBottom ? -stage.height : stage.height
-    gagAnim.duration = Math.round(clamp(stage.height * 0.7, 600, 1100))
+    var target = Math.round(clamp(actor.x, 0, Math.max(0, stage.width - actor.width)))
+    var fromLeft = target + actor.width / 2 < stage.width / 2
+    actor.x = fromLeft ? -actor.width : stage.width
+    actor.rotation = 0
+    // A roll pivots his middle; the wobble's Bottom pivot would sweep him
+    // through the screen edge. Every way out of gagAnim restores it.
+    actor.transformOrigin = Item.Center
+    gagSlide.to = target
+    gagSpin.from = 0
+    gagSpin.to = (fromLeft ? 1 : -1) * 1080
+    var d = Math.round(clamp(Math.abs(target - actor.x) * 0.55, 500, 1100))
+    gagSlide.duration = d
+    gagSpin.duration = d
     gagAnim.landed = function () {
-      root.mood = "idle"
       if (onLanded) onLanded()
-      else { root.idleAnim(); root.scheduleQuote() }
+      else sprite.play("IdleHeadScratch", false, function () { root.idleAnim(); root.scheduleQuote() })
     }
-    sprite.play("Wave", true)
+    sprite.play("RestPose", true)
     gagAnim.start()
   }
 
@@ -2290,7 +2318,7 @@ Item {
         "reply <text> — the typed version of listen; same comeback, no mic",
         "slap left|right — hit him (answers dodged when he slips it); fling left|right — off the bar, fatal",
         "kill / respawn — the deliberate versions",
-        "gag entrance|peek — the skyfall re-entry, or a corner peek: half-in from a far corner, one line, back out (revives roll the entrance; idle beats roll the peek at peekChance)",
+        "gag entrance|peek — the tumble re-entry: rolls in along the bar, or a corner peek: half-in from a far corner, one line, back out (revives roll the entrance; idle beats roll the peek at peekChance)",
         "epitaph — poke the grave while he's dead",
         "snooze <minutes> / unsnooze",
         "show / hide / toggle — show also revives him",

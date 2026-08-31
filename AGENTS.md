@@ -153,19 +153,34 @@ Design rules that outrank any single feature:
   - gags (`gags`, default true, v1.42.0): scripted full-screen stunts.
     All y motion in the plugin is one additive offset, `gagDy`, on the
     actor's feet-line binding (the Tombstone-thud pattern — nothing ever
-    assigns `actor.y`, so the binding can't be destroyed); a gag animates
-    `gagDy` and ends at 0, plain state, zeroed in `revive()`,
-    `maybeBoot()` and `finishDeath()` — that's its whole lifecycle. The
-    skyfall (`gagEntrance()`): he enters from the far screen edge —
-    falls onto a bottom bar, shoots up at a top one — and OutBounce-lands
-    on the feet line, waving; runs inside `mood == "reviving"` so every
-    existing gate refuses for free, and rides that mood's sleep contract
-    (finishes on its own, ≤1.1 s). Triggers: `revive()` rolls it with
+    assigns `actor.y`, so the binding can't be destroyed); a gag that
+    leaves the bar sets or animates `gagDy` and ends at 0, plain state,
+    zeroed in `revive()`, `maybeBoot()` and `finishDeath()` — that's its
+    whole lifecycle. The tumble (`gagEntrance()`, v1.45.0 — it shipped
+    as the skyfall in v1.42.0, a fall in from the far screen edge; Costa
+    never warmed to it and picked the tumble from a pitched set, the
+    rest parked in IDEAS.md): he rolls in along the bar line from the
+    nearest screen edge like a dropped coin — one `ParallelAnimation`
+    (`gagAnim`: x slide + three full rotation turns, both OutCubic, so
+    the roll decelerates to a stop), pivoting `transformOrigin:
+    Item.Center` for the duration (the wobble's Bottom pivot would sweep
+    him through the screen edge; `onStopped` restores Bottom on every
+    way out, interrupts included), then rotation snaps 1080→0
+    (invisible), the slap `wobble` tips him upright the way he was
+    rolling, and the comeback line plays `IdleHeadScratch` (the dizzy
+    button — `comeback` takes an optional anim; the sprite's onDone
+    calls with no args so the plain Greeting path stays random). Never
+    touches gagDy. Runs inside `mood == "reviving"` so every existing
+    gate refuses for free, and rides that mood's sleep contract
+    (finishes on its own, ≤1.1 s — `gagAnim.onFinished` refuses to
+    flip mood to idle unless still reviving, so a mid-roll IPC kill
+    keeps its death). Triggers: `revive()` rolls it with
     `entranceChance` (0.35, a constant — the on/off taste call is the
     `gags` key, the odds are ours; no new timers, the mostly-still rule),
     and IPC `gag entrance` forces it (the slap/fling non-pointer-testing
     idiom; says no line on landing — the comeback book assumes a death,
-    and grudge lines need kills ≥ 1). Menu row: the "Full-screen gags"
+    and grudge lines need kills ≥ 1 — and settles into idle via a lone
+    head-scratch). Menu row: the "Full-screen gags"
     ●/○ toggle (v1.43.0 — it shipped row-less; Costa asked for the row).
     The fling's long drop lives in the fling bullet below.
     The corner peek (v1.44.0): he slides in from a far-edge corner
@@ -186,7 +201,7 @@ Design rules that outrank any single feature:
     free-number → no menu row) on the existing idle beats — no new
     trigger timers (`peekDwell` is only the say-failed fallback) — and
     forced by IPC `gag peek` (which DOES speak, unlike the forced
-    entrance: its line is the ordinary quotes pool). Unlike the skyfall
+    entrance: its line is the ordinary quotes pool). Unlike the entrance
     it can NOT ride `mood = "reviving"` — say() and slap() both refuse
     there, and the peek needs both — so `peeking` (a flag, mood stays
     idle→talking) is the truth, gating decide/unprompted/crashReact/

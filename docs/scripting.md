@@ -13,7 +13,7 @@ omarchy-shell costafot.clippy slap left   # or right: the way he flies
 omarchy-shell costafot.clippy fling left  # off that end of the bar; fatal
 omarchy-shell costafot.clippy kill
 omarchy-shell costafot.clippy respawn
-omarchy-shell costafot.clippy gag entrance  # the skyfall: in from the far screen edge, bounced onto the bar
+omarchy-shell costafot.clippy gag entrance  # the tumble: rolls in along the bar like a dropped coin, tips upright
 omarchy-shell costafot.clippy gag peek      # in from a far screen corner, huge, one line, back out (slappable meanwhile)
 omarchy-shell costafot.clippy epitaph     # poke the grave while he's dead: an epitaph in the bubble
 omarchy-shell costafot.clippy unsnooze    # wakes him early

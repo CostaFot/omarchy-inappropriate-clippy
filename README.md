@@ -41,10 +41,10 @@ Ten slaps in six seconds knocks him out. Sometimes the fucker dodges.
 <img src="assets/screenshots/last-words.png" width="700" alt="Oh, you're KILLING me? Real mature.">
 
 Either way a tombstone marks the spot until he respawns — and sometimes
-the respawn is a skyfall: he drops in from the far edge of the screen and
-bounces onto the bar (`set gags false` if you like your paperclips
-grounded). Once in a while he also peeks in from a far corner of the
-screen to say something — and yes, you can slap him back into it.
+the respawn is a tumble: he rolls in along the bar like a dropped coin,
+tips upright and scratches his head (`set gags false` if you like your
+paperclips dignified). Once in a while he also peeks in from a far corner
+of the screen to say something — and yes, you can slap him back into it.
 
 <!-- shot: epitaph over IPC (a click on the grave), {back} filled in -->
 <img src="assets/screenshots/tombstone.png" width="700" alt="Back in 5 minutes. Start apologizing.">
