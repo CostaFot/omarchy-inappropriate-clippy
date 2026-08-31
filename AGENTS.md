@@ -44,7 +44,9 @@ OUTSIDE `docs/` must be an absolute GitHub URL, since Pages serves only
 plugin clone,
 which is what keeps the agent connection: `help` ends with
 `<pluginDir>/docs/`, not a README path. Marketplace state is
-`PUBLISHING.md`.
+`PUBLISHING.md`. `CHANGELOG.md` is release notes: one entry per release,
+terse user-facing bullets — Costa's shape ("just put the next version.
+bullet points of the changes"), not a per-commit or per-version journal.
 
 Clippy walks the Omarchy bar and insults you. The repo root IS the plugin
 (`manifest.json`, id `costafot.clippy`, kinds `panel` + `bar-widget`,
