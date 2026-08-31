@@ -19,10 +19,12 @@ could join a random entrance roll rather than replace the tumble:
   (don't re-pitch): three jerky OutCubic pulls on gagDy from below the
   screen edge, `LookUp` looping, `Wave` on landing. Costa watched the
   forced run live and called it off — "hmm i dont like it".
-- **The materialize** — the authentic clippy.js entrance: the sheet's
-  `Show` animation starts hidden and materializes him in place, dressed
-  with a scale pop (0 → overshoot → 1, the peek's grow machinery).
-  Cheapest of the lot, very "it's 1997 and he's back".
+- ~~**The materialize**~~ — built and reverted 2026-08-31 (don't
+  re-pitch): the sheet's `Show` flicker-in under a 550 ms OutBack scale
+  pop on the actor. Worked, but at bar size the whole thing is a blink
+  on a 24 px sprite — Costa: "he is too small to notice the animation.
+  not worth it." An entrance that reads at bar size needs travel (the
+  tumble) or bulk (the peekGrown blow-up), not an in-place pop.
 - **The lob** — someone off-screen threw him back: in from a side edge
   on a flat parabolic arc (linear x, parabolic gagDy), face-plant with
   the wobble, gets up grumbling. The fling's revenge.
