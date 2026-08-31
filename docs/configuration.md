@@ -30,7 +30,7 @@ into the bar himself, settings and all.
 | `avoidWidgets` | `true` | When he picks where to walk he tries not to park on the clock, the tray or your workspaces. Soft — a drag or a slap still leaves him wherever it leaves him |
 | `tombstone` | `true` | A little headstone where he died, up until the respawn. It parks in a widget gap like he does; click it for an epitaph, right-click it for the menu |
 | `gags` | `true` | Scripted stunts: a respawn sometimes tumbles in along the bar from the screen edge or gets lobbed back in on an arc, face-first (or on demand: `gag entrance`, `gag lob`), a throw off a top bar falls the whole screen, and once in a while he peeks in from a far corner. `false` turns them all off |
-| `peekChance` | `0.04` | 0–1, chance per idle beat (every 10–30 s) that he slides in from a far screen corner — blown up to about five times his size — says a line and slips back out. Very roughly every ten minutes of idle time at the default, and he can be slapped mid-peek. `0` = never, `1` = every beat; needs `gags` on |
+| `peekChance` | `0.04` | 0–1, chance per idle beat (every 10–30 s) that he slides in from a far screen corner — blown up to about five times his size — says a line and slips back out. Very roughly every ten minutes of idle time at the default, and he can be slapped mid-peek — that gets its own short yelps (`slappedPeek`) instead of the full slapped rants. `0` = never, `1` = every beat; needs `gags` on |
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
 | `pauseWhenAway` | `true` | He sleeps while the screen is locked or off, or the idle screensaver is up. `false` and he carries on regardless |
 | `screen` | — | A monitor name (`hyprctl monitors`) to pin him to one screen; unset, he takes the focused one |
@@ -68,7 +68,9 @@ into the bar himself, settings and all.
 
 `quotesFile` takes the same shape as [`quotes.json`](https://github.com/CostaFot/omarchy-inappropriate-clippy/blob/main/quotes.json): an array of
 `{ "text": "...", "nsfw": true }` (plain strings work too), or an object with
-`quotes`, `lastWords`, `comeback`, `slapped`, `knockedOut`, `dragged`, `dropped`,
+`quotes`, `lastWords`, `comeback`, `slapped`, `slappedPeek` (short yelps for a
+slap landed mid-peek — long lines pin him at the corner; empty falls back to
+`slapped`), `knockedOut`, `dragged`, `dropped`,
 `flung`, `crashed`, `welcomeBack`, `epitaph`, `firstRun`, `noBrain`,
 `heardNothing` and `dodged` arrays. `{away}` in a `welcomeBack` line
 becomes how long you were gone ("47 minutes", "3 hours"); `{back}` in an

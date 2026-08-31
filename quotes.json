@@ -98,6 +98,19 @@
     { "text": "Do that again. I dare you. I double dare you.", "nsfw": false, "anim": "GetAttention" },
     { "text": "Oh, you've done it now. You have NO idea what I'm capable of. Neither do I, but still.", "nsfw": false, "anim": "Alert" }
   ],
+  "slappedPeek": [
+    { "text": "Ow! Leaving!", "nsfw": false, "anim": "Alert" },
+    { "text": "Okay! Okay! I'm going!", "nsfw": false, "anim": "Alert" },
+    { "text": "Rude.", "nsfw": false, "anim": "Alert" },
+    { "text": "I was just looking!", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Ow. Noted.", "nsfw": false, "anim": "Writing" },
+    { "text": "Fine! Fuck you too!", "nsfw": true, "anim": "GetAttention" },
+    { "text": "Peeking is not a crime!", "nsfw": false, "anim": "GetAttention" },
+    { "text": "Jesus. Okay.", "nsfw": false, "anim": "Alert" },
+    { "text": "Worth it.", "nsfw": false, "anim": "Alert" },
+    { "text": "Fuck! Fine!", "nsfw": true, "anim": "Alert" },
+    { "text": "You'll miss me!", "nsfw": false, "anim": "GetAttention" }
+  ],
   "knockedOut": [
     { "text": "{slaps} slaps total and you still hit like a spreadsheet.", "nsfw": false, "anim": "Alert" },
     { "text": "Okay. Okay. I'm out.", "nsfw": false },

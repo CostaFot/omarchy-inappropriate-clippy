@@ -627,7 +627,7 @@ Item {
   // ---- quotes ------------------------------------------------------------
   // Two books, merged per key at draw time so load order doesn't matter
   // (the two FileViews fire in whichever order the disk answers).
-  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun", "noBrain", "heardNothing", "dodged"]
+  readonly property var quoteKeys: ["quotes", "comeback", "lastWords", "slapped", "slappedPeek", "knockedOut", "dragged", "dropped", "flung", "crashed", "welcomeBack", "epitaph", "firstRun", "noBrain", "heardNothing", "dodged"]
   property var book: emptyBook()
   property var extraBook: emptyBook()
   // The window reactions ride in the same JSON files under a "reactions"
@@ -1580,7 +1580,11 @@ Item {
       kill("knockedOut")
       return true
     }
-    var q = randomQuoteFrom("slapped")
+    // Mid-peek the full slapped pool drags: the peek's exit rendezvous
+    // waits on the bubble, so a long rant (450 ms/word) pins him clamped
+    // at the corner. Short yelps instead; an empty slappedPeek pool
+    // (quotesFile without the key, clean with no survivors) falls back.
+    var q = (peeking ? randomQuoteFrom("slappedPeek") : null) || randomQuoteFrom("slapped")
     say(q ? q.text : "Ow.", q && q.anim ? q.anim : "Alert", false, !!fx)
     if (fx) { slapWaitFx = fx; slapVoiceCap.restart() }
     // Swatted back into his corner: the recoil starts at once and the

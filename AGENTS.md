@@ -239,7 +239,10 @@ Design rules that outrank any single feature:
     the shove (both would write a corner x into `persisted.lastX` — the
     peek never writes lastX, `peekReturnX` is plain state) and recoils
     him out at once, the bubble riding the live bindings and speaking
-    clamped at the corner, the fling pattern. The bubble flips to his
+    clamped at the corner, the fling pattern — its line comes from
+    `slappedPeek` (v1.49.0, short yelps: the exit rendezvous waits on
+    the bubble, so a long `slapped` rant at 450 ms/word pinned him
+    hanging at the corner; an empty pool falls back to `slapped`). The bubble flips to his
     bar side while peeking (the instance's `aboveHim` binding) —
     without the flip the vertical clamp parks it ON him at the far
     edge and the dwell is a bubble with no Clippy (seen live, top
@@ -617,9 +620,9 @@ Design rules that outrank any single feature:
   exchange `remember()`s itself. Ai off → both verbs say a `noBrain`
   book line themselves. No new settings key — the gesture is the opt-in.
   Test without a mic: `reply "<text>"` over IPC.
-- `quotes.json` — `{ quotes, lastWords, comeback, slapped, knockedOut,
-  dragged, dropped, flung, crashed, welcomeBack, epitaph, firstRun,
-  noBrain, heardNothing, dodged }` (the
+- `quotes.json` — `{ quotes, lastWords, comeback, slapped, slappedPeek,
+  knockedOut, dragged, dropped, flung, crashed, welcomeBack, epitaph,
+  firstRun, noBrain, heardNothing, dodged }` (the
   key list is `quoteKeys` in Clippy.qml; add there and here), entries
   `{ text, nsfw, anim? }`. `clean: true` filters `nsfw`. Content rules:
   lines must be speakable — no elongation gags or repeated letters
