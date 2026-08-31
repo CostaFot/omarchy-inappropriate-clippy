@@ -210,6 +210,34 @@
       { "text": "Steam. Buying games you'll never play is technically a hobby.", "nsfw": false, "anim": "Explain" },
       { "text": "Steam's open. Your backlog called. It's given up on you too.", "nsfw": false, "anim": "Alert" },
       { "text": "Games? Now? Sure, the code was going nowhere anyway.", "nsfw": false, "anim": "GetAttention" }
+    ],
+    "pornhub": [
+      { "text": "Ahem.", "nsfw": true, "anim": "Alert" },
+      { "text": "I saw nothing.", "nsfw": true, "anim": "LookUp" },
+      { "text": "Don't mind me. I'm basically a lamp.", "nsfw": true, "anim": "Thinking" },
+      { "text": "It looks like you're watching porn. Would you like help? No? Thank god.", "nsfw": true, "anim": "Alert" },
+      { "text": "I can see this. I just want to be very clear that I can see this.", "nsfw": true, "anim": "Explain" }
+    ],
+    "onlyfans": [
+      { "text": "Hm.", "nsfw": true, "anim": "Thinking" },
+      { "text": "Noted.", "nsfw": true, "anim": "Alert" },
+      { "text": "Your money. Carry on.", "nsfw": true, "anim": "LookUp" },
+      { "text": "OnlyFans. She says she misses you. She says that to four thousand subscribers.", "nsfw": true, "anim": "Explain" },
+      { "text": "OnlyFans again. Your bank statement reads like a cry for help.", "nsfw": true, "anim": "Alert" }
+    ],
+    "xvideos|xhamster|redtube|youporn": [
+      { "text": "Well then.", "nsfw": true, "anim": "Alert" },
+      { "text": "I'll come back later.", "nsfw": true, "anim": "LookUp" },
+      { "text": "Carry on. I'm not here.", "nsfw": true, "anim": "Thinking" },
+      { "text": "Incognito mode exists, you know. This is just brazen.", "nsfw": true, "anim": "Alert" },
+      { "text": "I'm not judging. I'm cataloguing. There's a difference.", "nsfw": true, "anim": "Explain" }
+    ],
+    "chaturbate|stripchat": [
+      { "text": "In this economy?", "nsfw": true, "anim": "Alert" },
+      { "text": "Bold.", "nsfw": true, "anim": "Thinking" },
+      { "text": "I'll give you two some privacy.", "nsfw": true, "anim": "LookUp" },
+      { "text": "A live cam. Because pre-recorded disappointment wasn't personal enough.", "nsfw": true, "anim": "Explain" },
+      { "text": "Tipping tokens to a stranger. In this economy.", "nsfw": true, "anim": "GetAttention" }
     ]
   },
   "welcomeBack": [

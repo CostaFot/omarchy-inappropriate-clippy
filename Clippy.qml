@@ -2638,7 +2638,7 @@ Item {
       if (root.asleep) return "asleep"
       var t = String(text || "")
       var hits = root.matchReactions(t, t)
-      if (!hits.length) return "no such target — nothing in the reactions map matches (built-ins: x, twitter, hacker news, chatgpt, facebook, instagram, tiktok, reddit, youtube, steam; a quotesFile reactions map adds more)"
+      if (!hits.length) return "no such target — nothing in the reactions map matches (built-ins: x, twitter, hacker news, chatgpt, facebook, instagram, tiktok, reddit, youtube, steam, plus the adult sites — pornhub, onlyfans, the big tube and cam sites — muted entirely under clean; a quotesFile reactions map adds more)"
       var h = root.randomFrom(hits)
       var q = root.randomFrom(h.quotes)
       return q && root.say(q.text, q.anim) ? root.ipcOkVoice() : "not now"

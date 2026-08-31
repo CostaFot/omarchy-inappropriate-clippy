@@ -350,7 +350,11 @@ Design rules that outrank any single feature:
     `reactionBook`/`extraReactionBook` pair rebuilt on every book load,
     merged per pattern by concatenation, clean-filtered in the matcher
     so an all-nsfw target under `clean` neither fires nor burns
-    cooldown), compiled lazily into a throw-proof cache — a bad
+    cooldown — the adult-site targets (pornhub, onlyfans, the merged
+    tube and cam patterns, v1.47.2) lean on exactly that: every line
+    nsfw on purpose, subtle "Ahem." beats mixed with full jabs, and
+    `clean` mutes the whole set), compiled lazily into a throw-proof
+    cache — a bad
     quotesFile regex warns once and is skipped, never crashes the
     mount. Each regex is tested against class and title SEPARATELY,
     case-insensitive (Steam anchors `^steam$` on the class; X anchors
