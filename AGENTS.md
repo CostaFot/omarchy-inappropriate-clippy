@@ -823,8 +823,12 @@ is one opaque string and ignores all three (clones bend via
   warm-voice deliberately don't extend to drop-ins (they're
   speak-clone-cache-shaped) — a drop-in containing "speak-clone" still
   gets the knobs via `cloneKnobsApply`, which is correct, not a leak.
-- `scripts/setup-voice` — installs engines (nothing is bundled; 60-340
-  MB downloads on demand) and ends every mode with `set tts` + a spoken
+- `scripts/setup-voice` — installs engines (nothing is bundled; on-demand
+  downloads: kokoro ~340 MB, piper ~60-120 MB, the clone path ~9 GB on
+  disk — a 6 GB torch venv plus the ~3 GB chatterbox model from HF
+  `ResembleAI/chatterbox`, pulled by `from_pretrained` on the daemon's
+  first line, cached in `~/.cache/huggingface`; `docs/voice.md` says
+  "~8 GB" to users) and ends every mode with `set tts` + a spoken
   hello, always through stdin→aplay (aplay, not pw-play — sndfile can't
   read raw audio from a pipe). Bare = hardware-picked default: an NVIDIA
   GPU with ≥6 GB total VRAM (`gpu_ok()`, biggest card) gets the shipped
@@ -1150,6 +1154,8 @@ stays free text — IPC and agent only.
 
 Everything above is live and verified on Costa's machine (the manifest
 names the current version). On GitHub at the README install URL; Pages is
-on (source `/docs` on `main`, primer theme, build confirmed live); not on
-the marketplace — `PUBLISHING.md` has the flow, prior submissions and
-the gap list. Future work: `IDEAS.md`. How we got here: `git log`.
+on (source `/docs` on `main`, primer theme, build confirmed live); LISTED
+on the marketplace since 2026-08-30 (snapshot v1.40.11; a Verify issue
+for the current version's snapshot may be in flight) — `PUBLISHING.md`
+has the flow, the submission log and the remaining gaps. Future work:
+`IDEAS.md`. How we got here: `git log`.

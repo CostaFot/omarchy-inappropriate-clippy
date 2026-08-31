@@ -1,12 +1,16 @@
 # Publishing to the Omarchy plugin marketplace
 
-Written 2026-08-28. Status: **submitted 2026-08-30 as HANCORE-linux/omarchy-plugin-marketplace#3395** (see "Submission log" at the end). Everything below is what an
+Written 2026-08-28. Status: **listed since 2026-08-30** (#3395,
+`approved-and-verified` by HANCORE-linux; snapshot pinned at `6980662` =
+v1.40.11). Verify issue **#3903** is open for the v1.49.1 snapshot (see
+"Submission log" at the end). The marketplace org renamed
+`HANCORE-linux` → `omacom` (old links redirect). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
 
 ## The flow (https://omarchyplugins.com/publish.html)
 
-Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
+Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
 (docs there: `SUBMISSION.md`, `SECURITY.md`, `VERIFICATION.md`).
 
 1. Repo prep: root `manifest.json` with every field, README with install
@@ -16,7 +20,7 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
 2. `omarchy plugin validate ~/Work/omarchy-inappropriate-clippy` — the real
    checkout, not the symlink in `~/.config/omarchy/plugins`.
 3. Open the "Submit a plugin" issue form:
-   https://github.com/HANCORE-linux/omarchy-plugin-marketplace/issues/new?template=submit-plugin.yml
+   https://github.com/omacom/omarchy-plugin-marketplace/issues/new?template=submit-plugin.yml
    Title `[Plugin]: <name>`. Fields: repository URL, category (dropdown:
    Appearance, Desktop, Developer Tools, Hardware, Productivity, System,
    Widgets, Other), 1–3 tags (AI, Bar, Games, Hyprland, Launcher, Media,
@@ -32,10 +36,19 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
    exact target SHA (template `verify-plugin.yml`, action "Verify and
    publish a newer upstream commit"). The listing is pinned to a commit;
    until you file one, new pushes show as "Update unverified".
+   **Freeze pushes while a Verify issue is open**: approval requires the
+   repo's default-branch HEAD to still BE the target commit —
+   `assertPluginUpdateInspection` (scripts/plugin-update.mjs) throws
+   `update-upstream-changed` ("The repository HEAD no longer matches the
+   requested update commit") otherwise. A push mid-review means editing
+   the issue body's Target commit to the new HEAD (the edit re-runs the
+   bots; a comment triggers nothing) and waiting again. Local commits are
+   invisible to the inspection; only pushes move HEAD. After approval,
+   pushes are harmless — the snapshot is pinned.
 
 ## Prior art to copy from
 
-- Autoduck submission: HANCORE-linux/omarchy-plugin-marketplace#2272
+- Autoduck submission: omacom/omarchy-plugin-marketplace#2272
   (Desktop; media, quickshell, bar; suggested "audio"; baseline `passed`;
   published the same day). Update: #2516 (Verify form, target commit SHA).
 - Yeet submission: #2651 (Productivity; bar, quickshell, media; suggested
@@ -52,7 +65,7 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   before a maintainer conflates them: ours runs the user's agent one-shot
   with tools off (`--tools ""`), only with `ai: true`, and never
   persistently.
-- `gh issue view <n> -R HANCORE-linux/omarchy-plugin-marketplace --json body`
+- `gh issue view <n> -R omacom/omarchy-plugin-marketplace --json body`
   gives the exact body shape; `SUBMISSION.md` there also has a
   `gh issue create` heredoc for doing it from the CLI.
 
@@ -176,5 +189,18 @@ Marketplace repo: https://github.com/HANCORE-linux/omarchy-plugin-marketplace
   of the plugin" sentence must be edited to say it is an AI illustration
   of the character under the same parody stance (that edit re-runs the
   bots on the new HEAD).
-  Next: maintainer applies `approved-and-verified`, then add the
-  marketplace URL to README + docs/index.md.
+  Outcome: `approved-and-verified` 2026-08-30 by HANCORE-linux, listed at
+  `6980662` (v1.40.11) — labels submission/validated/listed on the closed
+  issue, the registry entry carries the four reviewed capabilities.
+  Still pending from "After it's listed": the marketplace URL in README +
+  docs/index.md.
+- 2026-08-31: #3903 (Verify form, "publish a newer upstream commit")
+  filed at `ae3e6a5` (v1.49.0). Validation ✅, baseline 🟡 with the same
+  four capabilities as #3395 (no findings); answered in the thread with
+  the per-capability breakdown plus a what-changed-since-v1.40.11
+  summary. 2026-09-01: retargeted to `1e2bb79` (v1.49.1, the setup-voice
+  self-heal fix) by editing the issue body's Target commit — the edit is
+  the re-run button, a comment triggers nothing — and the bots re-ran:
+  compatibility ✅ at `1e2bb79`, baseline 🟡 identical but for
+  `setup-voice:174` → `:180`; noted for the maintainer in a comment.
+  Next: maintainer applies `approved-and-verified` at `1e2bb79`.
