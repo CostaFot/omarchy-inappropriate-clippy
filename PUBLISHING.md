@@ -2,8 +2,10 @@
 
 Written 2026-08-28. Status: **listed since 2026-08-30** (#3395,
 `approved-and-verified` by HANCORE-linux; snapshot pinned at `6980662` =
-v1.40.11). Verify issue **#3903** is open for the v1.49.1 snapshot (see
-"Submission log" at the end). The marketplace org renamed
+v1.40.11), re-snapshotted at `d61ab1b` = v1.49.2 by **#3903**
+(`approved-and-verified` 2026-09-02; see "Submission log" at the end).
+v1.50.0 is released but not yet on the marketplace — it needs its own
+Verify issue when Costa wants it there. The marketplace org renamed
 `HANCORE-linux` → `omacom` (old links redirect). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
@@ -206,5 +208,8 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   Later that day: v1.49.2 (speak-clone's daemon-death and slow-download
   error paths, prompted by the same reporter's next traceback) released
   and #3903 retargeted a second time to its commit, same
-  edit-the-body procedure. Next: maintainer applies
-  `approved-and-verified` at the v1.49.2 commit.
+  edit-the-body procedure. 2026-09-02 00:26 UTC: closed
+  `approved-and-verified` at the v1.49.2 commit (`d61ab1b`). The freeze
+  lifted with it; v1.50.0 (volume knobs) was pushed and released later
+  that day with no Verify issue filed — Costa's call ("don't make a
+  verification issue yet").
