@@ -161,3 +161,14 @@ setup and it doubles his territory.
   opt-in.
 - **Walking on window title bars** — leaves the bar-anchored model
   entirely; a big rewrite for a gag the bar already delivers.
+
+## Voice volume for George and piper (parked from v1.50.0)
+
+`voiceVolume` reaches espeak (`-a`) and the clones (the `CLIPPY_VOICE_VOLUME`
+env var, read by speak-clone). Robot George and piper play through stored
+`tts` strings the plugin never rewrites, so they ignore it. The fix is
+known, just not free: George's ffmpeg chain can take `volume=${CLIPPY_VOICE_VOLUME:-1}`
+(bash expands it at run time), piper would need an ffmpeg stage inserted
+before aplay, and `currentVoiceId`'s exact string match must learn both
+shapes or every existing install's picker starts saying "custom". Costa's
+call 2026-09-02: espeak + clones only, the rest answer "ok — but".

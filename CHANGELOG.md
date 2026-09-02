@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.50.0
+
+- `soundVolume` (0–1): the slap, fall and whoosh have a level now, with a quiet · medium · full row in the menu under Sounds.
+- `voiceVolume` (0–1): how loud he talks, same three chips under the Voice picker. The espeak-ng robot and clone voices honour it (an existing clone install needs one `setup-voice` rerun to refresh its client); robot George, piper and custom commands ignore it.
+
 ## v1.49.2
 
 - A voice daemon that dies while a line waits on it (e.g. the model download failing) now reports "daemon never came up" with the crash's last log line, instead of a raw ConnectionResetError traceback — and the next line respawns it.

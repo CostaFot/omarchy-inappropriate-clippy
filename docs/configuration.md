@@ -42,6 +42,7 @@ into the bar himself, settings and all.
 | `slapsToKill` | `10` | That many slaps inside six seconds knocks him out, same as a kill. `0` = never |
 | `dodge` | `0.1` | Chance a slap misses — he sidesteps, gloats, and it counts for nothing. `0`/`false` = he takes every one, `1` = untouchable |
 | `dodgeSound` | follows `slapSound` | The whoosh when he slips one. `false`, or a path to a WAV instead of the built-in one |
+| `soundVolume` | `1` | How loud the slap, fall and whoosh play (0–1). `0.5` is a lot quieter; the menu has quiet · medium · full |
 | `drag` | `true` | `false` stops the long-press drag |
 | `fling` | `true` | `false` makes a fast release just a drop, not a throw |
 | `crashLines` | `true` | When one of your programs dumps core he has a line about it, on the spot. `false` and crashes pass without comment |
@@ -55,6 +56,7 @@ into the bar himself, settings and all.
 | `ttsSaved` | — | Where a custom `tts` command parks while the voice is toggled off, so toggling doesn't lose it. Managed for you; `set ttsSaved unset` forgets it |
 | `cloneTempo` | `1` | How fast a cloned voice talks, pitch untouched — `1.1` is a little brisker, `0.9` slower (0.5–2). Instant: derived from the line cache, never the GPU |
 | `clonePitch` | `1` | Pitch for a cloned voice, tempo untouched — `0.85` deeper, `1.2` lighter (0.5–2). Set both knobs the same for the full chipmunk |
+| `voiceVolume` | `1` | How loud he talks (0–1). The espeak-ng robot and clone voices honour it; robot George, piper and a custom command ignore it — turn those down in your mixer. The menu has quiet · medium · full |
 | `voiceCacheMb` | `500` | Size cap in MB for the cloned-voice line cache (`~/.cache/clippy-voice`) — least-recently-played renders go first, so the warmed book stays. `0` means no cap. Applies from the voice daemon's next start |
 | `duck` | `0.8` | The fraction of volume everything else keeps while he talks (0–1). `0.5` halves your music, `1` or `false` turns ducking off. The menu only toggles; the ratio is IPC-only |
 | `duckSaved` | — | Where a custom `duck` ratio parks while ducking is toggled off, so toggling doesn't lose it. Managed for you |

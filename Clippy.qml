@@ -113,9 +113,9 @@ Item {
   readonly property var settingDefaults: ({
     size: 30, clean: false, intervalMin: 90, intervalMax: 420, speed: 40, restless: 0.3,
     respawn: 300, screen: "", quotesFile: "", promptFile: "",
-    slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10, dodge: 0.1, dodgeSound: null,
+    slap: true, slapSwipe: true, slapSound: true, flingSound: null, slapsToKill: 10, dodge: 0.1, dodgeSound: null, soundVolume: 1,
     drag: true, fling: true, tts: false, ttsVoice: "en+m3", ttsSpeed: 155, ttsPitch: 45,
-    ttsSaved: "", cloneTempo: 1, clonePitch: 1, voiceCacheMb: 500, duck: 0.8, duckSaved: "",
+    ttsSaved: "", cloneTempo: 1, clonePitch: 1, voiceVolume: 1, voiceCacheMb: 500, duck: 0.8, duckSaved: "",
     ai: false, aiAgent: "", aiModel: "",
     pauseWhenAway: true, avoidWidgets: true, tombstone: true, crashLines: true, reactions: true,
     reactionCooldown: 2700, reactionGap: 600, gags: true, peekChance: 0.04,
@@ -248,6 +248,14 @@ Item {
   readonly property var slapSounds: soundList(slapSoundSetting, ["slap-crack.wav", "slap-punch.wav"])
   readonly property var flingSounds: soundList(flingSoundSetting, ["fall-cartoon.wav"])
   readonly property var dodgeSounds: soundList(dodgeSoundSetting, ["dodge-whoosh.wav"])
+  // `soundVolume` (0-1, v1.50.0): one level for all three banks — the
+  // SoundEffect's own linear gain, so no pactl and nothing for the duck
+  // script to see. Off is still an empty bank, not volume 0. NaN-tolerant
+  // like voiceCacheMb; `|| 1` would turn an explicit 0 into full volume.
+  readonly property real soundVolume: {
+    var n = Number(setting("soundVolume", 1))
+    return isNaN(n) ? 1 : clamp(n, 0, 1)
+  }
   // `tts`: false for silence (the default), true for espeak-ng — install that
   // yourself — or your own shell command as a string, handed every line on
   // stdin. The machinery lives next to the SoundBanks below.
@@ -268,6 +276,19 @@ Item {
   readonly property real cloneTempo: clamp(Number(setting("cloneTempo", 1)) || 1, 0.5, 2)
   readonly property real clonePitch: clamp(Number(setting("clonePitch", 1)) || 1, 0.5, 2)
   readonly property bool cloneKnobsApply: typeof ttsSetting === "string" && ttsSetting.indexOf("speak-clone") !== -1
+  // `voiceVolume` (0-1, v1.50.0): his own level. Every engine plays through
+  // a different pipe, so it reaches only the two we can bend without
+  // touching a stored tts string: espeak takes it as -a (0-200, 100 =
+  // default), speak-clone reads CLIPPY_VOICE_VOLUME from the environment
+  // (an env var, not a flag — a client installed before the knob ignores
+  // it instead of argparse-exiting into silence) and applies it in the
+  // same ffmpeg step as tempo/pitch. Robot George, piper and custom
+  // commands are frozen strings and ignore it; the set reply says so.
+  readonly property real voiceVolume: {
+    var n = Number(setting("voiceVolume", 1))
+    return isNaN(n) ? 1 : clamp(n, 0, 1)
+  }
+  readonly property bool voiceVolumeApplies: ttsSetting === true || cloneKnobsApply
   // MB the clone line cache may hold; the daemon prunes least-recently-played
   // renders past it, 0 = no cap. Reaches the daemon through the environment
   // of whichever of our processes spawns it (a spoken line or a warm), so a
@@ -278,7 +299,9 @@ Item {
     var n = Number(setting("voiceCacheMb", 500))
     return isNaN(n) ? 500 : Math.max(0, Math.round(n))
   }
-  readonly property var voiceCacheEnv: ({ CLIPPY_VOICE_CACHE_MB: String(voiceCacheMb) })
+  // The daemon reads the cap; speak-clone reads the volume. Both ride on
+  // every process that can spawn either (a spoken line or a warm).
+  readonly property var voiceEnv: ({ CLIPPY_VOICE_CACHE_MB: String(voiceCacheMb), CLIPPY_VOICE_VOLUME: String(voiceVolume) })
   // Ducking: every *other* audio stream drops to `duck` of its volume
   // while he speaks and comes back after. Works with any engine: the
   // snapshot is taken before the engine spawns (see scripts/duck).
@@ -1645,6 +1668,7 @@ Item {
     delegate: SoundEffect {
       required property string modelData
       source: modelData
+      volume: root.soundVolume
       onStatusChanged: if (status === SoundEffect.Error) console.warn("clippy: can't load sound " + source)
       onPlayingChanged: if (!playing) root.slapSoundDone(this)
     }
@@ -1744,7 +1768,7 @@ Item {
     // Dead overrides ttsVoice: epitaphs whisper no matter who he was.
     var cmd = typeof ttsSetting === "string" ? ttsSetting
             : "exec espeak-ng -v '" + (mood === "dead" ? "en+whisper" : ttsVoice)
-              + "' -s " + ttsSpeed + " -p " + ttsPitch
+              + "' -s " + ttsSpeed + " -p " + ttsPitch + " -a " + Math.round(voiceVolume * 100)
     // The clone knobs ride here, not in the stored string. Appended last,
     // so on a hand-set command that already carries the flags these win
     // (argparse keeps the final occurrence).
@@ -1756,7 +1780,7 @@ Item {
   }
   Process {
     id: ttsProc
-    environment: root.voiceCacheEnv // the voice daemon inherits its cache cap
+    environment: root.voiceEnv // the daemon's cache cap, speak-clone's volume
     // Belt and braces for a real unload (plugin disable, shell exit):
     // nothing else kills the child there, and running=false wouldn't either.
     Component.onDestruction: signal(15)
@@ -1869,7 +1893,7 @@ Item {
   }
   Process {
     id: warmBookProc
-    environment: root.voiceCacheEnv // a warm may be what spawns the daemon
+    environment: root.voiceEnv // a warm may be what spawns the daemon
     stderr: StdioCollector { id: warmBookErr }
     stdout: StdioCollector { id: warmBookOut }
     onExited: function (code) {
@@ -1884,7 +1908,7 @@ Item {
   }
   Process {
     id: warmProc
-    environment: root.voiceCacheEnv // a warm may be what spawns the daemon
+    environment: root.voiceEnv // a warm may be what spawns the daemon
     stderr: StdioCollector { id: warmErr }
     onExited: function (code) {
       // Not-a-speak-clone is gated before the spawn, so nonzero is real.
@@ -2857,11 +2881,26 @@ Item {
       }
       if (key === "voiceCacheMb" && parsed !== undefined && (typeof parsed !== "number" || parsed < 0))
         return "no — voiceCacheMb is a size in MB, 0 for no cap"
+      if ((key === "soundVolume" || key === "voiceVolume") && parsed !== undefined && typeof parsed !== "number")
+        return "no — " + key + " is 0-1 (1 is full volume)"
       if (!root.setSetting(key, parsed)) return "can't write shell.json"
       if (key === "voiceCacheMb" && parsed !== undefined)
         return (parsed === 0 ? "ok — no cap; the voice line cache grows unpruned"
           : "ok — the voice line cache trims least-recently-played renders past " + Math.round(parsed) + " MB")
           + " (applies from the voice daemon's next start; it exits after 15 idle minutes)"
+      if (key === "soundVolume") {
+        var sv = Math.round(root.soundVolume * 100)
+        return "ok — sounds at " + sv + "%" + (root.slapSoundOn ? "" : " (sounds are off — set slapSound true)")
+      }
+      if (key === "voiceVolume") {
+        var vv = Math.round(root.voiceVolume * 100)
+        if (!root.ttsOn) return "ok — heard once tts is on"
+        if (root.ttsSetting === true) return root.ttsEngineMissing
+          ? "ok — but espeak-ng isn't installed, so he stays silent until it is"
+          : "ok — the robot speaks at " + vv + "%"
+        if (root.cloneKnobsApply) return "ok — heard on the next line at " + vv + "% (derived from the line cache, so it's instant; a clone installed before v1.50.0 needs one setup-voice rerun to pick it up)"
+        return "ok — but the active voice is a custom command, which ignores voiceVolume (espeak and clone voices honour it)"
+      }
       if (key === "ttsVoice" || key === "ttsSpeed" || key === "ttsPitch") {
         if (typeof root.ttsSetting === "string") return "ok — but tts is a custom command, which ignores the built-in tuning (a clone bends with cloneTempo/clonePitch instead)"
         if (root.ttsEngineMissing) return "ok — but espeak-ng isn't installed, so he stays silent until it is"

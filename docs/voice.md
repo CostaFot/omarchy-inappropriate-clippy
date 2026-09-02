@@ -91,7 +91,12 @@ deep · normal · light · squeaky) whenever a clone voice is the one talking.
 `set clonePitch 0.85` and he's noticeably deeper, tempo untouched; both to
 `1.2` and you've built the chipmunk. They're applied to the line cache with
 ffmpeg, never the GPU, so auditioning values is instant and the warm cache
-stays warm. The synthesis itself is still tuned by editing the `tts`
+stays warm. `voiceVolume` (0–1, a Voice volume row in the menu) rides the
+same step, so `set voiceVolume 0.5` is instant too; a clone installed
+before v1.50.0 needs one rerun of `setup-voice` to refresh its client
+first — until then the knob is ignored, not broken. The espeak-ng robot
+takes the same key; robot George, piper and a custom command don't (their
+commands are frozen strings — turn those down in your mixer). The synthesis itself is still tuned by editing the `tts`
 string's `--exag` and `--cfg` knobs (both up = snappier delivery) — those
 re-render every line, so rerun `scripts/warm-voice` after.
 
@@ -180,7 +185,7 @@ already playing when the line started (so his own voice is never
 ducked, and neither are his own sound effects), and volumes are
 snapshotted and restored exactly — if the shell dies mid-sentence, the
 next mount puts them back. A slap
-reaction gets both, in order: the crack plays first at full volume, and
+reaction gets both, in order: the crack plays first (at `soundVolume`), and
 the moment it ends he speaks the line — the voice never talks over its
 own sound effect.
 

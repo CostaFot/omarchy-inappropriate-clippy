@@ -272,6 +272,23 @@ PanelWindow {
         active: on
         onTapped: menu.set("slapSound", !on)
       }
+      // The level under the toggle (v1.50.0): three presets, hidden while
+      // sounds are off (a dead row, the Tempo/Pitch rule); an off-preset
+      // IPC value highlights the nearest chip.
+      Choice {
+        visible: menu.clippy ? menu.clippy.slapSoundOn : true
+        label: "Sound volume"
+        options: [
+          { label: "quiet", value: 0.25 },
+          { label: "medium", value: 0.5 },
+          { label: "full", value: 1 }
+        ]
+        current: {
+          var v = menu.clippy ? menu.clippy.soundVolume : 1
+          return v <= 0.35 ? 0 : (v < 0.75 ? 1 : 2)
+        }
+        onPicked: function (value) { menu.set("soundVolume", value) }
+      }
       Entry {
         readonly property bool on: menu.clippy ? menu.clippy.gagsEnabled : true
         label: "Full-screen gags"
@@ -348,6 +365,24 @@ PanelWindow {
         font.pixelSize: card.fontSize - 2
         leftPadding: Style.space(8)
         bottomPadding: Style.space(3)
+      }
+      // His own level (v1.50.0): only while the voice is on AND the engine
+      // can take it — espeak and the clones; George, piper and a custom
+      // command are frozen strings the knob can't reach, so the row would
+      // be dead weight there.
+      Choice {
+        visible: menu.open && menu.clippy ? (menu.clippy.ttsOn && menu.clippy.voiceVolumeApplies) : false
+        label: "Voice volume"
+        options: [
+          { label: "quiet", value: 0.25 },
+          { label: "medium", value: 0.5 },
+          { label: "full", value: 1 }
+        ]
+        current: {
+          var v = menu.clippy ? menu.clippy.voiceVolume : 1
+          return v <= 0.35 ? 0 : (v < 0.75 ? 1 : 2)
+        }
+        onPicked: function (value) { menu.set("voiceVolume", value) }
       }
       // The clone bend (v1.26.0): cloneTempo/clonePitch as preset chips.
       // Only while a speak-clone voice is the one talking — for every other
