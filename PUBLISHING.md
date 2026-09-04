@@ -5,7 +5,8 @@ Written 2026-08-28. Status: **listed since 2026-08-30** (#3395,
 v1.40.11), re-snapshotted at `d61ab1b` = v1.49.2 by **#3903**
 (`approved-and-verified` 2026-09-02; see "Submission log" at the end).
 v1.50.0 is released and under review: **#4870** (Verify form, filed
-2026-09-04 at `a544fc2`) — pushes are frozen until it closes. The marketplace org renamed
+2026-09-04 at `a544fc2`) — `main` stays parked on that commit (= the
+v1.50.0 tag) until it closes; work goes on the `next` branch. The marketplace org renamed
 `HANCORE-linux` → `omacom` (old links redirect). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
@@ -45,8 +46,24 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
    requested update commit") otherwise. A push mid-review means editing
    the issue body's Target commit to the new HEAD (the edit re-runs the
    bots; a comment triggers nothing) and waiting again. Local commits are
-   invisible to the inspection; only pushes move HEAD. After approval,
-   pushes are harmless — the snapshot is pinned.
+   invisible to the inspection; only pushes move HEAD. **After approval
+   a push to `main` is NOT harmless either** (learned 2026-09-04): the
+   snapshot pin protects installs and the reviewed code, but the
+   listing's badge follows HEAD of the default branch — the catalog
+   re-validates every new HEAD on its own (`upstreamObservedCommit`),
+   and any HEAD newer than `verificationCommit` shows as "Update
+   unverified" until the next Verify issue is approved, docs-only
+   commits included (v1.50.0's docs follow-up `a544fc2` did exactly
+   that). Hence the branch rule below.
+6. **`main` is the marketplace.** Local and remote `main` sit exactly on
+   the last release tag and move only at release time; everything in
+   between is committed on the `next` branch (pushed freely — the
+   marketplace reads only the default branch). A release is: merge
+   `next` into `main`, bump `manifest.json`, tag, push `main`, `gh
+   release create`, then file the Verify issue at that HEAD at once.
+   If a fix lands while a Verify issue is still unreviewed, prefer
+   retargeting it (edit the body's Target commit) over pushing after
+   approval.
 
 ## Prior art to copy from
 
@@ -168,8 +185,11 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
 
 - Add the marketplace URL to the README install section (autoduck's
   README does not, but it's the obvious place) and to `docs/index.md`.
-- On each release: bump `manifest.json` version, tag, push, then the
-  Verify issue with the full 40-char SHA. Record the issue numbers here.
+- On each release: merge `next` into `main`, bump `manifest.json`
+  version, tag, push, `gh release create`, then the Verify issue with
+  the full 40-char SHA — in one sitting, since the listing reads
+  "Update unverified" from the push until the approval. Record the
+  issue numbers here.
 
 ## Submission log
 
@@ -221,4 +241,8 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   Validation ✅, baseline 🟡 with the same four capabilities (only
   `Clippy.qml:2712` → `:2736`); answered in the thread with the
   per-capability breakdown plus the what-changed-since-v1.49.2 summary
-  (the volume knobs). Freeze on until it closes.
+  (the volume knobs). Same day, checking the listing showed why the
+  old "pushes are harmless after approval" note was wrong (the badge
+  follows HEAD — see flow step 5/6), so `main` was reset to the
+  v1.50.0 tag and this entry's commit moved to the new `next` branch;
+  from here on `main` moves only at release time.
