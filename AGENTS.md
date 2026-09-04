@@ -1191,6 +1191,7 @@ Everything above is live and verified on Costa's machine (the manifest
 names the current version). On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); LISTED
 on the marketplace since 2026-08-30 (snapshot v1.49.2 since 2026-09-02;
-v1.50.0 is released but has no Verify issue yet) — `PUBLISHING.md`
+v1.50.0's Verify issue #4870 was filed 2026-09-04 at `a544fc2` — pushes
+frozen until it closes) — `PUBLISHING.md`
 has the flow, the submission log and the remaining gaps. Future work:
 `IDEAS.md`. How we got here: `git log`.

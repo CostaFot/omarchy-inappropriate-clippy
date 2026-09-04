@@ -4,8 +4,8 @@ Written 2026-08-28. Status: **listed since 2026-08-30** (#3395,
 `approved-and-verified` by HANCORE-linux; snapshot pinned at `6980662` =
 v1.40.11), re-snapshotted at `d61ab1b` = v1.49.2 by **#3903**
 (`approved-and-verified` 2026-09-02; see "Submission log" at the end).
-v1.50.0 is released but not yet on the marketplace — it needs its own
-Verify issue when Costa wants it there. The marketplace org renamed
+v1.50.0 is released and under review: **#4870** (Verify form, filed
+2026-09-04 at `a544fc2`) — pushes are frozen until it closes. The marketplace org renamed
 `HANCORE-linux` → `omacom` (old links redirect). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
@@ -213,3 +213,12 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   lifted with it; v1.50.0 (volume knobs) was pushed and released later
   that day with no Verify issue filed — Costa's call ("don't make a
   verification issue yet").
+- 2026-09-04: the catalog had picked up v1.50.0 on its own
+  (`upstreamValidatedCommit` = `a544fc2`, `upstreamCheckStatus: passed`)
+  and the listing showed `verificationCoverage: update-unverified`. #4870
+  (Verify form, "publish a newer upstream commit") filed at `a544fc2`
+  (v1.50.0 + the docs-only follow-up, which is where the tag sits).
+  Validation ✅, baseline 🟡 with the same four capabilities (only
+  `Clippy.qml:2712` → `:2736`); answered in the thread with the
+  per-capability breakdown plus the what-changed-since-v1.49.2 summary
+  (the volume knobs). Freeze on until it closes.
