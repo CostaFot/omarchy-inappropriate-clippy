@@ -1199,3 +1199,7 @@ only at release time, because the marketplace badge follows HEAD of
 between goes on the `next` branch, pushed freely. `PUBLISHING.md`
 has the flow, the submission log and the remaining gaps. Future work:
 `IDEAS.md`. How we got here: `git log`.
+
+## Board
+
+This repo is the Linear project **omarchy-inappropriate-clippy** on Costa's public board (https://www.costafotiadis.com/board/). The `board` skill has the commands. Issues for this repo carry that project and one area label (`omarchy`). Follow-ups (a deferred fix, a check that waits on something external, a TODO written here) become an issue before the session ends; a note in this file is not a substitute.
