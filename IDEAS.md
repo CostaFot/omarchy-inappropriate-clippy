@@ -1,5 +1,7 @@
 # Ideas
 
+Every live idea below is an issue on the board (https://www.costafotiadis.com/board/, COS-64 to COS-76, imported 2026-09-06). A new idea gets an issue when it is added here; a shipped one gets its issue completed. Dead ideas have none.
+
 Pitched 2026-08-28, in rough order of payoff-to-effort. (The short list
 that used to live in AGENTS.md was merged in here 2026-08-29.)
 
