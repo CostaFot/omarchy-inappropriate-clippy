@@ -10,8 +10,8 @@ source of truth. The session journal (who asked for what, what was tried
 and dropped, how it was verified) is the commit messages: `git log
 --grep=v1.36.0` or `git log -S<symbol>` when you need the why behind a
 rule here (a `HISTORY.md` used to duplicate them; removed in v1.40.3 after
-an audit folded every still-true fact into this file). Future work goes in
-`IDEAS.md`, never here. User docs are split
+an audit folded every still-true fact into this file). Future work is issues on
+the board (see Board below), never here. User docs are split
 (v1.40.0): `README.md` is the pitch — the 16:9 `preview.png` as hero
 (the marketplace card image, 4267×2400 like Costa's other plugins; since
 v1.40.11 an AI-generated illustration — Clippy on a deckchair on a thin
@@ -161,7 +161,7 @@ Design rules that outrank any single feature:
     whole lifecycle. The tumble (`gagEntrance()`, v1.45.0 — it shipped
     as the skyfall in v1.42.0, a fall in from the far screen edge; Costa
     never warmed to it and picked the tumble from a pitched set, the
-    rest parked in IDEAS.md): he rolls in along the bar line from the
+    rest parked as board issues): he rolls in along the bar line from the
     nearest screen edge like a dropped coin — one `ParallelAnimation`
     (`gagAnim`: x slide + three full rotation turns, both OutCubic, so
     the roll decelerates to a stop), pivoting `transformOrigin:
@@ -1198,7 +1198,7 @@ only at release time, because the marketplace badge follows HEAD of
 "Update unverified" until the next Verify issue is approved; all work in
 between goes on the `next` branch, pushed freely. `PUBLISHING.md`
 has the flow, the submission log and the remaining gaps. Future work:
-`IDEAS.md`. How we got here: `git log`.
+the board. How we got here: `git log`.
 
 ## Board
 

@@ -2284,7 +2284,7 @@ Item {
     gagDy = (barBottom ? -1 : 1) * (stage.height - actor.height)
     actor.x = left ? -actor.width : stage.width
     // The vertical Look reads right from either far corner and sidesteps
-    // the character-mirroring question the side Looks raise (IDEAS.md).
+    // the character-mirroring question the side Looks raise (see the board).
     var look = barBottom ? "LookDown" : "LookUp"
     sprite.play(sprite.has(look) ? look : "RestPose", true)
     peekAnim.stop()
