@@ -717,6 +717,9 @@ Item {
   }
 
   onBarVerticalChanged: if (barVertical) console.warn("clippy: vertical bars are not supported, hiding")
+  // A bar that changed size or moved screens has re-laid-out its widgets.
+  onBarSizeChanged: invalidateGeometry()
+  onTargetScreenChanged: invalidateGeometry()
 
   // One Clippy, on the output Hyprland has focused (like navbar-cat does), so
   // he follows you between screens instead of multiplying. `screen: "<name>"`
@@ -1342,17 +1345,24 @@ Item {
 
   // ---- widget avoidance --------------------------------------------------
   // Occupied x-intervals [lo, hi] of visible bar widgets on his screen,
-  // padded and merged. null = unknowable (setting off, no bar yet, a shell
-  // without moduleSlots, vertical bar) — callers fall back to raw targets.
+  // padded and merged. null = unknowable (setting off, no bar yet, no
+  // source that answers, vertical bar) — callers fall back to raw targets.
   // Read lazily at pick time, never from a binding: widget widths change
   // without signals (tray drawer, center peeks) and moduleSlots is
   // reassigned on every register/unregister.
+  //
+  // Two sources, because omarchy 4.0.3's plugin facade took the first one
+  // away. `shell.bar.moduleSlots` is the bar's live slot list — exact, free,
+  // per screen, and gone from the facade. `debugBarGeometry` is the bar
+  // dumping that same list to JSON, still reachable by anyone over IPC; it
+  // costs a fork, so it is sampled and cached (below). Live first: a host
+  // that still hands us the slots is never worth a subprocess.
+  readonly property int widgetPad: 6
   function occupiedIntervals() {
     if (!avoidWidgets || barVertical || !shell || !shell.bar) return null
     var slots = shell.bar.moduleSlots
-    if (!slots || typeof shell.bar.slotScreenName !== "function") return null
+    if (!slots || typeof shell.bar.slotScreenName !== "function") return sampledIntervals()
     var mine = targetScreen ? String(targetScreen.name) : ""
-    var pad = 6
     var boxes = []
     for (var i = 0; i < slots.length; i++) {
       var s = slots[i]
@@ -1362,9 +1372,14 @@ Item {
       if (shell.bar.slotScreenName(s) !== mine) continue
       try { // slot windows can vanish mid bar-reload
         var p = s.mapToItem(null, 0, 0) // bar-window x == screen x == stage x
-        boxes.push([p.x - pad, p.x + s.width + pad])
+        boxes.push([p.x - widgetPad, p.x + s.width + widgetPad])
       } catch (e) {}
     }
+    return mergeBoxes(boxes)
+  }
+
+  // Sort and union, so callers get one interval per cluster.
+  function mergeBoxes(boxes) {
     boxes.sort(function (a, b) { return a[0] - b[0] })
     var merged = []
     for (var j = 0; j < boxes.length; j++) {
@@ -1373,6 +1388,85 @@ Item {
       else merged.push(boxes[j])
     }
     return merged
+  }
+
+  // The sampled source: `omarchy-shell shell debugBarGeometry`, the bar's own
+  // dump of every slot (id, section, x, y, width, height, visible) in the
+  // same coordinate space the live path used — each entry is already mapped
+  // to its bar window, and a bar window's x is the stage's x. It is a debug
+  // verb, so upstream could rename it without notice; losing it just puts
+  // him back on the raw-target fallback, which is where he was before this.
+  //
+  // It carries no screen name, where the live path filtered on
+  // slotScreenName, so on a multi-monitor box the sample is every bar's
+  // slots at once. The bar renders ONE layout per screen, so equal-width
+  // screens stack their duplicates exactly and the union is the truth; on
+  // mixed widths the wider screen's right-hand widgets project onto his as
+  // spans nothing actually occupies. That fails safe — he avoids more than
+  // he has to, never less — and the real fix is a screen name on
+  // debugBarGeometry, which is the upstream ask.
+  //
+  // Sampled lazily like the live path, but one pick behind it: a pick uses
+  // the sample it has and orders a fresh one once that has aged past
+  // geomTtlMs. So the fork happens at most once per idle beat (10-30 s
+  // apart), never from a binding, and never at all while he sleeps, because
+  // nothing picks then. The first pick after a mount has nothing to go on
+  // and falls back to raw targets; by the next beat there is a sample.
+  property var geomBoxes: null  // merged intervals from the last sample
+  property real geomAt: 0       // when it was taken
+  property int geomFails: 0
+  readonly property int geomTtlMs: 10000
+  function sampledIntervals() {
+    // A source that keeps failing (no omarchy-shell on PATH, a shell that
+    // dropped the verb) stops being asked; a resize or a screen change arms
+    // it again, since those are when a dead sample could come back.
+    if (geomFails < 3 && Date.now() - geomAt > geomTtlMs && !geomProc.running)
+      geomProc.running = true
+    return geomBoxes
+  }
+  function invalidateGeometry() {
+    geomAt = 0
+    geomFails = 0
+  }
+  Process {
+    id: geomProc
+    // omarchy-shell reads OMARCHY_PATH; the shell has it in its own
+    // environment and children inherit it, and the injected copy covers a
+    // host that hands us the path without exporting it.
+    environment: root.omarchyPath !== "" ? ({ OMARCHY_PATH: root.omarchyPath }) : ({})
+    // Through bash so a missing omarchy-shell is exit 127 rather than a
+    // Process that never starts and never fires onExited (the espeak lesson).
+    command: ["bash", "-c", "omarchy-shell shell debugBarGeometry"]
+    stdout: StdioCollector { id: geomOut }
+    onExited: function (code) {
+      root.geomAt = Date.now()
+      var boxes = code === 0 ? root.parseGeometry(geomOut.text) : null
+      if (boxes === null) {
+        root.geomFails++
+        // Keep the last good sample: a one-off failure (the shell busy, the
+        // 2 s IPC timeout) is not news about where the widgets are.
+        if (root.geomFails >= 3) root.geomBoxes = null
+        return
+      }
+      root.geomFails = 0
+      root.geomBoxes = boxes
+    }
+  }
+  // Boxes from the JSON, or null when it is not the answer we asked for
+  // (an unknown verb prints an error and exits non-zero, so this mostly
+  // guards a shell that starts answering something else).
+  function parseGeometry(text) {
+    var slots
+    try { slots = JSON.parse(text) } catch (e) { return null }
+    if (!Array.isArray(slots)) return null
+    var boxes = []
+    for (var i = 0; i < slots.length; i++) {
+      var s = slots[i]
+      // `visible` is already the shell's own collapsed-slot test.
+      if (!s || s.visible !== true || !(s.width > 0)) continue
+      boxes.push([s.x - widgetPad, s.x + s.width + widgetPad])
+    }
+    return mergeBoxes(boxes)
   }
 
   // Position intervals [lo, hi] where a thing of width `w` (the actor,
@@ -3104,8 +3198,13 @@ Item {
       id: stage
       anchors.fill: parent
       // A resolution or monitor change invalidates a live peek's gagDy:
-      // cancel-and-restore beats a mid-air hang.
-      onWidthChanged: { if (root.peeking) root.peekCancel(true); root.maybeBoot() }
+      // cancel-and-restore beats a mid-air hang. It also moves every widget,
+      // so a sampled bar geometry is wrong the instant it happens.
+      onWidthChanged: {
+        if (root.peeking) root.peekCancel(true)
+        root.invalidateGeometry()
+        root.maybeBoot()
+      }
       onHeightChanged: if (root.peeking) root.peekCancel(true)
 
       Item {

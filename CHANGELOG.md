@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.51.0
+
+- He parks between your widgets again (`avoidWidgets`). Current Omarchy stopped telling plugins where the bar widgets are, so he now asks the bar for them directly instead. With more than one monitor he can't tell which screen a widget is on, so he keeps clear of all of them.
+
 ## v1.50.1
 
 - Settings work again on current Omarchy. The shell changed how a plugin is handed its own configuration; he read none of it, so every setting fell back to its default, the menu and `set` looked dead, and each write overwrote the rest of your entry. If yours was emptied, Omarchy's backups are at `~/.config/omarchy/shell.json.bak.*`.

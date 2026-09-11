@@ -157,26 +157,49 @@ Design rules that outrank any single feature:
     probability `restless` (0.3), walks are mostly short hops of
     80-400 px with 1 in 5 a trek anywhere.
   - widget avoidance (`avoidWidgets`, default true): walk targets park in
-    the gaps between bar widgets. `occupiedIntervals()` filters
-    `shell.bar.moduleSlots` by his screen and the shell's visibility test
-    (a collapsed slot keeps visible=true but drops to 0x0), maps with
-    `mapToItem(null, 0, 0)` (bar-window x == screen x == stage x), pads
-    6 px and merges; `freeGaps(w)` inverts that into positions where a
-    width-`w` thing fits. Sampled lazily at pick time, NEVER from a
-    binding: widget widths change without signals and `moduleSlots` is
-    reassigned per register/unregister. Treks pick a width-weighted
+    the gaps between bar widgets. `occupiedIntervals()` filters slots by
+    his screen and the shell's visibility test (a collapsed slot keeps
+    visible=true but drops to 0x0), pads 6 px and merges (`mergeBoxes`);
+    `freeGaps(w)` inverts that into positions where a width-`w` thing
+    fits. Read lazily at pick time, NEVER from a binding: widget widths
+    change without signals and the slot list is reassigned per
+    register/unregister. Treks pick a width-weighted
     random gap; hops snap to the nearest clear position, uncapped — the
     snap IS the hop aesthetic (a first cut capped the snap at 120 px so a
     hop would "stay a hop"; deep-in-cluster targets then stood dirty and he
     parked on the workspaces within minutes). Standing on a widget raises the next
     beat's walk chance to 0.8. Boot/revive placement uses `randomSpot()`
-    (also gap-preferring). Null `shell.bar`, no `moduleSlots`, or no gap
-    he fits in fall back to raw targets — which is the whole feature on
-    omarchy ≥ 4.0.3, where the facade's `shell.bar` is a four-scalar view
-    (`barHidden`, `barSize`, `fontFamily`, `position`) and `moduleSlots`
-    /`slotScreenName` are simply gone. He walks over widgets there. There
-    is no replacement API; the fallback keeps him working, and the fix is
-    upstream (issue on the board).
+    (also gap-preferring). Null `shell.bar` or no gap he fits in fall back
+    to raw targets. Only the RESTING spot is picked clear — a walk is a
+    straight line along the bar, so he still crosses the clock on his way
+    somewhere, and a screenshot caught mid-walk proves nothing.
+    Two sources, live first (v1.51.0). `shell.bar.moduleSlots` +
+    `slotScreenName` is the bar's own slot list — exact, free, per screen,
+    mapped with `mapToItem(null, 0, 0)` (bar-window x == screen x == stage
+    x) — and omarchy ≥ 4.0.3's facade doesn't have it (`shell.bar` there is
+    four scalars: `barHidden`, `barSize`, `fontFamily`, `position`). The
+    fallback is `omarchy-shell shell debugBarGeometry`
+    (`sampledIntervals()`/`parseGeometry()`): the bar dumping that same
+    list to JSON — id, section, x, y, width, height, visible, in the same
+    coordinate space — over an IPC verb the facade never gated
+    (`shell.qml`'s `debugBarGeometry()` calls `Bar.qml`'s, which walks
+    `moduleSlots` directly). It costs a fork, so it is cached: a pick uses
+    the sample it has and orders a fresh one once that is older than
+    `geomTtlMs` (10 s), which puts the fork at one per idle beat at worst,
+    none while asleep (nothing picks), and leaves the first pick after a
+    mount on raw targets. Three failures in a row (no `omarchy-shell` on
+    PATH, a shell that dropped the verb) stop the sampling until
+    `invalidateGeometry()` — stage resize, `barSize`, `targetScreen` —
+    arms it again; one-off failures keep the last good sample, since a
+    busy shell is not news about where the widgets are. The verb is
+    undocumented, so upstream could rename it and put him back on raw
+    targets; it also carries NO screen name, so on multi-monitor the
+    sample is every bar's slots at once. One layout is rendered per
+    screen, so equal-width screens stack their duplicates exactly and the
+    union is the truth; mixed widths project the wider screen's
+    right-hand widgets onto his as spans nothing occupies — over-avoiding,
+    never under-avoiding. The upstream ask is a screen name on
+    `debugBarGeometry` (issue on the board).
   - gags (`gags`, default true, v1.42.0): scripted full-screen stunts.
     All y motion in the plugin is one additive offset, `gagDy`, on the
     actor's feet-line binding (the Tombstone-thud pattern — nothing ever
@@ -1141,7 +1164,12 @@ stays free text — IPC and agent only.
   intervals/respawn/slapsToKill). Known gap, stated in scripting.md.
 - Test harnesses that worked: widget avoidance = `set restless 1` and
   screenshot pairs against `omarchy-shell shell debugBarGeometry` (same
-  coordinate space as stage x); engine-less TTS = `set tts "cat >>
+  coordinate space as stage x) — his exact x comes out of a `grim` with
+  him up, a `hide`, a second `grim`, a `show` and an ImageMagick
+  `-compose difference` trim of the pair (`hide`/`show` write no settings
+  and don't move him, verified), which beats eyeballing a strip; note
+  `grim -g` takes LOGICAL px while the file it writes is device px, so a
+  scaled monitor needs the divide; engine-less TTS = `set tts "cat >>
   /tmp/lines"` collects exactly the displayed lines, `set tts "sleep 30"`
   proves every kill path (replacement line, `hide`, `set tts false`,
   sleep) — it's what caught the `running = false` bug; setup-voice's
@@ -1167,15 +1195,21 @@ stays free text — IPC and agent only.
   short, and it is the whole contract). What we lost, in order of pain:
   `shellConfig` (worked around via `hostConfig`/`pendingSettings`, see
   the settings paragraph), `bar.moduleSlots`/`slotScreenName` (widget
-  avoidance), `serviceFor` for anything but our own id (lock/idle
+  avoidance — worked around via the `debugBarGeometry` IPC verb, see that
+  bullet), `serviceFor` for anything but our own id (lock/idle
   sleeping), `panelLoaders` (the bar icon's handle on the panel),
   `mutateShellConfig` (denied without a `bar` kind, so `adoptIntoBar` is
-  a no-op). Two habits fall out of it. Diff the shell before blaming the
+  a no-op). Three habits fall out of it. Diff the shell before blaming the
   plugin: `bsdtar -xf /var/cache/pacman/pkg/omarchy-<old>.pkg.tar.zst`
   and compare `shell/shell.qml` — the pacman cache keeps the last few.
-  And treat a host value as possibly stale as well as possibly absent:
+  Treat a host value as possibly stale as well as possibly absent:
   4.0.3's plugin-facing config copy is pushed from a signal handler that
-  runs before the binding it copies, so it arrives one write behind.
+  runs before the binding it copies, so it arrives one write behind. And
+  when an injected property goes, check whether the same data still
+  leaves the shell by another door before writing the feature off — the
+  facade scopes what it INJECTS, not what the shell answers over IPC, and
+  `omarchy-shell shell <verb>` is open to anyone (that is the whole
+  widget-avoidance fix, and `listShellConfig` sits next to it).
 - Every `Text` sets `textFormat: Text.PlainText` (v1.40.10) — the
   `AutoText` default renders anything that looks like HTML as markup,
   and the bubble shows agent output, crash app names and `quotesFile`

@@ -33,8 +33,8 @@ to it at `~/.config/omarchy/shell.json.bak.*`.
 | `intervalMax` | `420` | Most seconds between unprompted lines |
 | `speed` | `40` | Walking speed, px/s |
 | `restless` | `0.3` | 0–1, how often he decides to walk (about once a minute at the default; `1` is constant pacing) |
-| `avoidWidgets` | `true` | Meant to keep him off the clock, the tray and your workspaces when he picks where to walk. Does nothing at the moment — the shell stopped telling plugins where the bar widgets are, so he stands wherever he lands |
-| `tombstone` | `true` | A little headstone where he died, up until the respawn. Click it for an epitaph, right-click it for the menu |
+| `avoidWidgets` | `true` | When he picks where to walk he tries not to park on the clock, the tray or your workspaces. Soft — a drag or a slap still leaves him wherever it leaves him. With more than one monitor he can't tell which screen a widget is on, so he keeps clear of all of them and may avoid a little more than he has to |
+| `tombstone` | `true` | A little headstone where he died, up until the respawn. It parks in a widget gap like he does; click it for an epitaph, right-click it for the menu |
 | `gags` | `true` | Scripted stunts: a respawn sometimes tumbles in along the bar from the screen edge or gets lobbed back in on an arc, face-first (or on demand: `gag entrance`, `gag lob`), a throw off a top bar falls the whole screen, and once in a while he peeks in from a far corner. `false` turns them all off |
 | `peekChance` | `0.04` | 0–1, chance per idle beat (every 10–30 s) that he slides in from a far screen corner — blown up to about five times his size — says a line and slips back out. Very roughly every ten minutes of idle time at the default, and he can be slapped mid-peek — that gets its own short yelps (`slappedPeek`) instead of the full slapped rants. `0` = never, `1` = every beat; needs `gags` on |
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |

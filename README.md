@@ -2,8 +2,8 @@
 
 <img src="preview.png" width="700" alt="Reports of my death were, frankly, your fault.">
 
-Clippy as-a-plugin, on the [Omarchy](https://omarchy.org) bar. He walks the bar,
-gets in the way, and mouths off every few minutes.
+Clippy as-a-plugin, on the [Omarchy](https://omarchy.org) bar. He walks, parks
+between your widgets, and mouths off every few minutes.
 
 ## Install
 
