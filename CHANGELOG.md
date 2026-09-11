@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.50.1
+
+- Settings work again on current Omarchy. The shell changed how a plugin is handed its own configuration; he read none of it, so every setting fell back to its default, the menu and `set` looked dead, and each write overwrote the rest of your entry. If yours was emptied, Omarchy's backups are at `~/.config/omarchy/shell.json.bak.*`.
+- Three things the shell no longer tells plugins, so they are off until it does: he no longer parks in the gaps between bar widgets (`avoidWidgets`), he only sleeps for the screen going off and not for the lock screen or the screensaver (`pauseWhenAway`), and the bar paperclip no longer dims when he is dead or opens the menu on the monitor you clicked.
+
 ## v1.50.0
 
 - `soundVolume` (0–1): the slap, fall and whoosh have a level now, with a quiet · medium · full row in the menu under Sounds.

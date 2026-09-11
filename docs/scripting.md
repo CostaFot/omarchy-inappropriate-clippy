@@ -72,7 +72,10 @@ answers `shown` or `hidden`; `state` answers one of its nine words;
 doesn't fit (`duck` outside 0–1, a handle with capitals, a `voiceCacheMb`
 that isn't a number of MB, a `soundVolume` or `voiceVolume` that isn't a
 number), and `can't write
-shell.json` when the write fails. `qs ipc -n -p "$OMARCHY_PATH/shell" show`
+shell.json` when the write fails — with `— this shell doesn't let the plugin
+read its own entry …` appended when the reason is that the shell is not
+handing the plugin its own settings (nothing was changed; see
+[configuration.md](configuration.md)). `qs ipc -n -p "$OMARCHY_PATH/shell" show`
 lists every method with its arguments.
 
 Omarchy is keyboard-first and these are plain commands, so any of them

@@ -40,6 +40,26 @@ Item {
   // layout (`bar.layout.<section>[]`), the way it does omarchy.menu.
   // Installs from before the icon have it under `plugins[]`. Both are read;
   // shell.updateEntryInline writes back to whichever one it finds.
+  //
+  // Where the config comes from depends on the host. omarchy ≤ 4.0.2 injected
+  // the shell root itself, so `shell.shellConfig` was the whole file. 4.0.3
+  // hands third-party plugins a capability-scoped facade (PluginShellApi)
+  // instead: no `shellConfig`, no `panelLoaders`, no `serviceFor` beyond our
+  // own id — reading it returns undefined and EVERY setting silently falls
+  // back to its default. `shell.barConfig` is that facade's public copy of
+  // `shellConfig.bar`, layout entries and all, and the shell reassigns it
+  // (syncPluginApis, off onShellConfigChanged) on every config write, so a
+  // binding on it still fires. Read both, newest first, so one build runs on
+  // either host. `plugins[]` is invisible through the facade — a stray entry
+  // there can't be read or adopted on 4.0.3; it also has no bar icon, so the
+  // fix is a reinstall.
+  readonly property var hostConfig: {
+    if (!shell) return null
+    var full = shell.shellConfig
+    if (full) return full
+    var barCfg = shell.barConfig
+    return barCfg ? ({ bar: barCfg }) : null
+  }
   function findEntry(cfg) {
     if (!cfg) return null
     var layout = cfg.bar && cfg.bar.layout ? cfg.bar.layout : null
@@ -55,8 +75,43 @@ Item {
       if (list[j] && list[j].id === pluginId) return { where: "plugins", entry: list[j] }
     return null
   }
-  readonly property var entryLocation: findEntry(shell ? shell.shellConfig : null)
-  readonly property var settings: entryLocation ? entryLocation.entry : ({})
+  readonly property var entryLocation: findEntry(hostConfig)
+  // What we have written but not yet been told about. The host's copy of the
+  // config can lag our own writes by one refresh: omarchy 4.0.3 pushes the
+  // plugin-facing copy from `onShellConfigChanged`, a handler that is
+  // connected before the `barConfig` binding it copies, so it runs first and
+  // ships the config from the write BEFORE this one. Left alone that makes
+  // every change look like it did nothing until the next unrelated write —
+  // and, worse, makes the next write rebuild the entry from a stale view and
+  // clobber the change back. Keys land here on write, are merged over the
+  // host's view, and are dropped again the moment the host agrees, so on a
+  // host that reports promptly this is a no-op. A change made by anyone else
+  // (a hand edit of shell.json) still arrives one refresh late; nothing can
+  // be done about that from here.
+  property var pendingSettings: ({})
+  readonly property var settings: {
+    var base = entryLocation ? entryLocation.entry : ({})
+    var out = ({})
+    for (var k in base) out[k] = base[k]
+    for (var p in pendingSettings) {
+      if (pendingSettings[p] === undefined) delete out[p]
+      else out[p] = pendingSettings[p]
+    }
+    return out
+  }
+  onEntryLocationChanged: reconcilePending()
+  function reconcilePending() {
+    if (!entryLocation) return
+    var base = entryLocation.entry
+    var next = ({})
+    var dropped = false
+    for (var k in pendingSettings) {
+      var want = pendingSettings[k]
+      if (want === undefined ? base[k] === undefined : base[k] === want) { dropped = true; continue }
+      next[k] = want
+    }
+    if (dropped) pendingSettings = next
+  }
   // False until shellConfig has delivered our entry — in that window every
   // setting reads as its default, which must never be acted on outwardly:
   // default-on leaderboard would post an anonymous bump for a user whose
@@ -76,7 +131,7 @@ Item {
     // No layout at all means the bar is running its defaults; a layout
     // holding only us would replace them. Leave that config alone. Checked
     // before mutating: a no-op write would still remount us, and loop.
-    var cur = shell.shellConfig
+    var cur = hostConfig
     if (!cur || !cur.bar || typeof cur.bar !== "object" || !cur.bar.layout || typeof cur.bar.layout !== "object") {
       console.warn("clippy: shell.json has no bar.layout, leaving our entry under plugins[]; the bar icon needs it in the layout")
       return
@@ -155,6 +210,16 @@ Item {
   // write — two sequential writes would race the remount.
   function setSettings(changes) {
     if (!shell || typeof shell.updateEntryInline !== "function") return false
+    // The host REPLACES our entry with what we hand it — it does not merge —
+    // so an entry we cannot read is an entry we must not rewrite: every key
+    // we never saw would be dropped on the floor. That is exactly what a
+    // host that stops exposing the config does (omarchy 4.0.3 did), and the
+    // damage is silent, so refuse instead of guessing.
+    if (!settingsLoaded) {
+      console.warn("clippy: refusing to write settings — our shell.json entry isn't readable "
+        + "through this shell, and a write would wipe the keys we can't see")
+      return false
+    }
     var entry = { id: pluginId }
     for (var k in settings) if (k !== "id") entry[k] = settings[k]
     for (var c in changes) {
@@ -162,12 +227,27 @@ Item {
       else entry[c] = changes[c]
     }
     shell.updateEntryInline(pluginId, entry)
+    // Remember it until the host reads it back to us (see pendingSettings).
+    var pending = ({})
+    for (var p in pendingSettings) pending[p] = pendingSettings[p]
+    for (var d in changes) pending[d] = changes[d] === null ? undefined : changes[d]
+    pendingSettings = pending
     return true
   }
   function setSetting(key, value) {
     var changes = {}
     changes[key] = value
     return setSettings(changes)
+  }
+  // Why a write didn't happen, in the agent's words. The unreadable-entry
+  // case is the one worth naming: the setting is not lost, it was never
+  // written, and no amount of retrying will help until the host hands the
+  // config back.
+  function writeFail() {
+    return settingsLoaded ? "can't write shell.json"
+      : "can't write shell.json — this shell doesn't let the plugin read its own "
+        + "entry (omarchy 4.0.3 sandboxed plugin settings), so writing would wipe "
+        + "every key we can't see. Nothing was changed."
   }
   readonly property bool clean: setting("clean", false) === true
   readonly property int respawnSeconds: Math.max(0, Number(setting("respawn", 300)))
@@ -450,44 +530,44 @@ Item {
       changes.ttsSaved = ttsSetting
     if (id === "off") {
       changes.tts = false
-      if (!setSettings(changes)) return "can't write shell.json"
+      if (!setSettings(changes)) return root.writeFail()
       return changes.ttsSaved ? "ok — voice off; the custom command is kept in ttsSaved (useVoice custom brings it back)" : "ok — voice off"
     }
     if (id === "robot" || id === "espeak") {
       changes.tts = true
-      if (!setSettings(changes)) return "can't write shell.json"
+      if (!setSettings(changes)) return root.writeFail()
       return ttsEngineMissing ? "ok — but espeak-ng isn't installed, so the robot is silent until it is" : "ok — the espeak robot"
     }
     if (id === "custom") {
       var saved = String(setting("ttsSaved", "") || "")
       if (saved === "") return "no custom command saved — set tts <shell command handed each line on stdin>"
-      if (!setSettings({ tts: saved, ttsSaved: undefined })) return "can't write shell.json"
+      if (!setSettings({ tts: saved, ttsSaved: undefined })) return root.writeFail()
       return "ok — restored the custom command: " + saved
     }
     if (id === "george") {
       if (!voiceInv.kokoro) return "george isn't installed — run scripts/setup-voice --robot in " + pluginDir + " (~340 MB, no GPU needed)"
       changes.tts = georgeCmd
-      if (!setSettings(changes)) return "can't write shell.json"
+      if (!setSettings(changes)) return root.writeFail()
       return "ok — robot george"
     }
     if ((voiceInv.clones || []).indexOf(id) !== -1) {
       if (!voiceInv.gpu) return id + " is a clone, and clones synthesize on an NVIDIA GPU — none found here"
       changes.tts = cloneCmd(id)
-      if (!setSettings(changes)) return "can't write shell.json"
+      if (!setSettings(changes)) return root.writeFail()
       return "ok — the " + id + " clone (the book is pre-rendered for him in the background if it wasn't already)"
     }
     var ps = voiceInv.piper || []
     for (var i = 0; i < ps.length; i++) {
       if (ps[i].name !== id) continue
       changes.tts = piperCmd(id, ps[i].rate)
-      if (!setSettings(changes)) return "can't write shell.json"
+      if (!setSettings(changes)) return root.writeFail()
       return "ok — " + id + " (piper)"
     }
     var ds = voiceInv.dropins || []
     for (i = 0; i < ds.length; i++) {
       if (ds[i].name !== id) continue
       changes.tts = ds[i].cmd
-      if (!setSettings(changes)) return "can't write shell.json"
+      if (!setSettings(changes)) return root.writeFail()
       return "ok — " + id + " (drop-in)"
     }
     voicePendingApply = id
@@ -496,7 +576,14 @@ Item {
   }
 
   // ---- bar geometry (same idiom as plugins/notifications/Service.qml) -----
-  readonly property string barPosition: shell && shell.barConfig ? String(shell.barConfig.position || "top") : "top"
+  // The live bar's own position, not the config's: `shell.bar.position` is
+  // bound to the running bar on both hosts, where the config key is absent
+  // whenever the user never set one (and lags a refresh on 4.0.3).
+  readonly property string barPosition: {
+    var live = shell && shell.bar ? String(shell.bar.position || "") : ""
+    if (live) return live
+    return shell && shell.barConfig ? String(shell.barConfig.position || "top") : "top"
+  }
   readonly property bool barVertical: barPosition === "left" || barPosition === "right"
   readonly property bool barBottom: barPosition === "bottom"
   readonly property bool barHidden: shell && shell.bar ? shell.bar.barHidden === true : false
@@ -2819,7 +2906,7 @@ Item {
         }
         var wasTts = root.ttsSetting
         var changes = typeof parsed === "string" ? { tts: parsed, ttsSaved: undefined } : { tts: parsed }
-        if (!root.setSettings(changes)) return "can't write shell.json"
+        if (!root.setSettings(changes)) return root.writeFail()
         if (typeof parsed === "string" && parsed.indexOf("speak-clone") !== -1 && parsed !== wasTts)
           return "ok — new clone voice: pre-rendering the book for it in the background (10-20 min of GPU, once; `voice` says when it's done)"
         return "ok"
@@ -2831,26 +2918,26 @@ Item {
         // may not have updated within this call).
         if (parsed === false || parsed === "off") {
           var wasNamed = root.leaderboardNamed
-          if (!root.setLeaderboardEnabled(false)) return "can't write shell.json"
+          if (!root.setLeaderboardEnabled(false)) return root.writeFail()
           return "ok — off; nothing is posted"
             + (wasNamed ? " (your handle is parked in leaderboardSaved; set leaderboard true restores it)" : "")
             + " — the graveyard keeps what was already posted (handles are claim-free, there is no delete)"
         }
         if (parsed === true) {
           var stash = String(root.setting("leaderboardSaved", "") || "").trim().toLowerCase()
-          if (!root.setLeaderboardEnabled(true)) return "can't write shell.json"
+          if (!root.setLeaderboardEnabled(true)) return root.writeFail()
           var who = /^[a-z0-9_.-]{1,24}$/.test(stash) && stash !== "off" ? stash : root.lbAnonHandle
           if (root.lbCurlMissing) return "ok — but curl isn't installed, so nothing gets posted"
           return "ok — posting as " + who + "; the graveyard: " + root.leaderboardUrl
         }
         if (parsed === undefined) {
-          if (!root.setSetting(key, undefined)) return "can't write shell.json"
+          if (!root.setSetting(key, undefined)) return root.writeFail()
           return "ok — posting anonymously to the shared '" + root.lbAnonHandle
             + "' stone (the default; set leaderboard <handle> claims your own, set leaderboard off stops posting)"
         }
         var handle = String(parsed).trim().toLowerCase()
         if (!/^[a-z0-9_.-]{1,24}$/.test(handle)) return "no — a handle is 1-24 of a-z 0-9 _ . - (it lands lowercased)"
-        if (!root.setSettings({ leaderboard: handle, leaderboardSaved: undefined })) return "can't write shell.json"
+        if (!root.setSettings({ leaderboard: handle, leaderboardSaved: undefined })) return root.writeFail()
         if (root.lbCurlMissing) return "ok — but curl isn't installed, so nothing gets posted"
         return "ok — posting as " + handle + "; the graveyard: " + root.leaderboardUrl + " (`leaderboard` reports your rank)"
       }
@@ -2859,22 +2946,22 @@ Item {
         // the fraction of volume other audio keeps while he talks (the
         // ratio is IPC-only — no chips in the menu, Costa's call).
         if (parsed === false) {
-          if (!root.setDuckEnabled(false)) return "can't write shell.json"
+          if (!root.setDuckEnabled(false)) return root.writeFail()
           return "ok — ducking off; other audio keeps its volume while he talks (a custom ratio is parked in duckSaved; set duck true restores it)"
         }
         if (parsed === true) {
           var duckStash = root.setting("duckSaved", undefined)
-          if (!root.setDuckEnabled(true)) return "can't write shell.json"
+          if (!root.setDuckEnabled(true)) return root.writeFail()
           var restored = typeof duckStash === "number" ? root.clamp(duckStash, 0, 1) : 0.8
           return "ok — other audio drops to " + Math.round(restored * 100) + "% of its volume while he talks"
         }
         if (parsed === undefined) {
-          if (!root.setSetting(key, undefined)) return "can't write shell.json"
+          if (!root.setSetting(key, undefined)) return root.writeFail()
           return "ok — the default: other audio drops to 80% of its volume while he talks"
         }
         if (typeof parsed !== "number") return "no — duck is 0-1 (the fraction of volume other audio keeps while he talks), or true/false"
         var duckVal = root.clamp(parsed, 0, 1)
-        if (!root.setSettings({ duck: duckVal, duckSaved: undefined })) return "can't write shell.json"
+        if (!root.setSettings({ duck: duckVal, duckSaved: undefined })) return root.writeFail()
         if (duckVal >= 1) return "ok — 1 is no duck; other audio keeps its volume while he talks"
         return "ok — other audio drops to " + Math.round(duckVal * 100) + "% of its volume while he talks"
           + (root.ttsOn ? "" : " (tts is off, so nothing talks yet)")
@@ -2883,7 +2970,7 @@ Item {
         return "no — voiceCacheMb is a size in MB, 0 for no cap"
       if ((key === "soundVolume" || key === "voiceVolume") && parsed !== undefined && typeof parsed !== "number")
         return "no — " + key + " is 0-1 (1 is full volume)"
-      if (!root.setSetting(key, parsed)) return "can't write shell.json"
+      if (!root.setSetting(key, parsed)) return root.writeFail()
       if (key === "voiceCacheMb" && parsed !== undefined)
         return (parsed === 0 ? "ok — no cap; the voice line cache grows unpruned"
           : "ok — the voice line cache trims least-recently-played renders past " + Math.round(parsed) + " MB")

@@ -103,13 +103,33 @@ Design rules that outrank any single feature:
 
 - `Clippy.qml` — root `Item` (the shell loads panels into a non-visual
   Loader, so the root must not be a window). Injected by the host: `shell`,
-  `manifest`, `omarchyPath`. Nothing else — no `settings`, no `bar`.
+  `manifest`, `omarchyPath`. Nothing else — no `settings`, no `bar`. On
+  omarchy ≥ 4.0.3 that `shell` is a sandboxed facade, not the shell root —
+  see the host-surface note under Dev loop for what it costs us.
   Settings are inline keys on our shell.json entry, which lives in
   `bar.layout.<section>[]` (a plugin with a `bar-widget` kind is filed
   there, like omarchy.menu), not `plugins[]`; `findEntry()` reads both,
   `shell.updateEntryInline` writes to whichever it finds, and
   `setSettings(map)` batches multi-key writes into one (two sequential
-  writes race the remount; `setSetting` delegates to it). An entry still
+  writes race the remount; `setSetting` delegates to it). WHERE the config
+  comes from depends on the host, and `hostConfig` is the one place that
+  knows (v1.50.1): omarchy ≤ 4.0.2 injected the shell root, so
+  `shell.shellConfig` was the whole file; 4.0.3 injects a capability-scoped
+  `PluginShellApi` facade instead and `shell.barConfig` — its public copy of
+  `shellConfig.bar`, layout entries and all — is the only route left. Two
+  consequences the code has to carry, both proven on Costa's box the day
+  4.0.3 landed. (1) A host that stops exposing the config makes every
+  setting read as its default, and because `updateEntryInline` REPLACES the
+  entry rather than merging, the next write then wipes every key we never
+  saw — so `setSettings` refuses outright when `!settingsLoaded`, and
+  `writeFail()` says why (that string is in `docs/scripting.md`). (2)
+  4.0.3's copy is one refresh STALE: the shell pushes it from
+  `onShellConfigChanged`, a handler connected before the `barConfig`
+  binding it copies, so what arrives is the config from the write before.
+  `pendingSettings` — written keys merged over the host's view, dropped
+  when the host agrees — is what makes a read-after-write true and keeps
+  the next write from clobbering; a no-op on a host that reports promptly.
+  Don't "simplify" it away by trusting `shell.barConfig` alone. An entry still
   under `plugins[]` (pre-icon install) is moved into `bar.layout.right`
   after `omarchy.tray` by `adoptIntoBar()` once, on mount, via
   `shell.mutateShellConfig` — deferred with `Qt.callLater` (the write
@@ -151,7 +171,12 @@ Design rules that outrank any single feature:
     parked on the workspaces within minutes). Standing on a widget raises the next
     beat's walk chance to 0.8. Boot/revive placement uses `randomSpot()`
     (also gap-preferring). Null `shell.bar`, no `moduleSlots`, or no gap
-    he fits in fall back to raw targets.
+    he fits in fall back to raw targets — which is the whole feature on
+    omarchy ≥ 4.0.3, where the facade's `shell.bar` is a four-scalar view
+    (`barHidden`, `barSize`, `fontFamily`, `position`) and `moduleSlots`
+    /`slotScreenName` are simply gone. He walks over widgets there. There
+    is no replacement API; the fallback keeps him working, and the fix is
+    upstream (issue on the board).
   - gags (`gags`, default true, v1.42.0): scripted full-screen stunts.
     All y motion in the plugin is one additive offset, `gagDy`, on the
     actor's feet-line binding (the Tombstone-thud pattern — nothing ever
@@ -297,7 +322,13 @@ Design rules that outrank any single feature:
     Hyprland has no DPMS event, so `dpmsPoll` calls
     `Hyprland.refreshMonitors()` (socket, no fork) every 10 s, 2 s while
     off, and unlock/idle-end refresh at once. `serviceFor` works as a
-    binding because the shell reassigns `_services` on registration.
+    binding because the shell reassigns `_services` on registration — but
+    only on omarchy ≤ 4.0.2: 4.0.3's facade scopes `serviceFor` to the
+    caller's OWN plugin id, so both lookups return null and the DPMS poll
+    is the only source left. He walks on the lock screen and over the
+    screensaver there. `firstPartyServiceFor` would hand back idle, but
+    only to a plugin with a `bar` kind, which we are not. Upstream fix
+    or a Hyprland-side detection of our own — issue on the board.
     `fallAsleep()` stops walk/brain/quote/bubble/drag timers, stops the
     sprite and drops the bubble (idle/walking/talking only;
     dying/reviving finish on their own); `shown` hides the window.
@@ -443,7 +474,12 @@ Design rules that outrank any single feature:
   `showMenuAt(x, screen)`, so the card opens under the icon on whichever
   monitor's bar was clicked. If the panel isn't mounted it falls back to
   `bar.run("omarchy-shell costafot.clippy showMenu")`. No IpcHandler
-  here — the panel owns the target.
+  here — the panel owns the target. On omarchy ≥ 4.0.3 `bar.shell` is the
+  same sandboxed facade the panel gets and has no `panelLoaders`, so
+  `clippy` is always null: the icon never dims, and every click takes the
+  IPC fallback (the menu still opens, anchored under the actor rather
+  than under the icon, on his monitor rather than the clicked one). Not
+  fatal, not fixed — issue on the board.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the
@@ -1122,6 +1158,24 @@ stays free text — IPC and agent only.
   destructors run. Don't rely on a `set` to reset plain state.
 - `shell.bar` is null while the bar loads and is reassigned on bar
   reload — every geometry read guards it and falls back to `Style.bar.*`.
+- The host surface is not stable across omarchy releases, and when it
+  shrinks it does so SILENTLY — a QML read of a property the injected
+  object no longer has is `undefined`, not an error. omarchy 4.0.3
+  (2026-09-11) swapped `item.shell = shell` for `item.shell =
+  shell.pluginShellFor(manifest)`, a capability-scoped `PluginShellApi`
+  (`/usr/share/omarchy/shell/.../PluginShellApi.qml` — read it, it is
+  short, and it is the whole contract). What we lost, in order of pain:
+  `shellConfig` (worked around via `hostConfig`/`pendingSettings`, see
+  the settings paragraph), `bar.moduleSlots`/`slotScreenName` (widget
+  avoidance), `serviceFor` for anything but our own id (lock/idle
+  sleeping), `panelLoaders` (the bar icon's handle on the panel),
+  `mutateShellConfig` (denied without a `bar` kind, so `adoptIntoBar` is
+  a no-op). Two habits fall out of it. Diff the shell before blaming the
+  plugin: `bsdtar -xf /var/cache/pacman/pkg/omarchy-<old>.pkg.tar.zst`
+  and compare `shell/shell.qml` — the pacman cache keeps the last few.
+  And treat a host value as possibly stale as well as possibly absent:
+  4.0.3's plugin-facing config copy is pushed from a signal handler that
+  runs before the binding it copies, so it arrives one write behind.
 - Every `Text` sets `textFormat: Text.PlainText` (v1.40.10) — the
   `AutoText` default renders anything that looks like HTML as markup,
   and the bubble shows agent output, crash app names and `quotesFile`
@@ -1158,9 +1212,20 @@ stays free text — IPC and agent only.
   default over the live grossman voice.
 - Live settings drift with use — read them (`omarchy-shell
   costafot.clippy settings`) rather than trusting notes. Last known
-  (2026-08-29 evening): a `grossman` clone active (Les Grossman, Tropic
-  Thunder, 5:59-6:12 of a "best moments" rip, `--exag 0.5 --cfg 0.5`),
-  the picker offering off · robot · grossman · rubick.
+  (2026-09-11): `tts` off, `leaderboard` the handle
+  `looks-like-youre-dying`, `size` 24, `duck` false, `soundVolume` 0.25,
+  `voiceVolume` 0.5, `tombstone` false, `respawn` 86400, `intervalMin`
+  360 / `intervalMax` 1500, `peekChance` 0.02, `aiModel`
+  claude-sonnet-5. The clone reference on disk is still `grossman` (Les
+  Grossman, Tropic Thunder, 5:59-6:12 of a "best moments" rip, `--exag
+  0.5 --cfg 0.5`), the picker offering off · robot · grossman · rubick,
+  but the voice is switched off. Those keys were briefly LOST on
+  2026-09-11: under omarchy 4.0.3 the plugin read every setting as its
+  default and each write replaced the entry with defaults-plus-one-key,
+  so a few menu taps stripped it to `{id, size}`. Recovered from
+  `~/.config/omarchy/shell.json.bak.*` — omarchy keeps timestamped
+  backups there, and they are the first place to look when a config
+  vanishes.
 - Approved clone references — NEVER regenerate, a re-cut sounds subtly
   different: `~/.local/share/chatterbox-tts/voices/rubick.wav` (also in
   the repo at `assets/voices/rubick.wav`, byte-identical). Parked, not

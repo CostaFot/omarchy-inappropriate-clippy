@@ -19,6 +19,12 @@ The paperclip moves like any widget: `omarchy bar move costafot.clippy --section
 Installs from before it existed have the entry under `plugins`; he moves it
 into the bar himself, settings and all.
 
+If nothing you set takes effect — the menu tap does nothing, `get` keeps
+answering the default — update him (`omarchy plugin update costafot.clippy`)
+and restart the shell. Check the entry afterwards: a mismatched pair of
+plugin and shell could empty it, and Omarchy keeps timestamped backups next
+to it at `~/.config/omarchy/shell.json.bak.*`.
+
 | Key | Default | What |
 |---|---|---|
 | `size` | `30` | His height in px, 20-400. The bar is 26, so he hangs over the edge a bit; go big and he just looms |
@@ -27,12 +33,12 @@ into the bar himself, settings and all.
 | `intervalMax` | `420` | Most seconds between unprompted lines |
 | `speed` | `40` | Walking speed, px/s |
 | `restless` | `0.3` | 0–1, how often he decides to walk (about once a minute at the default; `1` is constant pacing) |
-| `avoidWidgets` | `true` | When he picks where to walk he tries not to park on the clock, the tray or your workspaces. Soft — a drag or a slap still leaves him wherever it leaves him |
-| `tombstone` | `true` | A little headstone where he died, up until the respawn. It parks in a widget gap like he does; click it for an epitaph, right-click it for the menu |
+| `avoidWidgets` | `true` | Meant to keep him off the clock, the tray and your workspaces when he picks where to walk. Does nothing at the moment — the shell stopped telling plugins where the bar widgets are, so he stands wherever he lands |
+| `tombstone` | `true` | A little headstone where he died, up until the respawn. Click it for an epitaph, right-click it for the menu |
 | `gags` | `true` | Scripted stunts: a respawn sometimes tumbles in along the bar from the screen edge or gets lobbed back in on an arc, face-first (or on demand: `gag entrance`, `gag lob`), a throw off a top bar falls the whole screen, and once in a while he peeks in from a far corner. `false` turns them all off |
 | `peekChance` | `0.04` | 0–1, chance per idle beat (every 10–30 s) that he slides in from a far screen corner — blown up to about five times his size — says a line and slips back out. Very roughly every ten minutes of idle time at the default, and he can be slapped mid-peek — that gets its own short yelps (`slappedPeek`) instead of the full slapped rants. `0` = never, `1` = every beat; needs `gags` on |
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
-| `pauseWhenAway` | `true` | He sleeps while the screen is locked or off, or the idle screensaver is up. `false` and he carries on regardless |
+| `pauseWhenAway` | `true` | He sleeps while the screen is off. `false` and he carries on regardless. He used to sleep for the lock screen and the screensaver too; the shell no longer tells plugins about either |
 | `screen` | — | A monitor name (`hyprctl monitors`) to pin him to one screen; unset, he takes the focused one |
 | `quotesFile` | — | Path to your own quotes JSON, merged into his |
 | `slap` | `true` | `false` turns slapping off. Middle-click snoozes again |
