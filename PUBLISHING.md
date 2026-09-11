@@ -14,9 +14,13 @@ review and there is no issue to retarget** — the plan is to fix all of it
 on the `next` branch (where v1.50.1 already sits), and when he is
 satisfied everything is fixed, cut a new version and file a FRESH Verify
 issue at that commit.
-`main` stays parked on `a544fc2` (= the v1.50.0 tag) until that release,
-so the listing keeps serving the `d61ab1b` (v1.49.2) snapshot and
-v1.50.0's volume knobs and v1.50.1's sandbox fix stay unpublished. The marketplace org renamed
+`main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
+Verify issue on purpose: the badge had read "update unverified" since
+v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
+default branch, so parking `main` was shipping the 4.0.3-broken v1.50.0
+to every new install while protecting nothing. The listing keeps serving
+the `d61ab1b` (v1.49.2) snapshot and stays "update unverified" until the
+post-fix release is verified. The marketplace org renamed
 `HANCORE-linux` → `omacom` (old links redirect). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
@@ -65,6 +69,19 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
    unverified" until the next Verify issue is approved, docs-only
    commits included (v1.50.0's docs follow-up `a544fc2` did exactly
    that). Hence the branch rule below.
+   **What the badge does and does not cost** (measured 2026-09-11, in
+   the marketplace's own code): `catalogVerificationFields`
+   (`scripts/catalog-verification.mjs`) sets `verificationStatus:
+   "unverified"` on `observedCommit !== verificationCommit`, nothing
+   else — so it is binary, one unverified commit ahead reads the same as
+   ten, and `verificationSnapshotStatus` stays `verified` throughout.
+   And the pin does not reach installs: `omarchy plugin add <url>` is a
+   plain `git clone` of the default branch
+   (`/usr/share/omarchy/bin/omarchy-plugin-add:120`), no commit, so HEAD
+   of `main` is what a user actually gets. Both together: once the badge
+   is already unverified, holding a fix off `main` buys nothing and
+   costs every new install — which is why v1.50.1 was released into
+   exactly that state.
 6. **`main` is the marketplace.** Local and remote `main` sit exactly on
    the last release tag and move only at release time; everything in
    between is committed on the `next` branch (pushed freely — the
@@ -289,3 +306,13 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   brand-new Verify issue filed at the release that fixes COS-159, with
   the supply-chain answer in its maintainer notes rather than argued
   after the fact.
+- 2026-09-11: **v1.50.1 released** (merge `next` → `main`, tag, push,
+  `gh release create`) with **no Verify issue** — the first release here
+  that deliberately leaves the listing unverified. The reasoning is in
+  flow step 5's badge note: the listing had been "update unverified"
+  since v1.50.0, the badge cannot get worse, and `omarchy plugin add`
+  clones the default branch, so the freeze was handing every new
+  installer the build that corrupts `shell.json` under omarchy 4.0.3.
+  Costa's call, asked and answered. `main` now sits on the v1.50.1 tag,
+  the branch rule continues from there, and the next submission is the
+  one that carries the COS-159 fix.

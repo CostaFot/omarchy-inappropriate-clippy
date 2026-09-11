@@ -1264,8 +1264,13 @@ of the four reviewed capabilities) — then CLOSED unapproved by Costa
 2026-09-11, so nothing is under review. The plan is to fix that on
 `next`, and when he is happy it is fixed, cut a new version and file a
 fresh Verify issue at it; COS-159 holds the options, `PUBLISHING.md` the
-exact wording and the lines it names. Until then the listing serves
-v1.49.2 and v1.50.0-1 are unpublished.
+exact wording and the lines it names. v1.50.1 was released to `main`
+anyway on 2026-09-11 with no Verify issue: the badge reads unverified
+whenever HEAD differs from the verified commit — binary, already true
+since v1.50.0 — and `omarchy plugin add` plain-clones the default
+branch, so a freeze would only have shipped the 4.0.3-broken v1.50.0 to
+every new install. The listing serves the v1.49.2 snapshot and reads
+"update unverified" until the post-fix release is verified.
 Branch rule (2026-09-04): `main` sits on the last release tag and moves
 only at release time, because the marketplace badge follows HEAD of
 `main` and any newer push — docs included — shows the listing as
