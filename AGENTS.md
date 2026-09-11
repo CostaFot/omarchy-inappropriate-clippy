@@ -1260,11 +1260,12 @@ v1.50.0's Verify issue #4870 was filed 2026-09-04 at `a544fc2` and
 BLOCKED 2026-09-10 — a maintainer's supply-chain objection to
 `scripts/setup-voice` installing unpinned Python packages and
 downloading model artifacts from mutable sources without hashes, not one
-of the four reviewed capabilities). The plan is to fix that on `next`,
-cut a new version and send it for review by retargeting #4870 at it;
-COS-159 holds the options, `PUBLISHING.md` the exact wording and the
-lines it names. Until then the listing serves v1.49.2 and v1.50.0-1 are
-unpublished.
+of the four reviewed capabilities) — then CLOSED unapproved by Costa
+2026-09-11, so nothing is under review. The plan is to fix that on
+`next`, and when he is happy it is fixed, cut a new version and file a
+fresh Verify issue at it; COS-159 holds the options, `PUBLISHING.md` the
+exact wording and the lines it names. Until then the listing serves
+v1.49.2 and v1.50.0-1 are unpublished.
 Branch rule (2026-09-04): `main` sits on the last release tag and moves
 only at release time, because the marketplace badge follows HEAD of
 `main` and any newer push — docs included — shows the listing as

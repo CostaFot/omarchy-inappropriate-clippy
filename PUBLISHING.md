@@ -8,11 +8,12 @@ v1.50.0 is released and **blocked**: **#4870** (Verify form, filed
 2026-09-04 at `a544fc2`) was blocked by a maintainer on 2026-09-10 over
 `scripts/setup-voice`'s unpinned package installs and unverified model
 downloads (the objection and the lines it names are in the submission log
-at the end; the options are COS-159 on the board). The plan, Costa's call
-on 2026-09-11: fix all of it on the `next` branch — where v1.50.1 already
-sits — cut a new version from it and send THAT for review, by retargeting
-#4870 at the new commit (editing the body's Target commit is the re-run
-button; a fresh Verify issue only if #4870 has been closed by then).
+at the end; the options are COS-159 on the board). Costa closed #4870
+unapproved on 2026-09-11 rather than argue it, so **nothing is under
+review and there is no issue to retarget** — the plan is to fix all of it
+on the `next` branch (where v1.50.1 already sits), and when he is
+satisfied everything is fixed, cut a new version and file a FRESH Verify
+issue at that commit.
 `main` stays parked on `a544fc2` (= the v1.50.0 tag) until that release,
 so the listing keeps serving the `d61ab1b` (v1.49.2) snapshot and
 v1.50.0's volume knobs and v1.50.1's sandbox fix stay unpublished. The marketplace org renamed
@@ -272,10 +273,19 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   `resolve/main` (:147-148), and chatterbox's `from_pretrained()` in the
   generated daemon (:275, ~3 GB from HF on its first line). No versions
   pinned, no immutable refs, no checksums.
-  Plan (Costa, 2026-09-11): fix all of it on `next`, cut a new version,
-  send that for review — so the answer to #4870 is a retarget at the new
-  commit, not a comment. **COS-159** on the board holds the four ways
-  out (pin versions + immutable refs + sha256; pin only; argue the
-  scope, which already failed with this reviewer once; or drop the
-  engine installs from the shipped script and document them) and takes
-  the decision; whatever is chosen gets recorded here.
+  **COS-159** on the board holds the four ways out (pin versions +
+  immutable refs + sha256; pin only; argue the scope, which already
+  failed with this reviewer once; or drop the engine installs from the
+  shipped script and document them) and takes the decision; whatever is
+  chosen gets recorded here.
+- 2026-09-11: **#4870 closed by Costa** at 00:21 UTC, unapproved — the
+  labels stayed `validated` + `security-review-required` +
+  `plugin-update`, so the listing is untouched at `d61ab1b` (v1.49.2).
+  "i closed the submission so we will make a new one when I am happy
+  everything is fixed." Consequences for whoever picks this up: nothing
+  is under review, so flow step 5's push freeze does not apply (step 6's
+  badge rule still does — that is why `main` stays on `a544fc2`), there
+  is no Target commit to retarget, and the next marketplace step is a
+  brand-new Verify issue filed at the release that fixes COS-159, with
+  the supply-chain answer in its maintainer notes rather than argued
+  after the fact.
