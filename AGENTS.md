@@ -1303,8 +1303,11 @@ anyway on 2026-09-11 with no Verify issue: the badge reads unverified
 whenever HEAD differs from the verified commit — binary, already true
 since v1.50.0 — and `omarchy plugin add` plain-clones the default
 branch, so a freeze would only have shipped the 4.0.3-broken v1.50.0 to
-every new install. The listing serves the v1.49.2 snapshot and reads
-"update unverified" until the post-fix release is verified.
+every new install. v1.51.0 followed on 2026-09-12 under that same
+reading — widget avoidance back on 4.0.3, hand-checked on the box first
+(COS-162) — so `main` now sits on the v1.51.0 tag. The listing serves
+the v1.49.2 snapshot and reads "update unverified" until the post-fix
+release is verified.
 Branch rule (2026-09-04): `main` sits on the last release tag and moves
 only at release time, because the marketplace badge follows HEAD of
 `main` and any newer push — docs included — shows the listing as

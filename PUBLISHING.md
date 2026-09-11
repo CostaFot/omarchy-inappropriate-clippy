@@ -18,9 +18,10 @@ issue at that commit.
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
 default branch, so parking `main` was shipping the 4.0.3-broken v1.50.0
-to every new install while protecting nothing. The listing keeps serving
-the `d61ab1b` (v1.49.2) snapshot and stays "update unverified" until the
-post-fix release is verified. The marketplace org renamed
+to every new install while protecting nothing. **v1.51.0** followed on
+2026-09-12 on the same reasoning and is where `main` sits now. The
+listing keeps serving the `d61ab1b` (v1.49.2) snapshot and stays
+"update unverified" until the post-fix release is verified. The marketplace org renamed
 `HANCORE-linux` → `omacom` (old links redirect). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
@@ -316,3 +317,13 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   Costa's call, asked and answered. `main` now sits on the v1.50.1 tag,
   the branch rule continues from there, and the next submission is the
   one that carries the COS-159 fix.
+- 2026-09-12: **v1.51.0 released**, same shape and same reasoning as
+  v1.50.1 — no Verify issue, because the badge is already unverified and
+  the default branch is what a new install clones. It restores widget
+  avoidance under omarchy 4.0.3 by sampling `omarchy-shell shell
+  debugBarGeometry`, which is worth flagging for whoever writes the next
+  maintainer notes: the verb is undocumented and read-only, and it is the
+  plugin asking the shell it runs in where its own bar widgets are, not a
+  new capability. Costa confirmed the behaviour by hand before the
+  release (COS-162). `main` sits on the v1.51.0 tag; the COS-159
+  supply-chain fix is still the condition for the next submission.
