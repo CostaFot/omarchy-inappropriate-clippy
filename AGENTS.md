@@ -1256,7 +1256,15 @@ Everything above is live and verified on Costa's machine (the manifest
 names the current version). On GitHub at the README install URL; Pages is
 on (source `/docs` on `main`, primer theme, build confirmed live); LISTED
 on the marketplace since 2026-08-30 (snapshot v1.49.2 since 2026-09-02;
-v1.50.0's Verify issue #4870 was filed 2026-09-04 at `a544fc2`).
+v1.50.0's Verify issue #4870 was filed 2026-09-04 at `a544fc2` and
+BLOCKED 2026-09-10 — a maintainer's supply-chain objection to
+`scripts/setup-voice` installing unpinned Python packages and
+downloading model artifacts from mutable sources without hashes, not one
+of the four reviewed capabilities). The plan is to fix that on `next`,
+cut a new version and send it for review by retargeting #4870 at it;
+COS-159 holds the options, `PUBLISHING.md` the exact wording and the
+lines it names. Until then the listing serves v1.49.2 and v1.50.0-1 are
+unpublished.
 Branch rule (2026-09-04): `main` sits on the last release tag and moves
 only at release time, because the marketplace badge follows HEAD of
 `main` and any newer push — docs included — shows the listing as

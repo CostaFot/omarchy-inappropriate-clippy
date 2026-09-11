@@ -4,9 +4,18 @@ Written 2026-08-28. Status: **listed since 2026-08-30** (#3395,
 `approved-and-verified` by HANCORE-linux; snapshot pinned at `6980662` =
 v1.40.11), re-snapshotted at `d61ab1b` = v1.49.2 by **#3903**
 (`approved-and-verified` 2026-09-02; see "Submission log" at the end).
-v1.50.0 is released and under review: **#4870** (Verify form, filed
-2026-09-04 at `a544fc2`) — `main` stays parked on that commit (= the
-v1.50.0 tag) until it closes; work goes on the `next` branch. The marketplace org renamed
+v1.50.0 is released and **blocked**: **#4870** (Verify form, filed
+2026-09-04 at `a544fc2`) was blocked by a maintainer on 2026-09-10 over
+`scripts/setup-voice`'s unpinned package installs and unverified model
+downloads (the objection and the lines it names are in the submission log
+at the end; the options are COS-159 on the board). The plan, Costa's call
+on 2026-09-11: fix all of it on the `next` branch — where v1.50.1 already
+sits — cut a new version from it and send THAT for review, by retargeting
+#4870 at the new commit (editing the body's Target commit is the re-run
+button; a fresh Verify issue only if #4870 has been closed by then).
+`main` stays parked on `a544fc2` (= the v1.50.0 tag) until that release,
+so the listing keeps serving the `d61ab1b` (v1.49.2) snapshot and
+v1.50.0's volume knobs and v1.50.1's sandbox fix stay unpublished. The marketplace org renamed
 `HANCORE-linux` → `omacom` (old links redirect). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
@@ -246,3 +255,27 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   follows HEAD — see flow step 5/6), so `main` was reset to the
   v1.50.0 tag and this entry's commit moved to the new `next` branch;
   from here on `main` moves only at release time.
+- 2026-09-10: **#4870 blocked**, by HANCORE-linux as a maintainer this
+  time, not a bot: "Blocked at `a544fc2…`: `scripts/setup-voice`
+  installs unpinned Python packages and downloads executable model
+  artifacts from mutable or unverified sources without hashes, then
+  loads them locally. This leaves the optional voice setup exposed to
+  upstream or package compromise." The issue carries
+  `security-review-required` and stays open. This is NOT one of the four
+  reviewed capabilities — the per-capability answer stands and was not
+  what the block is about; it is a new objection about supply chain, and
+  every line it covers is in `scripts/setup-voice` on the opt-in path
+  the plugin never runs itself: `pip install kokoro-onnx` (:96),
+  `pip install piper-tts` (:139), `uv pip install chatterbox-tts`
+  (:180), the kokoro model `curl` from a GitHub release (:101-102), the
+  piper voices `curl` from `huggingface.co/rhasspy/piper-voices` at
+  `resolve/main` (:147-148), and chatterbox's `from_pretrained()` in the
+  generated daemon (:275, ~3 GB from HF on its first line). No versions
+  pinned, no immutable refs, no checksums.
+  Plan (Costa, 2026-09-11): fix all of it on `next`, cut a new version,
+  send that for review — so the answer to #4870 is a retarget at the new
+  commit, not a comment. **COS-159** on the board holds the four ways
+  out (pin versions + immutable refs + sha256; pin only; argue the
+  scope, which already failed with this reviewer once; or drop the
+  engine installs from the shipped script and document them) and takes
+  the decision; whatever is chosen gets recorded here.
