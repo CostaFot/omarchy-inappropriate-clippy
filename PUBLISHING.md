@@ -355,3 +355,24 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   them; (4) `HF_HUB_OFFLINE` on the daemon closes the last fetch. Do not
   re-argue the four reviewed capabilities — that answer stood and was
   never what #4870 blocked on.
+
+- 2026-09-12: **COS-160 done** on `next`, and it has to go out in the same
+  release as COS-159 or the submission gets bounced twice for two
+  different reasons. The tracked root `AGENTS.md` (86 KB) and `CLAUDE.md`
+  are gone: the rules are a tracked `REFERENCE.md`, and the checkout keeps
+  one-line untracked pointers to it, both gitignored. `omarchy plugin add`
+  is a plain clone of the default branch, so before this every install
+  dropped an unreviewed instruction file into
+  `~/.config/omarchy/plugins/costafot.clippy/` for any agent opened in or
+  above it to read. This is the same maintainer's objection that refused
+  Costa's omarchy-android-dev submission (#5546, 2026-09-08, "remove
+  `AGENTS.md` (and any equivalent agent-instruction file) from the
+  installed/published plugin tree … then submit a newly validated
+  commit"), and that fix went on to be approved — so it is pre-empted
+  here rather than answered later. A symlink was tried first:
+  `omarchy-plugin-validate` refuses symlinks anywhere in a plugin folder.
+  **Worth one line in the next Verify issue's maintainer notes**, after
+  the setup-voice points: the published tree carries no
+  agent-instruction file, by the same reasoning as #5546.
+  `PUBLISHING.md` stays tracked on purpose — nothing auto-reads it, and
+  omarchy-android-dev ships its own.

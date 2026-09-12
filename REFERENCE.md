@@ -1,5 +1,21 @@
 # omarchy-inappropriate-clippy — agent notes
 
+The rules used to live in a tracked `AGENTS.md`; they are here because
+the installed plugin directory is this repository cloned whole, so such a
+file lands in `~/.config/omarchy/plugins/` on every install, where a
+coding agent opened in or above it reads an unreviewed file as
+instructions — the marketplace refused a submission of Costa's over
+exactly that (omacom/omarchy-plugin-marketplace#5546, 2026-09-08,
+omarchy-android-dev). What is left in the checkout is a one-line
+untracked `AGENTS.md` and `CLAUDE.md`, both pointing here, both in
+`.gitignore`: agents still load the rules, the clone still carries
+nothing they auto-read. A symlink was tried first and
+`omarchy-plugin-validate` refuses one anywhere in a plugin folder. So:
+edit THIS file, never `git add` an `AGENTS.md`, `CLAUDE.md`,
+`CLAUDE.local.md`, `GEMINI.md`, `.cursorrules`, `.windsurfrules` or
+`copilot-instructions.md`, and keep the pointer files one line long —
+content in them is content that ships.
+
 Before committing, re-read this file, the README and `docs/` against what
 actually changed and amend anything they now state stale — an "only" that no longer
 holds, a default that moved, a path that no longer exists — then commit.
