@@ -14,9 +14,11 @@ review and there is no issue to retarget**. The fix shipped as
 **v1.52.0** (released 2026-09-12, where `main` now sits): the script
 neither installs nor downloads anything any more, and the same release
 stopped publishing a root `AGENTS.md`. See the last two submission-log
-entries for what changed and what the maintainer notes must say. **The
-next step is a FRESH Verify issue at the v1.52.0 commit** — not filed as
-this is written, Costa's call when it goes out.
+entries for what changed and what the maintainer notes must say. That
+submission is **#6429**, filed 2026-09-12 at `ff96fee` and OPEN — so
+flow step 5's push freeze is on: `main` must stay on `ff96fee` until it
+resolves, or approval throws `update-upstream-changed`. Work on `next`
+as usual.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
@@ -388,3 +390,18 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   Verify issue at this commit is the next step and Costa's call when to
   send it; when it goes out, the notes are the two entries above, in
   that order, and COS-159 and COS-160 close with it.
+
+- 2026-09-12: **#6429 filed** (Verify form, "publish a newer upstream
+  commit") at `ff96fee` = v1.52.0, with the maintainer notes as a comment
+  since the verify template has no notes field. They say, in order: the
+  blocked lines are gone rather than pinned (setup-voice installs and
+  downloads nothing, prints the commands instead, `docs/voice.md` carries
+  them); the clone daemon's `HF_HUB_OFFLINE` closes the third fetch;
+  nothing in the repo resolves a package version or a model URL; the
+  published tree no longer carries a root `AGENTS.md`, volunteered
+  against #5546 rather than waiting to be told; and the user-facing
+  changes since v1.49.2, with v1.51.0's `debugBarGeometry` sampling
+  flagged as read-only and not a new capability. The four reviewed
+  capabilities were deliberately NOT re-argued — that answer stood in
+  #3395 and #3903 and was never what #4870 blocked on. **`main` is frozen
+  at `ff96fee` while this is open.**
