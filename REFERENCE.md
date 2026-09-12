@@ -1353,24 +1353,30 @@ BLOCKED 2026-09-10 — a maintainer's supply-chain objection to
 downloading model artifacts from mutable sources without hashes, not one
 of the four reviewed capabilities) — then CLOSED unapproved by Costa
 2026-09-11, so nothing is under review. That objection is ANSWERED on
-`next` as v1.52.0 (2026-09-12, unreleased at the time of writing):
-`scripts/setup-voice` installs nothing and downloads nothing any more —
-it wires up an engine already on disk and prints the exact commands when
-one isn't there — and the clone daemon runs under `HF_HUB_OFFLINE`, so
-no package version and no model URL is resolved by anything this repo
-ships. COS-159 holds the decision (four options; Costa picked "drop the
-installs, document them"), `PUBLISHING.md` the wording for the next
-submission's maintainer notes. When he is happy it is fixed, cut the
-version and file a fresh Verify issue at that commit. v1.50.1 was released to `main`
+`next` and RELEASED as v1.52.0 on 2026-09-12: `scripts/setup-voice`
+installs nothing and downloads nothing any more — it wires up an engine
+already on disk and prints the exact commands when one isn't there — and
+the clone daemon runs under `HF_HUB_OFFLINE`, so no package version and
+no model URL is resolved by anything this repo ships. The same release
+stopped publishing an agent-instruction file: the rules are
+`REFERENCE.md`, and the `AGENTS.md`/`CLAUDE.md` left in the checkout are
+one-line untracked pointers to it (COS-160 — the same maintainer refused
+another of Costa's plugins over a published `AGENTS.md`, so it is
+pre-empted rather than answered later). COS-159 holds the setup-voice
+decision (four options; Costa picked "drop the installs, document
+them"), `PUBLISHING.md` the wording the next maintainer notes need for
+both. NOT filed yet, and the next marketplace step: a fresh Verify issue
+at the v1.52.0 commit — Costa's call when it goes out, which is why
+COS-159 and COS-160 are still open. v1.50.1 was released to `main`
 anyway on 2026-09-11 with no Verify issue: the badge reads unverified
 whenever HEAD differs from the verified commit — binary, already true
 since v1.50.0 — and `omarchy plugin add` plain-clones the default
 branch, so a freeze would only have shipped the 4.0.3-broken v1.50.0 to
 every new install. v1.51.0 followed on 2026-09-12 under that same
 reading — widget avoidance back on 4.0.3, hand-checked on the box first
-(COS-162) — so `main` now sits on the v1.51.0 tag. The listing serves
-the v1.49.2 snapshot and reads "update unverified" until the post-fix
-release is verified.
+(COS-162), and v1.52.0 the same day — so `main` now sits on the v1.52.0
+tag. The listing serves the v1.49.2 snapshot and reads "update
+unverified" until the post-fix release is verified.
 Branch rule (2026-09-04): `main` sits on the last release tag and moves
 only at release time, because the marketplace badge follows HEAD of
 `main` and any newer push — docs included — shows the listing as

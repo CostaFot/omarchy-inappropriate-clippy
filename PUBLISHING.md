@@ -10,20 +10,21 @@ v1.50.0 is released and **blocked**: **#4870** (Verify form, filed
 downloads (the objection and the lines it names are in the submission log
 at the end; the options are COS-159 on the board). Costa closed #4870
 unapproved on 2026-09-11 rather than argue it, so **nothing is under
-review and there is no issue to retarget**. The fix is written on `next`
-as **v1.52.0** (2026-09-12, unreleased as this is written): the script
-neither installs nor downloads anything any more — see the last
-submission-log entry for what changed and what the maintainer notes
-should say. When Costa is satisfied it is fixed, cut the version and file
-a FRESH Verify issue at that commit.
+review and there is no issue to retarget**. The fix shipped as
+**v1.52.0** (released 2026-09-12, where `main` now sits): the script
+neither installs nor downloads anything any more, and the same release
+stopped publishing a root `AGENTS.md`. See the last two submission-log
+entries for what changed and what the maintainer notes must say. **The
+next step is a FRESH Verify issue at the v1.52.0 commit** — not filed as
+this is written, Costa's call when it goes out.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
 default branch, so parking `main` was shipping the 4.0.3-broken v1.50.0
-to every new install while protecting nothing. **v1.51.0** followed on
-2026-09-12 on the same reasoning and is where `main` sits now. The
-listing keeps serving the `d61ab1b` (v1.49.2) snapshot and stays
-"update unverified" until the post-fix release is verified. The marketplace org renamed
+to every new install while protecting nothing. **v1.51.0** and
+**v1.52.0** followed on 2026-09-12 on the same reasoning, and `main`
+sits on v1.52.0. The listing keeps serving the `d61ab1b` (v1.49.2) snapshot and stays
+"update unverified" until that release is verified. The marketplace org renamed
 `HANCORE-linux` → `omacom` (old links redirect). Everything below is what an
 agent needs to take it from here; it mirrors what was done for
 `costafot.autoduck` and `costafot.yeet`.
@@ -376,3 +377,14 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   agent-instruction file, by the same reasoning as #5546.
   `PUBLISHING.md` stays tracked on purpose — nothing auto-reads it, and
   omarchy-android-dev ships its own.
+
+- 2026-09-12: **v1.52.0 released** — merge `next` → `main`, tag, push,
+  `gh release create`, no Verify issue yet. Third release in a row into
+  an already-unverified badge, same reasoning as v1.50.1 and v1.51.0,
+  but the first one that is *ready* for the submission rather than just
+  better than what `main` was serving: it carries both answers a
+  maintainer is now primed to look for — the setup-voice supply-chain
+  fix (COS-159) and no published agent-instruction file (COS-160). The
+  Verify issue at this commit is the next step and Costa's call when to
+  send it; when it goes out, the notes are the two entries above, in
+  that order, and COS-159 and COS-160 close with it.
