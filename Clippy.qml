@@ -444,8 +444,10 @@ Item {
   // can enumerate (`voices`) and switch (`useVoice`) without reading the
   // docs. scripts/voice-scan fills it: espeak/GPU/kokoro presence, clone
   // wavs, piper models, drop-in command files (~/.local/share/clippy-voices).
-  // Installing NEW voices stays with scripts/setup-voice —
-  // switching here is only ever a `set tts` write, never a download.
+  // Putting a new engine on disk is the user's own install (docs/voice.md;
+  // scripts/setup-voice prints the commands and wires up what's already
+  // there) — switching here is only ever a `set tts` write, never a
+  // download, and neither is setup-voice since v1.52.0.
   property var voiceInv: ({ espeak: false, gpu: false, kokoro: false, clones: [], piper: [], dropins: [] })
   // A useVoice for a name the (possibly stale) inventory doesn't know parks
   // the name here and kicks a rescan — the natural agent flow is "write a
@@ -545,7 +547,7 @@ Item {
       return "ok — restored the custom command: " + saved
     }
     if (id === "george") {
-      if (!voiceInv.kokoro) return "george isn't installed — run scripts/setup-voice --robot in " + pluginDir + " (~340 MB, no GPU needed)"
+      if (!voiceInv.kokoro) return "george isn't installed — he's a kokoro voice, and you install that yourself (~340 MB, no GPU needed): scripts/setup-voice --robot in " + pluginDir + " prints the four commands, docs/voice.md explains them"
       changes.tts = georgeCmd
       if (!setSettings(changes)) return root.writeFail()
       return "ok — robot george"
@@ -572,7 +574,7 @@ Item {
     }
     voicePendingApply = id
     voiceScan.running = true
-    return JSON.stringify(id) + " isn't in the last inventory scan — rescanning now: a just-dropped file in ~/.local/share/clippy-voices switches in a beat (`voices` confirms). If it's genuinely not installed: scripts/setup-voice in " + pluginDir + " (a kokoro/piper name, --robot, or --clone <sample.wav> <name> on an NVIDIA GPU), or drop a command file in ~/.local/share/clippy-voices"
+    return JSON.stringify(id) + " isn't in the last inventory scan — rescanning now: a just-dropped file in ~/.local/share/clippy-voices switches in a beat (`voices` confirms). If it's genuinely not installed: scripts/setup-voice in " + pluginDir + " points him at an engine you have (a kokoro/piper name, --robot, or --clone <sample.wav> <name> on an NVIDIA GPU) and prints the install commands when you don't — or drop a command file in ~/.local/share/clippy-voices"
   }
 
   // ---- bar geometry (same idiom as plugins/notifications/Service.qml) -----
@@ -2902,7 +2904,7 @@ Item {
       if (!root.ttsOn) {
         var saved = String(root.setting("ttsSaved", "") || "")
         if (saved !== "") return "off — set tts true restores the saved custom voice: " + saved
-        return "off — `voices` lists what's installed (useVoice <name> switches), scripts/setup-voice in the plugin dir installs real ones (--clone <sample.wav> clones any voice, GPU required)"
+        return "off — `voices` lists what's installed (useVoice <name> switches), scripts/setup-voice in the plugin dir points him at a real one and prints what to install when there's nothing yet (--clone <sample.wav> clones any voice, GPU required)"
       }
       var s = typeof root.ttsSetting === "string"
             ? "custom command: " + root.ttsSetting
@@ -2916,7 +2918,7 @@ Item {
             : (root.ttsEngineMissing
                ? "espeak-ng: not installed — silent (sudo pacman -S espeak-ng, or set tts to a shell command)"
                : "espeak-ng: ready — " + root.ttsVoice + ", " + root.ttsSpeed + " wpm, pitch " + root.ttsPitch
-                 + " (a better voice: scripts/setup-voice in the plugin dir)")
+                 + " (a better voice: docs/voice.md installs one, scripts/setup-voice in the plugin dir then points him at it)")
       if (root.ttsWarned) s += "; failing, see journal"
       if (ttsProc.running) s += "; speaking"
       s += root.duckOn
@@ -2936,7 +2938,7 @@ Item {
       if (!inv.espeak) lines.push("note: robot needs espeak-ng, which isn't installed")
       if ((inv.clones || []).length > 0 && !inv.gpu) lines.push("note: clone wavs exist but there's no NVIDIA GPU to synthesize on — not offered")
       lines.push("more voices: scripts/setup-voice in " + root.pluginDir
-        + " — bare ships a Rubick clone on an NVIDIA GPU (else robot george), a kokoro/piper name installs that voice, --clone <sample> <name> [--from M:SS --to M:SS] clones anything from 10-20 s of clean speech, cut out of any audio/video ffmpeg reads and loudness-normalised for you (GPU); the book is pre-rendered in the background for every clone")
+        + " — it installs nothing and downloads nothing; it points him at an engine already on disk and prints the exact install commands when one isn't (docs/voice.md has them with the prose). Bare picks the shipped Rubick clone when chatterbox and an NVIDIA GPU are here, else robot george when kokoro is; a kokoro/piper name picks that voice; --clone <sample> <name> [--from M:SS --to M:SS] clones anything from 10-20 s of clean speech, cut out of any audio/video ffmpeg reads and loudness-normalised for you (GPU). The book is pre-rendered in the background for every clone")
       lines.push("drop-ins: a file at ~/.local/share/clippy-voices/<name> whose first non-comment line is a shell command (line on stdin) shows up here by name")
       lines.push("raw: set tts <shell command handed each line on stdin> | true (espeak) | false")
       return lines.join("\n")

@@ -124,8 +124,10 @@ finds the stupidest thing to comment on it hopefully.
 
 Set `tts: true` for the espeak robot.
 
-`scripts/setup-voice` for a local neural one: the shipped Rubick clone (sorry I used to play that piece of shit game), a ring-modulated droid, or a clone of anyone
+For a local neural one you install the engine yourself — a handful of commands, all in the docs — and then `scripts/setup-voice` points him at it: the shipped Rubick clone (sorry I used to play that piece of shit game), a ring-modulated droid, or a clone of anyone
 you have twenty seconds of.
+
+The script itself installs nothing and downloads nothing. Your machine, your pins.
 
 Needs a decent GPU for the clones. My 3080ti works fine with it.
 

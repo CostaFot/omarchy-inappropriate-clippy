@@ -19,33 +19,99 @@ omarchy-shell costafot.clippy set ttsVoice en+croak
 
 Epitaphs stay whispered whatever you pick.
 
-If you'd rather he sounded good (why?), `scripts/setup-voice` does the whole
-thing locally: it installs a neural TTS into a venv, downloads what it
-needs, and points `tts` at it. No cloud calls, a model on your disk, and
-the espeak robot is one `set tts true` away. The scripts live in the plugin
-dir — `~/.config/omarchy/plugins/costafot.clippy/scripts/` — and every
+If you'd rather he sounded good (why?), there's a local neural voice two
+steps away: you install an engine, then `scripts/setup-voice` points `tts`
+at it. No cloud calls, the model sits on your disk, and the espeak robot is
+one `set tts true` away.
+
+The script installs **nothing** and downloads **nothing**. It writes the
+glue — the kokoro `say.py`, the clone daemon, its client — sets `tts`, and
+when an engine isn't there it prints the exact commands and stops.
+
+A plugin that runs `pip install` behind your back is a plugin you've handed
+your package manager to. Better that you pin your own versions and check
+your own hashes. It is a few more steps than it used to be.
+
+The scripts live in the plugin dir —
+`~/.config/omarchy/plugins/costafot.clippy/scripts/` — and every
 `scripts/…` below is relative to that. The modes:
 
 ```bash
-scripts/setup-voice                      # bare: the shipped Rubick clone on an NVIDIA GPU with 6 GB of VRAM, robot George otherwise
-scripts/setup-voice --robot              # robot George, GPU or not
-scripts/setup-voice af_heart             # any kokoro voice, unprocessed (af_*, am_*, bm_*, ...)
-scripts/setup-voice en_US-ryan-high      # any piper catalog voice (the dash in the name picks piper)
-scripts/setup-voice --clone ~/sample.mp4 [name]                  # clone any voice from a 10-20 s sample; NVIDIA GPU
+scripts/setup-voice                      # bare: the shipped Rubick clone if chatterbox and an NVIDIA GPU are here, robot George if kokoro is
+scripts/setup-voice --robot              # robot George (kokoro), GPU or not
+scripts/setup-voice af_heart             # any kokoro voice you've fetched, unprocessed (af_*, am_*, bm_*, ...)
+scripts/setup-voice en_US-ryan-high      # any piper voice you've fetched (the dash in the name picks piper)
+scripts/setup-voice --clone ~/sample.mp4 [name]                  # clone any voice from a 10-20 s sample; chatterbox + NVIDIA GPU
 scripts/setup-voice --clone ~/scene.mp4 name --from 5:59 --to 6:12   # the same, cut out of a longer recording
 scripts/warm-voice                       # re-render the book into the clone cache (after --exag/--cfg edits)
 scripts/voice-scan                       # one JSON object of every voice on this machine
 ```
 
-Bare, it checks what you're
-running on: an NVIDIA GPU with 6 GB of VRAM gets the shipped voice — a
-clone of Rubick the Grand Magus, built from the 20-second sample in
-`assets/voices/` (Dota 2 audio, © Valve) — and anything less gets the
-blessed robot,
-[kokoro](https://github.com/thewh1teagle/kokoro-onnx)'s `bm_george` (~340 MB)
-put through a ring-modulated robot chain: a fussy English droid, dialed in
-by ear. `--robot` skips the GPU check and gets you the droid anyway. Pass a
-name for any
+Each of those wants its engine on disk first. Robot George and every named
+kokoro voice are [kokoro](https://github.com/thewh1teagle/kokoro-onnx),
+~340 MB, no GPU:
+
+```bash
+python3 -m venv ~/.local/share/kokoro-tts/venv
+~/.local/share/kokoro-tts/venv/bin/pip install kokoro-onnx
+curl -fL --create-dirs -o ~/.local/share/kokoro-tts/kokoro-v1.0.onnx \
+  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+curl -fL -o ~/.local/share/kokoro-tts/voices-v1.0.bin \
+  https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+```
+
+Piper is the engine once, then one model per voice (~60–120 MB each), named
+`locale-speaker-quality` out of the
+[catalog](https://rhasspy.github.io/piper-samples/):
+
+```bash
+python3 -m venv ~/.local/share/piper-tts/venv
+~/.local/share/piper-tts/venv/bin/pip install piper-tts
+curl -fL --create-dirs -o ~/.local/share/piper-voices/en_US-ryan-high.onnx \
+  https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/en_US-ryan-high.onnx
+curl -fL -o ~/.local/share/piper-voices/en_US-ryan-high.onnx.json \
+  https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/en_US-ryan-high.onnx.json
+```
+
+`resolve/main` is a moving ref — swap in a commit sha off the repo if you
+want the same bytes twice.
+
+The clones, shipped Rubick included, are
+[chatterbox](https://github.com/resemble-ai/chatterbox). It wants its own
+Python 3.12 and about 6 GB of torch, so
+[uv](https://github.com/astral-sh/uv) builds the venv:
+
+```bash
+sudo pacman -S uv
+uv venv ~/.local/share/chatterbox-tts/venv --python 3.12
+uv pip install --python ~/.local/share/chatterbox-tts/venv/bin/python chatterbox-tts "setuptools<81"
+~/.local/share/chatterbox-tts/venv/bin/python -c 'from huggingface_hub import hf_hub_download as d
+[d(repo_id="ResembleAI/chatterbox", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]'
+```
+
+That `setuptools<81` is load-bearing: chatterbox's watermarker still
+imports `pkg_resources`, and without the pin the model load dies on
+`'NoneType' object is not callable`.
+
+The last line is the model itself, five files and ~3 GB. `hf_hub_download`
+takes a `revision="<commit sha>"` if you want the exact bytes twice. The
+clone daemon runs with `HF_HUB_OFFLINE=1` and only ever loads what's
+already in that cache, so nothing here fetches a model later, in the
+background, in the middle of an insult.
+
+Those paths are where `setup-voice` looks. An engine you keep somewhere
+else is a drop-in file instead (below). Missing model, half-built venv,
+wrong dir — run the mode you wanted and it tells you which command you
+skipped.
+
+Bare, it picks the best voice you already have, not the best this machine
+could run: chatterbox and an NVIDIA GPU with 6 GB of VRAM get the shipped
+voice — a clone of Rubick the Grand Magus, built from the 20-second sample
+in `assets/voices/` (Dota 2 audio, © Valve) — and anything short of that
+falls to kokoro's `bm_george` put through a ring-modulated robot chain: a
+fussy English droid, dialed in by ear. Neither installed and it prints
+both routes and stops. `--robot` skips the GPU check and gets you the
+droid anyway. Pass a name for any
 [kokoro voice](https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md)
 unprocessed (`af_heart`, `am_adam`, `jf_alpha`, ...) or, with a dash in the name, any
 [piper catalog](https://rhasspy.github.io/piper-samples/) voice like
@@ -70,11 +136,8 @@ pick the driest, calmest stretch you can find. The script prints the
 cut's length and warns when it's short. Re-cloning a name replaces its
 sample; lines rendered from the old one are never reused (the line cache
 is keyed by the sample's contents), and the book is re-rendered for the
-new one like a fresh clone. Cloning uses
-[chatterbox](https://github.com/resemble-ai/chatterbox), so it needs an
-NVIDIA GPU, [uv](https://github.com/astral-sh/uv) (`sudo pacman -S uv` —
-the script tells you and stops if it's missing, it never installs it for
-you) and pulls ~8 GB on first run — the shipped Rubick is this exact
+new one like a fresh clone. Cloning uses chatterbox, so it needs an NVIDIA
+GPU and the ~8 GB you installed up top — the shipped Rubick is this exact
 machinery pointed at a sample we picked for you, so the same costs apply.
 A small daemon keeps the model warm
 between lines and exits after 15 idle minutes to give your VRAM back; every
@@ -193,8 +256,9 @@ Once voices are on disk, switching between them takes no terminal: the
 menu's Voice row is a picker showing everything installed — off, the espeak
 robot, robot george, every clone you've made, every piper model, every
 drop-in file — and a tap
-switches instantly. Nothing in the menu ever downloads; installing a NEW
-voice is always `scripts/setup-voice`. The same picker speaks IPC for your
+switches instantly. Nothing in the menu ever downloads, and neither does
+`scripts/setup-voice` — a new engine is an install you run yourself, up
+top. The same picker speaks IPC for your
 agent: `voices` lists what's installed and where new ones come from,
 `useVoice rubick` switches (and answers with the fix when it can't —
 missing engine, no GPU, unknown name). Both are fed by

@@ -880,8 +880,9 @@ is one opaque string and ignores all three (clones bend via
   parks an unrecognized custom command in `ttsSaved` before overwriting.
   IPC `voices` lists active + installed + how to install more + the
   drop-in dir + the raw `set tts` contract. Switching lives in the
-  plugin (instant `set tts`); installing stays with setup-voice — a menu
-  tap must never start a 2 GB download.
+  plugin (instant `set tts`); installing an engine is the user's own
+  command out of `docs/voice.md` (setup-voice only wires up, v1.52.0) —
+  a menu tap must never start a 2 GB download.
 - Drop-in voices: `~/.local/share/clippy-voices/<name>` — filename is the
   picker name (`[A-Za-z0-9_.-]+`; off/robot/espeak/custom/george are
   reserved and skipped by voice-scan), the first non-comment non-blank
@@ -892,19 +893,38 @@ is one opaque string and ignores all three (clones bend via
   warm-voice deliberately don't extend to drop-ins (they're
   speak-clone-cache-shaped) — a drop-in containing "speak-clone" still
   gets the knobs via `cloneKnobsApply`, which is correct, not a leak.
-- `scripts/setup-voice` — installs engines (nothing is bundled; on-demand
-  downloads: kokoro ~340 MB, piper ~60-120 MB, the clone path ~9 GB on
-  disk — a 6 GB torch venv plus the ~3 GB chatterbox model from HF
-  `ResembleAI/chatterbox`, pulled by `from_pretrained` on the daemon's
-  first line, cached in `~/.cache/huggingface`; `docs/voice.md` says
-  "~8 GB" to users) and ends every mode with `set tts` + a spoken
-  hello, always through stdin→aplay (aplay, not pw-play — sndfile can't
-  read raw audio from a pipe). Bare = hardware-picked default: an NVIDIA
-  GPU with ≥6 GB total VRAM (`gpu_ok()`, biggest card) gets the shipped
-  Rubick clone (`cp` of `assets/voices/rubick.wav`, knobs 0.5/0.5),
-  anything less falls back to robot George with the "you're poor. Get more
-  RAM" line (Costa's wording, deliberate — it's VRAM and the wrongness is
-  the joke; don't accuracy-fix it); `--robot` bypasses the GPU pick. Robot
+- `scripts/setup-voice` — points `tts` at an engine that is already on
+  disk. It installs NOTHING and downloads NOTHING (v1.52.0): the
+  marketplace blocked v1.50.0 over this script's unpinned `pip install`s
+  and unhashed model `curl`s, and out of COS-159's four ways out Costa
+  picked dropping the installs over carrying a lockfile and a hash table
+  in what is already the fragile part of the repo. So each mode probes
+  (`kokoro_ready`, `piper_engine_ready` + `piper_voice_ready`,
+  `clone_engine_ready` + `clone_model_ready`) and, when something is
+  missing, PRINTS the exact commands to stderr (`how_kokoro`,
+  `how_piper`, `how_clone_engine`, `how_clone_model`, `how_nothing`) and
+  exits 1. Those heredocs and `docs/voice.md`'s code blocks are the same
+  commands twice — change one, change the other; that pair is the whole
+  feature and the only thing a reviewer reads. Sizes to quote: kokoro
+  ~340 MB, piper ~60-120 MB per voice, the clone path ~9 GB on disk (a
+  6 GB torch venv plus the ~3 GB chatterbox model in
+  `~/.cache/huggingface`; `docs/voice.md` says "~8 GB" to users). Engine
+  locations are fixed constants (`KOKORO_DIR`, `PIPER_DIR`,
+  `PIPER_VOICES`, `CLONE_DIR`) because the commands it prints have to
+  name a path — an engine kept anywhere else is a drop-in file, not this
+  script's business. What it still does: writes the glue (the kokoro
+  `say.py`, the clone `daemon.py` and `speak-clone`), converts the clone
+  sample, and ends every mode with `set tts` + a spoken hello, always
+  through stdin→aplay (aplay, not pw-play — sndfile can't read raw audio
+  from a pipe). Bare = the best voice INSTALLED, not the best the
+  hardware could run: an NVIDIA GPU with ≥6 GB total VRAM (`gpu_ok()`,
+  biggest card) AND a chatterbox venv get the shipped Rubick clone (`cp`
+  of `assets/voices/rubick.wav`, knobs 0.5/0.5), else kokoro gets robot
+  George — keeping the "you're poor. Get more RAM" line for the no-GPU
+  case (Costa's wording, deliberate — it's VRAM and the wrongness is the
+  joke; don't accuracy-fix it) — else `how_nothing` prints all three
+  routes, espeak-ng first because it needs no engine and no script at
+  all, and stops. `--robot` bypasses the GPU pick. Robot
   George is kokoro `bm_george` through an ffmpeg ring-mod chain
   (`asetrate` +15 %, `tremolo f=45`, `acrusher bits=6`, 250-3400 band);
   a named piper voice (name-with-dash) comes through unprocessed;
@@ -926,10 +946,21 @@ is one opaque string and ignores all three (clones bend via
   3.14 has no torch wheels; `setuptools<81` pinned or perth's
   watermarker dies on missing pkg_resources — the symptom is
   `from_pretrained` throwing "'NoneType' object is not callable"; plain
-  pip on system 3.14 backtracks forever, hence uv; uv itself must come
-  from pacman — setup-voice refuses without it, the `curl … | sh`
-  bootstrap it used to run was the marketplace baseline's one
-  `curl-pipe-shell` finding, v1.40.9). Per-line spawn would
+  pip on system 3.14 backtracks forever, hence uv, and uv from pacman —
+  the `curl … | sh` bootstrap setup-voice used to run was the
+  marketplace baseline's one `curl-pipe-shell` finding, v1.40.9. Since
+  v1.52.0 the script installs none of it: those three commands are
+  printed by `how_clone_engine` and run by the user, so uv is not even a
+  runtime dependency any more). The ~3 GB model (HF
+  `ResembleAI/chatterbox`, five files, `~/.cache/huggingface`) is
+  fetched by hand too — `how_clone_model` prints the `hf_hub_download`
+  one-liner — and `daemon.py` sets `HF_HUB_OFFLINE=1` (setdefault, so
+  the user can still override) BEFORE chatterbox is imported, because
+  huggingface_hub reads that at import time; a cold cache then raises
+  `LocalEntryNotFoundError` (an `OSError`) and the daemon `sys.exit`s
+  with a ONE-line reason, one line because speak-clone reports the log's
+  last line. Verified on the box: a full `from_pretrained(device="cuda")`
+  loads from cache with the variable set. Per-line spawn would
   reload 2 GB onto the GPU, so `speak-clone` (stdlib client) talks to
   `daemon.py` (venv python) over `$XDG_RUNTIME_DIR/clippy-voice.sock`;
   the daemon self-starts on demand and exits after 15 idle minutes
@@ -1174,7 +1205,11 @@ stays free text — IPC and agent only.
   proves every kill path (replacement line, `hide`, `set tts false`,
   sleep) — it's what caught the `running = false` bug; setup-voice's
   no-GPU and `--robot` branches = stub `nvidia-smi` and `omarchy-shell`
-  binaries on PATH; a subprocess that fails only from the shell = run the
+  binaries on PATH, and every not-installed branch (including
+  `how_nothing`) = `HOME=/tmp/anything scripts/setup-voice …`, which is
+  safe because those paths all exit before the `set tts`; the success
+  paths are NOT safe to run on Costa's box, they overwrite his live
+  `tts`; a subprocess that fails only from the shell = run the
   identical command under `systemd-run --user` (how a "plugin curl fails,
   terminal curl works" scare was proven to be the edge being down, and
   why `lbProc` collects stderr).
@@ -1243,7 +1278,10 @@ stays free text — IPC and agent only.
   The installed speak-clone client (`~/.local/share/chatterbox-tts/
   speak-clone`) is regenerated by hand from setup-voice's heredoc after
   a heredoc change — a bare `setup-voice` run would re-pick the rubick
-  default over the live grossman voice.
+  default over the live grossman voice. Both heredocs changed in v1.52.0
+  (the daemon's `HF_HUB_OFFLINE` block, speak-clone's BUSY text), so the
+  installed pair is stale until then; harmless while `tts` is off, and
+  the old daemon still works — it just downloads rather than refusing to.
 - Live settings drift with use — read them (`omarchy-shell
   costafot.clippy settings`) rather than trusting notes. Last known
   (2026-09-11): `tts` off, `leaderboard` the handle
@@ -1252,8 +1290,11 @@ stays free text — IPC and agent only.
   360 / `intervalMax` 1500, `peekChance` 0.02, `aiModel`
   claude-sonnet-5. The clone reference on disk is still `grossman` (Les
   Grossman, Tropic Thunder, 5:59-6:12 of a "best moments" rip, `--exag
-  0.5 --cfg 0.5`), the picker offering off · robot · grossman · rubick,
-  but the voice is switched off. Those keys were briefly LOST on
+  0.5 --cfg 0.5`), the picker offering off · robot plus whatever clone
+  wavs sit in `~/.local/share/chatterbox-tts/voices` — Costa's own, so
+  that list moves; run `scripts/voice-scan` rather than trusting a note.
+  No `george` chip, because kokoro is parked (`kokoro-tts` empty,
+  everything in `kokoro-tts-parked`). The voice is switched off. Those keys were briefly LOST on
   2026-09-11: under omarchy 4.0.3 the plugin read every setting as its
   default and each write replaced the entry with defaults-plus-one-key,
   so a few menu taps stripped it to `{id, size}`. Recovered from
@@ -1295,10 +1336,16 @@ BLOCKED 2026-09-10 — a maintainer's supply-chain objection to
 `scripts/setup-voice` installing unpinned Python packages and
 downloading model artifacts from mutable sources without hashes, not one
 of the four reviewed capabilities) — then CLOSED unapproved by Costa
-2026-09-11, so nothing is under review. The plan is to fix that on
-`next`, and when he is happy it is fixed, cut a new version and file a
-fresh Verify issue at it; COS-159 holds the options, `PUBLISHING.md` the
-exact wording and the lines it names. v1.50.1 was released to `main`
+2026-09-11, so nothing is under review. That objection is ANSWERED on
+`next` as v1.52.0 (2026-09-12, unreleased at the time of writing):
+`scripts/setup-voice` installs nothing and downloads nothing any more —
+it wires up an engine already on disk and prints the exact commands when
+one isn't there — and the clone daemon runs under `HF_HUB_OFFLINE`, so
+no package version and no model URL is resolved by anything this repo
+ships. COS-159 holds the decision (four options; Costa picked "drop the
+installs, document them"), `PUBLISHING.md` the wording for the next
+submission's maintainer notes. When he is happy it is fixed, cut the
+version and file a fresh Verify issue at that commit. v1.50.1 was released to `main`
 anyway on 2026-09-11 with no Verify issue: the badge reads unverified
 whenever HEAD differs from the verified commit — binary, already true
 since v1.50.0 — and `omarchy plugin add` plain-clones the default

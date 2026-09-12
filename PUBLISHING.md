@@ -10,10 +10,12 @@ v1.50.0 is released and **blocked**: **#4870** (Verify form, filed
 downloads (the objection and the lines it names are in the submission log
 at the end; the options are COS-159 on the board). Costa closed #4870
 unapproved on 2026-09-11 rather than argue it, so **nothing is under
-review and there is no issue to retarget** — the plan is to fix all of it
-on the `next` branch (where v1.50.1 already sits), and when he is
-satisfied everything is fixed, cut a new version and file a FRESH Verify
-issue at that commit.
+review and there is no issue to retarget**. The fix is written on `next`
+as **v1.52.0** (2026-09-12, unreleased as this is written): the script
+neither installs nor downloads anything any more — see the last
+submission-log entry for what changed and what the maintainer notes
+should say. When Costa is satisfied it is fixed, cut the version and file
+a FRESH Verify issue at that commit.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
@@ -145,8 +147,10 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   disclosure is the README's graveyard bullet and `docs/graveyard.md`);
   and, only with `ai: true`, `scripts/clippy-ai` running the user's own
   coding-agent CLI (`claude -p` etc.) with tools off. No install/
-  setup-named files at the root (`scripts/setup-voice` is opt-in and
-  downloads TTS models on demand — say so), no sudo, no binaries.
+  setup-named files at the root (`scripts/setup-voice` is opt-in and,
+  since v1.52.0, installs nothing and downloads nothing — it points `tts`
+  at an engine the user installed and prints the install commands when
+  there isn't one; say so), no sudo, no binaries.
 
 ## Gaps — do these first
 
@@ -327,3 +331,27 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   new capability. Costa confirmed the behaviour by hand before the
   release (COS-162). `main` sits on the v1.51.0 tag; the COS-159
   supply-chain fix is still the condition for the next submission.
+
+- 2026-09-12: **COS-159 answered** on `next` (v1.52.0, unreleased as this
+  is written). Of the four options Costa picked the last one: drop the
+  engine installs from the shipped script and document the manual steps.
+  `scripts/setup-voice` now installs nothing and downloads nothing — it
+  probes for an engine already on disk, writes the glue (kokoro's
+  `say.py`, the clone `daemon.py` and `speak-clone`), sets `tts`, and
+  when an engine or a model is missing it PRINTS the exact commands to
+  stderr and exits 1. The same commands are `docs/voice.md`'s, so a user
+  runs them in their own shell with their own pins and hashes. The three
+  `pip`/`uv pip` lines, both model `curl` sets and chatterbox's
+  `from_pretrained` fetch are gone from the executed paths; the clone
+  daemon sets `HF_HUB_OFFLINE` before importing chatterbox and exits with
+  a one-line reason on a cold cache, so it cannot pull ~3 GB on its own
+  either. Nothing in the repo now resolves a package version or a model
+  URL. **Maintainer notes for the next Verify issue should say exactly
+  that**, in this order: (1) the blocked lines are gone rather than
+  pinned — no unpinned install remains because no install remains; (2)
+  what the script still does is local file writing plus one
+  `omarchy-shell … set tts`; (3) the install commands moved to
+  `docs/voice.md` and to the script's own stderr, where the user runs
+  them; (4) `HF_HUB_OFFLINE` on the daemon closes the last fetch. Do not
+  re-argue the four reviewed capabilities — that answer stood and was
+  never what #4870 blocked on.

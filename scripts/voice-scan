@@ -1,15 +1,16 @@
 #!/bin/bash
 # What voices are on this machine, as one JSON object — the panel's menu
 # picker and the `voices` IPC verb are fed by it, and an agent can run it
-# directly. It reports only what is already installed: putting NEW voices
-# on disk is scripts/setup-voice's job.
+# directly. It only ever reports: putting an engine on disk is an install
+# you run yourself (docs/voice.md), and pointing him at one is
+# scripts/setup-voice.
 set -uo pipefail
 
 e=false; command -v espeak-ng >/dev/null && e=true
 g=false; command -v nvidia-smi >/dev/null && g=true
 
-# kokoro: the say.py + models setup-voice writes, plus ffmpeg for the
-# robot-george effect chain.
+# kokoro: the models you installed, the say.py setup-voice writes next to
+# them, plus ffmpeg for the robot-george effect chain.
 k=false; kk="$HOME/.local/share/kokoro-tts"
 [ -x "$kk/say.py" ] && [ -s "$kk/kokoro-v1.0.onnx" ] && [ -s "$kk/voices-v1.0.bin" ] \
   && command -v ffmpeg >/dev/null && k=true

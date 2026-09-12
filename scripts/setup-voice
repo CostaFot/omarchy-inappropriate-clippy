@@ -1,16 +1,21 @@
 #!/bin/bash
 
 # Give Clippy a real voice, locally — no cloud calls, the model runs on your
-# machine. Modes:
-#   scripts/setup-voice                    # bare: the shipped Rubick clone on
-#                                          # an NVIDIA GPU with the VRAM for
-#                                          # it, robot George everywhere else
-#   scripts/setup-voice --robot            # robot George, GPU or not
-#   scripts/setup-voice af_heart           # any kokoro voice (af_*, am_*, bm_*, ...)
-#   scripts/setup-voice en_US-ryan-high    # any voice from the piper catalog
+# machine. It sets `tts` and writes the glue around an engine (the kokoro
+# say.py, the clone daemon and client); it installs NOTHING and downloads
+# NOTHING. When an engine or a model isn't here it prints the exact
+# commands and stops, so every fetch runs under your eyes with your own
+# pins. docs/voice.md has the same steps with the prose around them.
+# Modes:
+#   scripts/setup-voice                    # bare: the shipped Rubick clone if
+#                                          # chatterbox and an NVIDIA GPU are
+#                                          # here, robot George if kokoro is
+#   scripts/setup-voice --robot            # robot George (kokoro), GPU or not
+#   scripts/setup-voice af_heart           # any kokoro voice you've fetched
+#   scripts/setup-voice en_US-ryan-high    # any piper voice you've fetched
 #   scripts/setup-voice --clone ~/sample.mp4 [name]   # clone ANY voice from a
 #                                          # 10-20 s sample — yours included.
-#                                          # Needs an NVIDIA GPU.
+#                                          # Needs chatterbox and an NVIDIA GPU.
 #   scripts/setup-voice --clone ~/scene.mp4 name --from 5:59 --to 6:12
 #                                          # the same, cut out of a longer
 #                                          # recording (ffmpeg times; --from
@@ -19,7 +24,8 @@
 #                                          # so a quiet rip needs no prep.
 #                                          # Once set, the plugin pre-renders
 #                                          # the whole book in the background.
-# kokoro (~340 MB) sounds better; piper (~60-120 MB) is lighter. Catalogs:
+# kokoro (~340 MB) sounds better; piper (~60-120 MB) is lighter. Pick a name
+# out of their catalogs, fetch it, then name it here:
 #   https://huggingface.co/hexgrad/Kokoro-82M/blob/main/VOICES.md
 #   https://rhasspy.github.io/piper-samples/
 # All modes talk to `tts` the same way: the line on stdin, raw samples to
@@ -36,6 +42,141 @@ gpu_ok() {
   local mib
   mib="$(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | sort -nr | head -1)"
   [ -n "$mib" ] && [ "$mib" -ge 6000 ] 2>/dev/null
+}
+
+# Where each engine has to live for the commands this script writes to find
+# it. They are the paths in docs/voice.md, and the ones printed below when
+# something is missing: a voice installed somewhere else is a drop-in file
+# (docs/voice.md), not this script's business.
+KOKORO_DIR="$HOME/.local/share/kokoro-tts"
+PIPER_DIR="$HOME/.local/share/piper-tts"
+PIPER_VOICES="$HOME/.local/share/piper-voices"
+CLONE_DIR="$HOME/.local/share/chatterbox-tts"
+DOCS="the long version is docs/voice.md in the plugin dir"
+
+# Is it here? Only what the USER has to put there — say.py, the daemon and
+# speak-clone are written by this script, so they are never part of it.
+kokoro_ready() {
+  [ -x "$KOKORO_DIR/venv/bin/python" ] \
+    && [ -s "$KOKORO_DIR/kokoro-v1.0.onnx" ] && [ -s "$KOKORO_DIR/voices-v1.0.bin" ]
+}
+piper_engine_ready() { [ -x "$PIPER_DIR/venv/bin/piper" ]; }
+piper_voice_ready() { [ -s "$PIPER_VOICES/$1.onnx" ] && [ -s "$PIPER_VOICES/$1.onnx.json" ]; }
+# The daemon's exact imports, not just the venv's python: an install
+# interrupted mid-torch leaves venv/bin/python behind, and the daemon then
+# dies on `import torchaudio` before it binds its socket ("daemon never came
+# up"). ~5 s on a healthy venv.
+clone_engine_ready() { "$CLONE_DIR/venv/bin/python" -c 'import torchaudio, chatterbox.tts' &>/dev/null; }
+# The model, separately, because it is a separate step: the daemon runs with
+# HF_HUB_OFFLINE, so what is not in the cache now is a stop here rather than
+# a silent 3 GB download on his first line.
+clone_model_ready() {
+  HF_HUB_OFFLINE=1 "$CLONE_DIR/venv/bin/python" -c 'from huggingface_hub import hf_hub_download as d
+[d(repo_id="ResembleAI/chatterbox", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]' &>/dev/null
+}
+
+# What to run when it is not. These are printed, never executed — the point
+# of the split: nothing this repo ships resolves a package version or a
+# model URL for you, so there is no unpinned install and no unverified
+# download inside the plugin. Your shell, your pins, your checksums.
+how_kokoro() {
+  cat >&2 <<EOF
+
+kokoro isn't here, and this script doesn't install things. Four commands,
+~340 MB, no GPU needed:
+
+  python3 -m venv $KOKORO_DIR/venv
+  $KOKORO_DIR/venv/bin/pip install kokoro-onnx
+  curl -fL --create-dirs -o $KOKORO_DIR/kokoro-v1.0.onnx \\
+    https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
+  curl -fL -o $KOKORO_DIR/voices-v1.0.bin \\
+    https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+
+Pin the version, check the hashes, read the release page first — they are
+your commands. Then run this again ($DOCS).
+EOF
+}
+
+how_piper() {  # $1 voice, $2 lang, $3 locale, $4 speaker, $5 quality
+  local u="https://huggingface.co/rhasspy/piper-voices/resolve/main/$2/$3/$4/$5"
+  echo >&2
+  if ! piper_engine_ready; then
+    cat >&2 <<EOF
+piper isn't here, and this script doesn't install things. The engine, once:
+
+  python3 -m venv $PIPER_DIR/venv
+  $PIPER_DIR/venv/bin/pip install piper-tts
+EOF
+    echo >&2
+  fi
+  cat >&2 <<EOF
+The $1 voice itself, ~60-120 MB (browse them at
+https://rhasspy.github.io/piper-samples/):
+
+  curl -fL --create-dirs -o $PIPER_VOICES/$1.onnx \\
+    $u/$1.onnx
+  curl -fL -o $PIPER_VOICES/$1.onnx.json \\
+    $u/$1.onnx.json
+
+resolve/main is a moving ref — swap it for a commit sha off the repo if you
+want the same bytes twice. Then run this again ($DOCS).
+EOF
+}
+
+how_clone_engine() {
+  cat >&2 <<EOF
+
+chatterbox isn't here (or its venv is half-built), and this script doesn't
+install things. It wants its own Python 3.12 and ~6 GB of torch, so uv:
+
+  sudo pacman -S uv
+  uv venv $CLONE_DIR/venv --python 3.12
+  uv pip install --python $CLONE_DIR/venv/bin/python chatterbox-tts "setuptools<81"
+
+That setuptools pin isn't optional — chatterbox's watermarker still imports
+pkg_resources, and without it the model load dies on "'NoneType' object is
+not callable". Pin chatterbox-tts itself too if you want the same venv
+twice. Then the model, below.
+EOF
+  how_clone_model
+}
+
+how_clone_model() {
+  cat >&2 <<EOF
+
+The chatterbox model is five files, ~3 GB, fetched once. The daemon never
+downloads — it loads what is already in your Hugging Face cache — so this
+is the one command that puts it there:
+
+  $CLONE_DIR/venv/bin/python -c 'from huggingface_hub import hf_hub_download as d
+[d(repo_id="ResembleAI/chatterbox", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]'
+
+Pass revision="<a commit sha off huggingface.co/ResembleAI/chatterbox>" to
+d() to pin the exact bytes. Then run this again ($DOCS).
+EOF
+}
+
+# Bare mode with nothing to point him at: every route, cheapest first.
+how_nothing() {
+  cat >&2 <<EOF
+
+Nothing this script can point him at is on this machine, and it doesn't
+install things — it wires up an engine you already have.
+
+The cheapest voice needs neither this script nor a model: the espeak-ng
+robot, which is what he was built around.
+
+  sudo pacman -S espeak-ng
+  omarchy-shell costafot.clippy set tts true
+EOF
+  how_kokoro
+  if gpu_ok; then
+    how_clone_engine
+  else
+    echo >&2
+    echo "Voice cloning is the third route and wants an NVIDIA GPU with 6 GB, which" >&2
+    echo "this machine doesn't have. You're poor. Get more RAM." >&2
+  fi
 }
 
 usage() { sed -n '3,/^$/p' "$0" | sed 's/^# \{0,1\}//'; }
@@ -69,14 +210,25 @@ if [ "${1:-}" = "--clone" ]; then
 elif [ "${1:-}" = "--robot" ]; then
   BLESSED=1
 elif [ $# -eq 0 ]; then
-  if gpu_ok; then
+  # Bare mode picks the best voice ALREADY INSTALLED, not the best this
+  # machine could run: the script has nothing to install with. The venv
+  # check here is the cheap one — setup_clone runs the real probe and
+  # prints the fix if it is half-built.
+  if gpu_ok && [ -x "$CLONE_DIR/venv/bin/python" ]; then
     MODE=clone SHIPPED=1
     SAMPLE="$HERE/assets/voices/rubick.wav"
     NAME=rubick
-    echo "NVIDIA GPU found — you get the shipped voice, a Rubick clone (--robot skips the GPU)"
-  else
+    echo "NVIDIA GPU and chatterbox found — you get the shipped voice, a Rubick clone (--robot picks the kokoro robot instead)"
+  elif kokoro_ready; then
     BLESSED=1
-    echo "no NVIDIA GPU with 6 GB to spare — you're poor. Get more RAM. Until then, the robot it is"
+    if gpu_ok; then
+      echo "the GPU is there but chatterbox isn't, so no clone today — kokoro is, so the robot it is"
+    else
+      echo "no NVIDIA GPU with 6 GB to spare — you're poor. Get more RAM. Until then, the robot it is"
+    fi
+  else
+    how_nothing
+    exit 1
   fi
 fi
 
@@ -89,18 +241,8 @@ ROBOT_FX="asetrate=24000*1.15,aresample=24000,atempo=0.870,tremolo=f=45:d=0.8,ac
 HELLO="Oh my! It looks like you're giving me a voice. You will regret this."
 
 setup_kokoro() {
-  local base="$HOME/.local/share/kokoro-tts" venv="$HOME/.local/share/kokoro-tts/venv"
-  if [ ! -x "$venv/bin/python" ]; then
-    echo "installing kokoro into $venv ..."
-    python3 -m venv "$venv"
-    "$venv/bin/pip" install --quiet kokoro-onnx
-  fi
-  for f in kokoro-v1.0.onnx voices-v1.0.bin; do
-    [ -s "$base/$f" ] && continue
-    echo "downloading $f ..."
-    curl -fsSL --retry 2 -o "$base/$f" \
-      "https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/$f"
-  done
+  local base="$KOKORO_DIR" venv="$KOKORO_DIR/venv"
+  kokoro_ready || { how_kokoro; exit 1; }
   cat > "$base/say.py" <<PY
 #!$venv/bin/python
 # Line on stdin -> raw s16 mono 24 kHz on stdout. KOKORO_VOICE/KOKORO_SPEED to taste.
@@ -129,24 +271,20 @@ PY
 }
 
 setup_piper() {
-  local venv="$HOME/.local/share/piper-tts/venv" voices="$HOME/.local/share/piper-voices"
+  local venv="$PIPER_DIR/venv" voices="$PIPER_VOICES"
   local locale speaker quality lang
   IFS=- read -r locale speaker quality <<< "$VOICE"
   lang="${locale%%_*}"
-  if [ ! -x "$venv/bin/piper" ]; then
-    echo "installing piper into $venv ..."
-    python3 -m venv "$venv"
-    "$venv/bin/pip" install --quiet piper-tts
+  # Without a download to 404, a malformed name would otherwise be printed
+  # back as an install command with a nonsense URL in it.
+  [ -n "$quality" ] || {
+    echo "setup-voice: $VOICE isn't a piper name — those are locale-speaker-quality, like en_US-ryan-high" >&2
+    exit 2
+  }
+  if ! piper_engine_ready || ! piper_voice_ready "$VOICE"; then
+    how_piper "$VOICE" "$lang" "$locale" "$speaker" "$quality"
+    exit 1
   fi
-  mkdir -p "$voices"
-  local ext f
-  for ext in onnx onnx.json; do
-    f="$VOICE.$ext"
-    [ -s "$voices/$f" ] && continue
-    echo "downloading $f ..."
-    curl -fsSL --retry 2 -o "$voices/$f" \
-      "https://huggingface.co/rhasspy/piper-voices/resolve/main/$lang/$locale/$speaker/$quality/$f"
-  done
   local rate; rate="$(jq -r .audio.sample_rate "$voices/$VOICE.onnx.json")"
   CMD="$venv/bin/piper -m $voices/$VOICE.onnx --output-raw 2>/dev/null | aplay -q -t raw -r $rate -f S16_LE -c 1 -"
   # Background + wait, so bash's TERM trap runs promptly and kills aplay —
@@ -156,29 +294,13 @@ setup_piper() {
 }
 
 setup_clone() {
-  local base="$HOME/.local/share/chatterbox-tts" venv="$HOME/.local/share/chatterbox-tts/venv"
+  local base="$CLONE_DIR" venv="$CLONE_DIR/venv"
   command -v nvidia-smi >/dev/null || {
     echo "cloning synthesizes every line with chatterbox, which needs an NVIDIA GPU" >&2
     exit 1
   }
-  export PATH="$HOME/.local/bin:$PATH"
-  command -v uv >/dev/null || {
-    echo "uv is not installed (chatterbox needs a pinned python; uv brings its own)." >&2
-    echo "install it first: sudo pacman -S uv" >&2
-    exit 1
-  }
-  # Probe the daemon's exact imports, not just the venv's python: an install
-  # interrupted mid-torch leaves venv/bin/python behind, every later run then
-  # skips this block, and the daemon dies on `import torchaudio` before
-  # binding its socket — "daemon never came up". A broken venv is rebuilt
-  # from scratch (uv's wheel cache makes that cheap); ~5 s on a healthy one.
-  if ! "$venv/bin/python" -c 'import torchaudio, chatterbox.tts' &>/dev/null; then
-    echo "installing chatterbox into $venv (~6 GB of torch — be patient) ..."
-    rm -rf "$venv"
-    uv venv "$venv" --python 3.12 >/dev/null
-    # setuptools<81: chatterbox's perth watermarker still imports pkg_resources
-    uv pip install --python "$venv/bin/python" --quiet chatterbox-tts "setuptools<81"
-  fi
+  clone_engine_ready || { how_clone_engine; exit 1; }
+  clone_model_ready || { how_clone_model; exit 1; }
   mkdir -p "$base/voices"
   if [ -n "$SHIPPED" ]; then
     # the shipped sample is already the exact approved 20 s mono take —
@@ -227,6 +349,13 @@ setup_clone() {
 # stays put while agent one-offs and lines from a superseded sample age out.
 import json, os, socket, sys
 os.environ.setdefault("TQDM_DISABLE", "1")  # no progress bars in daemon.log
+# Nothing here fetches: the model is fetched once, by hand, by whoever
+# installed chatterbox (setup-voice prints the command, docs/voice.md
+# explains it), and this only ever loads it out of the local HF cache.
+# setdefault, not a hard-code — HF_HUB_OFFLINE=0 in the environment is
+# still your call — and it has to be set before huggingface_hub is
+# imported, which chatterbox does at import time.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
 try:
     CACHE_MB = int(os.environ.get("CLIPPY_VOICE_CACHE_MB", "500"))
 except ValueError:
@@ -272,7 +401,14 @@ s.listen(4)
 s.settimeout(900)
 import torchaudio
 from chatterbox.tts import ChatterboxTTS
-model = ChatterboxTTS.from_pretrained(device="cuda")
+try:
+    model = ChatterboxTTS.from_pretrained(device="cuda")
+except OSError as e:
+    # LocalEntryNotFoundError under HF_HUB_OFFLINE, i.e. the model was never
+    # fetched. One line, because speak-clone reports the log's last line.
+    sys.exit("chatterbox's model isn't in the local cache and this daemon never downloads it"
+             " — run scripts/setup-voice and it prints the one command that fetches it"
+             " (five files, ~3 GB); the loader said: " + str(e).replace("\n", " ")[:200])
 prune(os.path.expanduser("~/.cache/clippy-voice"))
 while True:
     try:
@@ -344,8 +480,8 @@ if os.path.exists(raw):
 else:
     sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "clippy-voice.sock")
     here = os.path.dirname(os.path.realpath(__file__))
-    BUSY = ("speak-clone: the daemon is still working after 2 minutes — a first"
-            " run downloads the ~3 GB model, and a slow connection takes longer"
+    BUSY = ("speak-clone: the daemon is still working after 2 minutes — a cold"
+            " start loads ~3 GB onto the GPU, and a busy machine takes longer"
             " than that. It keeps going in the background; try again in a few"
             " minutes (log: ~/.cache/clippy-voice/daemon.log)")
     def logtail():
@@ -430,10 +566,9 @@ PY
 
   CMD="exec $base/speak-clone --ref $base/voices/$NAME.wav --exag 0.5 --cfg 0.5"
   HELLO="Behold! It looks like you're giving me someone else's voice. How deliciously unethical."
-  echo "the first line loads (and on the very first run, downloads) the model — give it a minute"
+  echo "the first line loads the model onto the GPU — give it a minute"
 }
 
-mkdir -p "$HOME/.local/share/kokoro-tts" "$HOME/.local/share/piper-tts"
 if [ "$MODE" = clone ]; then
   setup_clone
 else

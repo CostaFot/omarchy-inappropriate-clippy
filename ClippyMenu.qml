@@ -341,8 +341,8 @@ PanelWindow {
       }
       // The voice picker: every voice already on disk, as chips — a tap is an
       // instant `set tts` write (applyVoice, same resolver as IPC useVoice).
-      // Installing NEW voices stays with scripts/setup-voice; a menu tap
-      // must never start a 2 GB download.
+      // Putting a new engine on disk is the user's own install
+      // (docs/voice.md); a menu tap must never start a 2 GB download.
       Choice {
         label: menu.open && menu.clippy && menu.clippy.ttsNeedsEngine
           ? "Voice · the robot needs espeak-ng" : "Voice"
@@ -358,7 +358,7 @@ PanelWindow {
         // better installed where the real voices come from.
         readonly property var inv: menu.open && menu.clippy ? menu.clippy.voiceInv : null
         visible: inv !== null && !(inv.kokoro || (inv.gpu && inv.clones.length > 0) || inv.piper.length > 0)
-        text: "better voices: scripts/setup-voice in the plugin dir"
+        text: "better voices: docs/voice.md in the plugin dir"
         color: Color.popups.text
         opacity: 0.45
         font.family: Style.fontFamily

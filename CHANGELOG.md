@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.52.0
+
+- `scripts/setup-voice` installs nothing and downloads nothing any more. It points him at a neural voice already on your machine, and when there isn't one it prints the exact commands and stops. Installing kokoro, piper or chatterbox is now a few commands you run yourself — `docs/voice.md` has them, with your own versions and your own hashes if you want them.
+- The voice-clone daemon only ever loads its model out of your Hugging Face cache, so nothing fetches a ~3 GB model in the middle of an insult. Fetch it once with the command the script prints.
+
 ## v1.51.0
 
 - He parks between your widgets again (`avoidWidgets`). Current Omarchy stopped telling plugins where the bar widgets are, so he now asks the bar for them directly instead. With more than one monitor he can't tell which screen a widget is on, so he keeps clear of all of them.
