@@ -405,3 +405,14 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   capabilities were deliberately NOT re-argued — that answer stood in
   #3395 and #3903 and was never what #4870 blocked on. **`main` is frozen
   at `ff96fee` while this is open.**
+  Bots, same day: validation ✅ at `ff96fee`, baseline 🟡
+  review-required with **no findings** and the same four capabilities
+  (`privilege`, `package-manager`, `service-management`, `installer`).
+  Answered in the thread, because the capability list now needs one
+  thing said out loud: the `pip install` / `sudo pacman` lines it cites
+  in `scripts/setup-voice` (:89, :108, :132, :134, :169) are all inside
+  `cat >&2 <<EOF` heredocs — printed text, not execution. To a maintainer
+  who has just blocked this plugin over those exact lines, an unexplained
+  capability list naming them again reads as nothing having changed. If
+  the script is ever restructured, check what the scanner cites before
+  assuming the answer still holds.
