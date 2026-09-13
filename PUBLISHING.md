@@ -19,12 +19,13 @@ submission is **#6429**, filed 2026-09-12 at `ff96fee`, and it was
 **blocked again** on 2026-09-12 — by a maintainer comment this time,
 not a label, over the *printed* install commands not carrying pinned
 digests (both bots came back clean; the full wording is in the
-submission log). The answer is **v1.53.0** on `next`: every printed
-command pins a version, a commit and a sha256, and `setup-voice`
-checks them. Since the block means there is no approval to invalidate,
-the next step is a release and then **retargeting #6429's Target
-commit** to it — not a new issue. `main` stays on `ff96fee` until that
-release goes out.
+submission log). The answer is **v1.53.0**, this commit: every printed
+command pins a version, a commit and a sha256, and `setup-voice` checks
+them against the bytes on disk before it wires a voice up. Because a
+block means there is no approval to invalidate, this released and
+**#6429 was retargeted** to the new HEAD rather than filed again — the
+edit is what re-runs the bots. `main` is frozen here now, on the same
+rule as before.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
