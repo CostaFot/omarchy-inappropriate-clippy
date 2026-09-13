@@ -4,8 +4,10 @@
 # machine. It sets `tts` and writes the glue around an engine (the kokoro
 # say.py, the clone daemon and client); it installs NOTHING and downloads
 # NOTHING. When an engine or a model isn't here it prints the exact
-# commands and stops, so every fetch runs under your eyes with your own
-# pins. docs/voice.md has the same steps with the prose around them.
+# commands and stops, so every fetch runs under your eyes — pinned to a
+# version, a commit and a sha256, which it then checks on disk before it
+# points him at anything. docs/voice.md has the same steps with the prose
+# around them.
 # Modes:
 #   scripts/setup-voice                    # bare: the shipped Rubick clone if
 #                                          # chatterbox and an NVIDIA GPU are
@@ -54,14 +56,66 @@ PIPER_VOICES="$HOME/.local/share/piper-voices"
 CLONE_DIR="$HOME/.local/share/chatterbox-tts"
 DOCS="the long version is docs/voice.md in the plugin dir"
 
+# What the bytes have to BE. This script fetches nothing, so these are for
+# the commands it prints and for the files you already have: every version
+# is exact, every URL names a commit or a release rather than a branch, and
+# every artifact has a sha256 that is checked before he is pointed at it.
+# A model that is present but isn't the one pinned here is a stop, not a
+# shrug — see mismatch() below.
+KOKORO_VER=0.6.1
+KOKORO_ONNX_SHA=7d5df8ecf7d4b1878015a32686053fd0eebe2bc377234608764cc0ef3636a6c5
+KOKORO_VOICES_SHA=bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d
+PIPER_VER=1.8.0
+# rhasspy/piper-voices at 2026-09-04. There are 176 voices and you pick one
+# at run time, so their digests are a file rather than three lines here.
+PIPER_REV=1162a9173d0ce503555aed757976b7a9912eae4c
+PIPER_PINS="$HERE/scripts/piper-voices.sha256"
+CLONE_VER=0.1.7
+# ResembleAI/chatterbox at 2026-06-10 and the five files the daemon loads —
+# which it loads by this revision, not by whatever main points at today.
+CLONE_REV=5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18
+CLONE_MODEL_SHA="f0921cab452fa278bc25cd23ffd59d36f816d7dc5181dd1bef9751a7fb61f63c  ve.safetensors
+914cb1696f47527fe8852ca8f1fe1fa63cb34f76f9c715e84e067b744dd0da81  t3_cfg.safetensors
+2b78103c654207393955e4900aac14a12de8ef25f4b09424f1ef91941f161d4e  s3gen.safetensors
+d71e3a44eabb1784df9a68e9f95b251ecbf1a7af6a9f50835856b2ca9d8c14a5  tokenizer.json
+6552d70568833628ba019c6b03459e77fe71ca197d5c560cef9411bee9d87f4e  conds.pt"
+
+# One shape for all three engines: what is on disk is not what this plugin
+# pins, so nothing gets wired up and the fetch command gets printed again.
+# Usually it means the file was fetched before the pin or half-downloaded;
+# if a fresh fetch keeps failing this check, the source moved and the pin
+# did not, which is the whole point of having one.
+mismatch() {  # $1 what it is, $2... the files that failed
+  echo >&2
+  echo "setup-voice: $1 doesn't match the sha256 this plugin pins:" >&2
+  printf '  %s\n' "${@:2}" >&2
+  echo "Nothing is wired up until it does. Delete those and fetch them again with" >&2
+  echo "the commands below — they carry the digests, and so does docs/voice.md." >&2
+}
+
 # Is it here? Only what the USER has to put there — say.py, the daemon and
 # speak-clone are written by this script, so they are never part of it.
 kokoro_ready() {
   [ -x "$KOKORO_DIR/venv/bin/python" ] \
     && [ -s "$KOKORO_DIR/kokoro-v1.0.onnx" ] && [ -s "$KOKORO_DIR/voices-v1.0.bin" ]
 }
+# Present is not the same as right: ~1 s of sha256 over 350 MB, in a script
+# you run by hand, and the difference is between "a model is there" and
+# "the model is there".
+kokoro_verified() {
+  printf '%s  %s\n%s  %s\n' "$KOKORO_ONNX_SHA" "$KOKORO_DIR/kokoro-v1.0.onnx" \
+    "$KOKORO_VOICES_SHA" "$KOKORO_DIR/voices-v1.0.bin" | sha256sum --check --status -
+}
 piper_engine_ready() { [ -x "$PIPER_DIR/venv/bin/piper" ]; }
 piper_voice_ready() { [ -s "$PIPER_VOICES/$1.onnx" ] && [ -s "$PIPER_VOICES/$1.onnx.json" ]; }
+# The two pinned lines for one voice, or nothing when the catalog grew a
+# voice after our pin: 0 verified, 1 wrong bytes, 2 not in the catalog.
+piper_pins() { grep -E "^[0-9a-f]{64}  ${1//./\\.}\.onnx(\.json)?$" "$PIPER_PINS" 2>/dev/null; }
+piper_voice_verified() {
+  local pins
+  pins="$(piper_pins "$1")" && [ -n "$pins" ] || return 2
+  printf '%s\n' "$pins" | (cd "$PIPER_VOICES" && sha256sum --check --status -) || return 1
+}
 # The daemon's exact imports, not just the venv's python: an install
 # interrupted mid-torch leaves venv/bin/python behind, and the daemon then
 # dies on `import torchaudio` before it binds its socket ("daemon never came
@@ -71,8 +125,22 @@ clone_engine_ready() { "$CLONE_DIR/venv/bin/python" -c 'import torchaudio, chatt
 # HF_HUB_OFFLINE, so what is not in the cache now is a stop here rather than
 # a silent 3 GB download on his first line.
 clone_model_ready() {
-  HF_HUB_OFFLINE=1 "$CLONE_DIR/venv/bin/python" -c 'from huggingface_hub import hf_hub_download as d
-[d(repo_id="ResembleAI/chatterbox", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]' &>/dev/null
+  HF_HUB_OFFLINE=1 "$CLONE_DIR/venv/bin/python" -c 'import sys
+from huggingface_hub import hf_hub_download as d
+[d(repo_id="ResembleAI/chatterbox", revision=sys.argv[1], filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]' "$CLONE_REV" &>/dev/null
+}
+
+# Where that revision sits in your HF cache — asked for rather than guessed,
+# so the digest check reads the same five files the daemon will load.
+clone_model_dir() {
+  HF_HUB_OFFLINE=1 "$CLONE_DIR/venv/bin/python" -c 'import os, sys
+from huggingface_hub import hf_hub_download as d
+print(os.path.dirname(d(repo_id="ResembleAI/chatterbox", revision=sys.argv[1], filename="tokenizer.json")))' "$CLONE_REV" 2>/dev/null
+}
+clone_model_verified() {
+  local dir
+  dir="$(clone_model_dir)" && [ -n "$dir" ] || return 1
+  printf '%s\n' "$CLONE_MODEL_SHA" | (cd "$dir" && sha256sum --check --status -)
 }
 
 # What to run when it is not. These are printed, never executed — the point
@@ -82,30 +150,36 @@ clone_model_ready() {
 how_kokoro() {
   cat >&2 <<EOF
 
-kokoro isn't here, and this script doesn't install things. Four commands,
-~340 MB, no GPU needed:
+kokoro isn't here, and this script doesn't install things. Five commands,
+~340 MB, no GPU needed — pinned to the version and the exact bytes this
+plugin was reviewed against:
 
   python3 -m venv $KOKORO_DIR/venv
-  $KOKORO_DIR/venv/bin/pip install kokoro-onnx
+  $KOKORO_DIR/venv/bin/pip install kokoro-onnx==$KOKORO_VER
   curl -fL --create-dirs -o $KOKORO_DIR/kokoro-v1.0.onnx \\
     https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
   curl -fL -o $KOKORO_DIR/voices-v1.0.bin \\
     https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+  printf '%s  %s\\n%s  %s\\n' \\
+    $KOKORO_ONNX_SHA $KOKORO_DIR/kokoro-v1.0.onnx \\
+    $KOKORO_VOICES_SHA $KOKORO_DIR/voices-v1.0.bin | sha256sum -c
 
-Pin the version, check the hashes, read the release page first — they are
-your commands. Then run this again ($DOCS).
+They are still your commands, run in your shell: read the release page
+first, and swap the pins for newer ones if you'd rather (this script will
+then tell you the bytes aren't the ones it knows, which is it working).
+Then run this again ($DOCS).
 EOF
 }
 
 how_piper() {  # $1 voice, $2 lang, $3 locale, $4 speaker, $5 quality
-  local u="https://huggingface.co/rhasspy/piper-voices/resolve/main/$2/$3/$4/$5"
+  local u="https://huggingface.co/rhasspy/piper-voices/resolve/$PIPER_REV/$2/$3/$4/$5"
   echo >&2
   if ! piper_engine_ready; then
     cat >&2 <<EOF
 piper isn't here, and this script doesn't install things. The engine, once:
 
   python3 -m venv $PIPER_DIR/venv
-  $PIPER_DIR/venv/bin/pip install piper-tts
+  $PIPER_DIR/venv/bin/pip install piper-tts==$PIPER_VER
 EOF
     echo >&2
   fi
@@ -117,10 +191,26 @@ https://rhasspy.github.io/piper-samples/):
     $u/$1.onnx
   curl -fL -o $PIPER_VOICES/$1.onnx.json \\
     $u/$1.onnx.json
-
-resolve/main is a moving ref — swap it for a commit sha off the repo if you
-want the same bytes twice. Then run this again ($DOCS).
 EOF
+  if piper_pins "$1" >/dev/null; then
+    cat >&2 <<EOF
+  grep -E "  $1\\.onnx(\\.json)?\$" $PIPER_PINS | \\
+    (cd $PIPER_VOICES && sha256sum -c)
+
+That URL is a commit, not resolve/main: $PIPER_REV, the
+revision whose digests are in $PIPER_PINS.
+The same bytes today and next year, and this script checks them before it
+points him at the voice. Then run this again ($DOCS).
+EOF
+  else
+    cat >&2 <<EOF
+
+$1 is newer than the catalog this plugin pins ($PIPER_REV,
+in $PIPER_PINS), so there is no digest here to
+check it against — that URL is still a commit rather than resolve/main, but
+those bytes are yours to vouch for. Then run this again ($DOCS).
+EOF
+  fi
 }
 
 how_clone_engine() {
@@ -131,12 +221,13 @@ install things. It wants its own Python 3.12 and ~6 GB of torch, so uv:
 
   sudo pacman -S uv
   uv venv $CLONE_DIR/venv --python 3.12
-  uv pip install --python $CLONE_DIR/venv/bin/python chatterbox-tts "setuptools<81"
+  uv pip install --python $CLONE_DIR/venv/bin/python chatterbox-tts==$CLONE_VER "setuptools<81"
 
 That setuptools pin isn't optional — chatterbox's watermarker still imports
 pkg_resources, and without it the model load dies on "'NoneType' object is
-not callable". Pin chatterbox-tts itself too if you want the same venv
-twice. Then the model, below.
+not callable". The chatterbox pin is the version this plugin was reviewed
+against; pacman's copy of uv comes signed by the distro, which is as pinned
+as a system package gets. Then the model, below.
 EOF
   how_clone_model
 }
@@ -145,14 +236,16 @@ how_clone_model() {
   cat >&2 <<EOF
 
 The chatterbox model is five files, ~3 GB, fetched once. The daemon never
-downloads — it loads what is already in your Hugging Face cache — so this
-is the one command that puts it there:
+downloads — it loads what is already in your Hugging Face cache, and only
+the revision below — so this is the one command that puts it there:
 
   $CLONE_DIR/venv/bin/python -c 'from huggingface_hub import hf_hub_download as d
-[d(repo_id="ResembleAI/chatterbox", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]'
+[d(repo_id="ResembleAI/chatterbox", revision="$CLONE_REV", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]'
 
-Pass revision="<a commit sha off huggingface.co/ResembleAI/chatterbox>" to
-d() to pin the exact bytes. Then run this again ($DOCS).
+That revision is a commit on huggingface.co/ResembleAI/chatterbox, so the
+five files are the same bytes every time; their sha256 are in this script
+(CLONE_MODEL_SHA), and it checks all five before the daemon is allowed to
+load them. Then run this again ($DOCS).
 EOF
 }
 
@@ -243,6 +336,10 @@ HELLO="Oh my! It looks like you're giving me a voice. You will regret this."
 setup_kokoro() {
   local base="$KOKORO_DIR" venv="$KOKORO_DIR/venv"
   kokoro_ready || { how_kokoro; exit 1; }
+  kokoro_verified || {
+    mismatch "kokoro's model" "$KOKORO_DIR/kokoro-v1.0.onnx" "$KOKORO_DIR/voices-v1.0.bin"
+    how_kokoro; exit 1
+  }
   cat > "$base/say.py" <<PY
 #!$venv/bin/python
 # Line on stdin -> raw s16 mono 24 kHz on stdout. KOKORO_VOICE/KOKORO_SPEED to taste.
@@ -285,6 +382,15 @@ setup_piper() {
     how_piper "$VOICE" "$lang" "$locale" "$speaker" "$quality"
     exit 1
   fi
+  piper_voice_verified "$VOICE" || case $? in
+    1) mismatch "the $VOICE voice" "$PIPER_VOICES/$VOICE.onnx" "$PIPER_VOICES/$VOICE.onnx.json"
+       how_piper "$VOICE" "$lang" "$locale" "$speaker" "$quality"
+       exit 1 ;;
+    # Newer than our pin rather than wrong: the catalog gains voices, and
+    # refusing one because this plugin hasn't seen it would be theatre.
+    *) echo "$VOICE isn't in the pinned catalog (scripts/piper-voices.sha256, rhasspy/piper-voices" >&2
+       echo "  at ${PIPER_REV:0:7}), so its bytes are yours to vouch for. Wiring it up anyway." >&2 ;;
+  esac
   local rate; rate="$(jq -r .audio.sample_rate "$voices/$VOICE.onnx.json")"
   CMD="$venv/bin/piper -m $voices/$VOICE.onnx --output-raw 2>/dev/null | aplay -q -t raw -r $rate -f S16_LE -c 1 -"
   # Background + wait, so bash's TERM trap runs promptly and kills aplay —
@@ -301,6 +407,10 @@ setup_clone() {
   }
   clone_engine_ready || { how_clone_engine; exit 1; }
   clone_model_ready || { how_clone_model; exit 1; }
+  clone_model_verified || {
+    mismatch "chatterbox's model at revision ${CLONE_REV:0:7}" "$(clone_model_dir)"
+    how_clone_model; exit 1
+  }
   mkdir -p "$base/voices"
   if [ -n "$SHIPPED" ]; then
     # the shipped sample is already the exact approved 20 s mono take —
@@ -401,12 +511,20 @@ s.listen(4)
 s.settimeout(900)
 import torchaudio
 from chatterbox.tts import ChatterboxTTS
+from huggingface_hub import hf_hub_download
+# The revision setup-voice pinned and checked, loaded out of the cache by
+# hand: from_pretrained() would take whatever "main" points at by then, and
+# this daemon is only ever allowed the bytes the plugin was reviewed with.
+MODEL_REV = "PINNED_MODEL_REV"
 try:
-    model = ChatterboxTTS.from_pretrained(device="cuda")
+    snapshot = os.path.dirname(hf_hub_download(repo_id="ResembleAI/chatterbox",
+                                               revision=MODEL_REV, filename="tokenizer.json"))
+    model = ChatterboxTTS.from_local(snapshot, device="cuda")
 except OSError as e:
-    # LocalEntryNotFoundError under HF_HUB_OFFLINE, i.e. the model was never
-    # fetched. One line, because speak-clone reports the log's last line.
-    sys.exit("chatterbox's model isn't in the local cache and this daemon never downloads it"
+    # LocalEntryNotFoundError under HF_HUB_OFFLINE, i.e. that revision was
+    # never fetched. One line, because speak-clone reports the log's last line.
+    sys.exit("chatterbox's model isn't in the local cache at revision " + MODEL_REV[:7] +
+             " and this daemon never downloads it"
              " — run scripts/setup-voice and it prints the one command that fetches it"
              " (five files, ~3 GB); the loader said: " + str(e).replace("\n", " ")[:200])
 prune(os.path.expanduser("~/.cache/clippy-voice"))
@@ -433,7 +551,7 @@ while True:
         c.close()
 os.unlink(SOCK)
 PY
-  sed -i "1s|.*|#!$venv/bin/python|" "$base/daemon.py"
+  sed -i "1s|.*|#!$venv/bin/python|;s|PINNED_MODEL_REV|$CLONE_REV|" "$base/daemon.py"
   chmod +x "$base/daemon.py"
 
   cat > "$base/speak-clone" <<'PY'

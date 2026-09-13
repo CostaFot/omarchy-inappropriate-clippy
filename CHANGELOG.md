@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.53.0
+
+- Every install command `scripts/setup-voice` prints is pinned now: exact package versions, model URLs that name a commit or a release rather than a branch, and a sha256 for every file you fetch. The script checks those digests against what is actually on your disk before it points his voice at anything, so a model that is not the one this plugin ships against stops it instead of being wired up. `docs/voice.md` carries the same pins.
+- The voice-clone daemon loads one pinned revision of the chatterbox model out of your Hugging Face cache, instead of whatever that repo's `main` branch points at the day you fetched it.
+
 ## v1.52.0
 
 - `scripts/setup-voice` installs nothing and downloads nothing any more. It points him at a neural voice already on your machine, and when there isn't one it prints the exact commands and stops. Installing kokoro, piper or chatterbox is now a few commands you run yourself — `docs/voice.md` has them, with your own versions and your own hashes if you want them.

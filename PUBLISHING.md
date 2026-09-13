@@ -15,10 +15,16 @@ review and there is no issue to retarget**. The fix shipped as
 neither installs nor downloads anything any more, and the same release
 stopped publishing a root `AGENTS.md`. See the last two submission-log
 entries for what changed and what the maintainer notes must say. That
-submission is **#6429**, filed 2026-09-12 at `ff96fee` and OPEN — so
-flow step 5's push freeze is on: `main` must stay on `ff96fee` until it
-resolves, or approval throws `update-upstream-changed`. Work on `next`
-as usual.
+submission is **#6429**, filed 2026-09-12 at `ff96fee`, and it was
+**blocked again** on 2026-09-12 — by a maintainer comment this time,
+not a label, over the *printed* install commands not carrying pinned
+digests (both bots came back clean; the full wording is in the
+submission log). The answer is **v1.53.0** on `next`: every printed
+command pins a version, a commit and a sha256, and `setup-voice`
+checks them. Since the block means there is no approval to invalidate,
+the next step is a release and then **retargeting #6429's Target
+commit** to it — not a new issue. `main` stays on `ff96fee` until that
+release goes out.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
@@ -416,3 +422,28 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   capability list naming them again reads as nothing having changed. If
   the script is ever restructured, check what the scanner cites before
   assuming the answer still holds.
+
+- 2026-09-13: **#6429 blocked** — HANCORE-linux, 2026-09-12T20:51Z, at
+  `ff96fee`: "optional voice setup downloads executable models and
+  dependencies without pinned digests, including content from mutable
+  upstream locations. Bind every executed artifact to immutable identity
+  and verified integrity, then revalidate." Both bots were clean
+  (validation "Ready for verified update review"; baseline the usual
+  amber, `"findings":[]`, the same four informational capabilities), and
+  the comment landed 11 hours after the thread already explained that
+  every cited line sits in a `cat >&2 <<EOF` heredoc. So it was read and
+  the bar moved rather than missed: #4870 said "installs unpinned
+  packages", this says "every executed artifact", which only has content
+  if it covers the commands the script prints — unversioned
+  `pip install kokoro-onnx`, and piper voices off `resolve/main`, the
+  mutable ref the heredoc itself flagged. **Answered by pinning rather
+  than arguing a second time** (v1.53.0, on `next`): exact versions for
+  all three engines, the kokoro models by sha256, the piper URL at a
+  commit with all 176 voices' digests in `scripts/piper-voices.sha256`,
+  the chatterbox model at a revision with its five digests in the
+  script — and `setup-voice` verifies each against the bytes on disk
+  before it wires a voice up, so the digests are enforced and not just
+  printed. The clone daemon stopped calling `from_pretrained` for the
+  same reason: it now loads the pinned revision out of the cache. Next
+  step is a release, then edit #6429's Target commit to it; the four
+  reviewed capabilities stay un-re-argued, as in #3395 and #3903.

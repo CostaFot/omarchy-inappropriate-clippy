@@ -29,8 +29,13 @@ glue — the kokoro `say.py`, the clone daemon, its client — sets `tts`, and
 when an engine isn't there it prints the exact commands and stops.
 
 A plugin that runs `pip install` behind your back is a plugin you've handed
-your package manager to. Better that you pin your own versions and check
-your own hashes. It is a few more steps than it used to be.
+your package manager to. So it doesn't: the commands are yours to run, in
+your shell. What the plugin does do is say exactly which bytes those
+commands should land — every version is exact, every model URL names a
+commit or a release rather than a branch, and every file has a sha256 that
+`setup-voice` checks on disk before it points his voice at anything. A
+model that's there but isn't the one pinned here stops the script instead
+of being wired up. It is a few more steps than it used to be.
 
 The scripts live in the plugin dir —
 `~/.config/omarchy/plugins/costafot.clippy/scripts/` — and every
@@ -53,12 +58,18 @@ kokoro voice are [kokoro](https://github.com/thewh1teagle/kokoro-onnx),
 
 ```bash
 python3 -m venv ~/.local/share/kokoro-tts/venv
-~/.local/share/kokoro-tts/venv/bin/pip install kokoro-onnx
+~/.local/share/kokoro-tts/venv/bin/pip install kokoro-onnx==0.6.1
 curl -fL --create-dirs -o ~/.local/share/kokoro-tts/kokoro-v1.0.onnx \
   https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
 curl -fL -o ~/.local/share/kokoro-tts/voices-v1.0.bin \
   https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/voices-v1.0.bin
+printf '%s  %s\n%s  %s\n' \
+  7d5df8ecf7d4b1878015a32686053fd0eebe2bc377234608764cc0ef3636a6c5 ~/.local/share/kokoro-tts/kokoro-v1.0.onnx \
+  bca610b8308e8d99f32e6fe4197e7ec01679264efed0cac9140fe9c29f1fbf7d ~/.local/share/kokoro-tts/voices-v1.0.bin | sha256sum -c
 ```
+
+`model-files-v1.0` is a release tag, so those two digests are what that URL
+has served since January 2025 and what `setup-voice` expects to find.
 
 Piper is the engine once, then one model per voice (~60–120 MB each), named
 `locale-speaker-quality` out of the
@@ -66,15 +77,22 @@ Piper is the engine once, then one model per voice (~60–120 MB each), named
 
 ```bash
 python3 -m venv ~/.local/share/piper-tts/venv
-~/.local/share/piper-tts/venv/bin/pip install piper-tts
+~/.local/share/piper-tts/venv/bin/pip install piper-tts==1.8.0
+REV=1162a9173d0ce503555aed757976b7a9912eae4c
 curl -fL --create-dirs -o ~/.local/share/piper-voices/en_US-ryan-high.onnx \
-  https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/en_US-ryan-high.onnx
+  https://huggingface.co/rhasspy/piper-voices/resolve/$REV/en/en_US/ryan/high/en_US-ryan-high.onnx
 curl -fL -o ~/.local/share/piper-voices/en_US-ryan-high.onnx.json \
-  https://huggingface.co/rhasspy/piper-voices/resolve/main/en/en_US/ryan/high/en_US-ryan-high.onnx.json
+  https://huggingface.co/rhasspy/piper-voices/resolve/$REV/en/en_US/ryan/high/en_US-ryan-high.onnx.json
+grep -E "  en_US-ryan-high\.onnx(\.json)?$" scripts/piper-voices.sha256 | \
+  (cd ~/.local/share/piper-voices && sha256sum -c)
 ```
 
-`resolve/main` is a moving ref — swap in a commit sha off the repo if you
-want the same bytes twice.
+That `$REV` is a commit, not `resolve/main`: a branch serves whatever it
+points at today, a commit serves the same bytes next year.
+`scripts/piper-voices.sha256` is the sha256 of all 176 voices at that
+commit — `setup-voice` prints the two lines for the voice you asked for and
+checks them before it wires it up. A voice added to the catalog after that
+pin isn't in the file; the script says so and leaves those bytes to you.
 
 The clones, shipped Rubick included, are
 [chatterbox](https://github.com/resemble-ai/chatterbox). It wants its own
@@ -84,20 +102,21 @@ Python 3.12 and about 6 GB of torch, so
 ```bash
 sudo pacman -S uv
 uv venv ~/.local/share/chatterbox-tts/venv --python 3.12
-uv pip install --python ~/.local/share/chatterbox-tts/venv/bin/python chatterbox-tts "setuptools<81"
+uv pip install --python ~/.local/share/chatterbox-tts/venv/bin/python chatterbox-tts==0.1.7 "setuptools<81"
 ~/.local/share/chatterbox-tts/venv/bin/python -c 'from huggingface_hub import hf_hub_download as d
-[d(repo_id="ResembleAI/chatterbox", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]'
+[d(repo_id="ResembleAI/chatterbox", revision="5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]'
 ```
 
 That `setuptools<81` is load-bearing: chatterbox's watermarker still
 imports `pkg_resources`, and without the pin the model load dies on
 `'NoneType' object is not callable`.
 
-The last line is the model itself, five files and ~3 GB. `hf_hub_download`
-takes a `revision="<commit sha>"` if you want the exact bytes twice. The
-clone daemon runs with `HF_HUB_OFFLINE=1` and only ever loads what's
-already in that cache, so nothing here fetches a model later, in the
-background, in the middle of an insult.
+The last line is the model itself, five files and ~3 GB, at one commit
+rather than at `main`. Their five sha256 are in `scripts/setup-voice`
+(`CLONE_MODEL_SHA`) and it checks all five before anything loads them. The
+clone daemon then loads *that revision* out of the cache by hand rather
+than asking for `main` — and it runs with `HF_HUB_OFFLINE=1`, so nothing
+here fetches a model later, in the background, in the middle of an insult.
 
 Those paths are where `setup-voice` looks. An engine you keep somewhere
 else is a drop-in file instead (below). Missing model, half-built venv,

@@ -919,9 +919,26 @@ is one opaque string and ignores all three (clones bend via
   `clone_engine_ready` + `clone_model_ready`) and, when something is
   missing, PRINTS the exact commands to stderr (`how_kokoro`,
   `how_piper`, `how_clone_engine`, `how_clone_model`, `how_nothing`) and
-  exits 1. Those heredocs and `docs/voice.md`'s code blocks are the same
-  commands twice — change one, change the other; that pair is the whole
-  feature and the only thing a reviewer reads. Sizes to quote: kokoro
+  exits 1. **v1.53.0 then carried the hash table after all**, because
+  #6429 was blocked a second time (HANCORE-linux, 2026-09-12) on
+  "optional voice setup downloads executable models and dependencies
+  without pinned digests" — a bar that only makes sense as covering the
+  commands the script PRINTS, since nothing in it executes. So the
+  printed commands pin: `KOKORO_VER`/`PIPER_VER`/`CLONE_VER` are exact
+  versions (a PyPI version is immutable once published), the kokoro
+  models carry `KOKORO_ONNX_SHA`/`KOKORO_VOICES_SHA`, the piper URL is
+  `PIPER_REV` (a commit, not `resolve/main`) with all 176 voices'
+  sha256 in `scripts/piper-voices.sha256`, and the chatterbox model is
+  `CLONE_REV` with the five files' sha256 in `CLONE_MODEL_SHA`. And the
+  script CHECKS them before wiring anything up: `kokoro_verified`,
+  `piper_voice_verified` (0 ok / 1 wrong bytes / 2 not in the pinned
+  catalog — a voice newer than the pin warns and proceeds, refusing it
+  would be theatre), `clone_model_verified` (via `clone_model_dir`,
+  ~2 s over 3 GB). A failure prints `mismatch` + the how_ block again
+  and exits 1. Those heredocs, `docs/voice.md`'s code blocks and the
+  pin constants are the same commands three times over — change one,
+  change the others; that set is the whole feature and the only thing a
+  reviewer reads. Sizes to quote: kokoro
   ~340 MB, piper ~60-120 MB per voice, the clone path ~9 GB on disk (a
   6 GB torch venv plus the ~3 GB chatterbox model in
   `~/.cache/huggingface`; `docs/voice.md` says "~8 GB" to users). Engine
@@ -958,6 +975,20 @@ is one opaque string and ignores all three (clones bend via
   Rubick wav is still `cp`'d verbatim, never through that pipeline.
   It does not warm the book itself — the plugin owns that (below),
   triggered by the `set tts` it ends with; the script only says so.
+- `scripts/piper-voices.sha256` (v1.53.0) — 352 lines in `sha256sum -c`
+  format, `<sha>  <voice>.onnx[.json]`, generated from
+  rhasspy/piper-voices' own file list at `PIPER_REV`: the `.onnx`
+  digests ARE the repo's git-lfs object ids (`/api/models/<repo>/tree/
+  <rev>?recursive=true&expand=true`, paginated 100 at a time), while the
+  `.onnx.json` ones had to be fetched and hashed — they are small enough
+  to be plain git objects, so the tree only gives their sha1. All 176
+  voices follow `<lang>/<locale>/<speaker>/<quality>/<name>.onnx`, which
+  is what makes `how_piper`'s URL building work. Regenerating means
+  re-reading both and bumping `PIPER_REV` in `setup-voice` and
+  `docs/voice.md` in the same commit. Deliberately NOT a generator
+  script in the tree: something that fetches from HF is exactly the
+  shape the marketplace scanner flags, and this file changes about as
+  often as the catalog does.
 - Clones: chatterbox on CUDA in a uv venv (`--python 3.12` — system
   3.14 has no torch wheels; `setuptools<81` pinned or perth's
   watermarker dies on missing pkg_resources — the symptom is
@@ -970,13 +1001,20 @@ is one opaque string and ignores all three (clones bend via
   runtime dependency any more). The ~3 GB model (HF
   `ResembleAI/chatterbox`, five files, `~/.cache/huggingface`) is
   fetched by hand too — `how_clone_model` prints the `hf_hub_download`
-  one-liner — and `daemon.py` sets `HF_HUB_OFFLINE=1` (setdefault, so
-  the user can still override) BEFORE chatterbox is imported, because
-  huggingface_hub reads that at import time; a cold cache then raises
+  one-liner, with `revision=` pinned since v1.53.0 — and `daemon.py`
+  sets `HF_HUB_OFFLINE=1` (setdefault, so the user can still override)
+  BEFORE chatterbox is imported, because huggingface_hub reads that at
+  import time; a cold cache then raises
   `LocalEntryNotFoundError` (an `OSError`) and the daemon `sys.exit`s
   with a ONE-line reason, one line because speak-clone reports the log's
   last line. Verified on the box: a full `from_pretrained(device="cuda")`
-  loads from cache with the variable set. Per-line spawn would
+  loads from cache with the variable set. Since v1.53.0 the daemon does
+  NOT call `from_pretrained` — it resolves whatever `main` points at by
+  then, which would undo the pin at load time. It resolves `MODEL_REV`
+  (sed'd in from `CLONE_REV` alongside the shebang) with one
+  `hf_hub_download(..., revision=...)` and hands the snapshot dir to
+  `ChatterboxTTS.from_local`, which is literally what `from_pretrained`
+  does minus the pin (chatterbox 0.1.7, `tts.py:168`). Per-line spawn would
   reload 2 GB onto the GPU, so `speak-clone` (stdlib client) talks to
   `daemon.py` (venv python) over `$XDG_RUNTIME_DIR/clippy-voice.sock`;
   the daemon self-starts on demand and exits after 15 idle minutes
