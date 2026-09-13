@@ -448,3 +448,22 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   same reason: it now loads the pinned revision out of the cache. Next
   step is a release, then edit #6429's Target commit to it; the four
   reviewed capabilities stay un-re-argued, as in #3395 and #3903.
+
+- 2026-09-13: **v1.53.0 released at `9f11960` and #6429 retargeted to it**,
+  rather than filed again: a block leaves no approval to invalidate, and
+  the body edit is what re-runs the bots (a comment triggers nothing).
+  The thread comment says, in order: the cited lines still don't execute,
+  but "every executed artifact" only has content if it reaches the
+  printed ones, so those pin — exact versions for all three engines (a
+  PyPI version is immutable once published), the kokoro models by sha256
+  on a release tag, the piper voices off commit `1162a917` instead of
+  `resolve/main` with all 176 digests in `scripts/piper-voices.sha256`,
+  the chatterbox model at revision `5bb1f6ee` with its five in the
+  script — that `setup-voice` hashes what is on disk against them and
+  refuses on a mismatch, so they gate rather than decorate; that the
+  clone daemon stopped calling `from_pretrained()` (it resolves `main`
+  at load time, which would undo the pin where it matters) in favour of
+  `from_local()` on the pinned snapshot; and that the two `pacman` lines
+  are unchanged because distro packages come signed. The four reviewed
+  capabilities were again left un-re-argued. `main` is frozen at
+  `9f11960` while this is open.
