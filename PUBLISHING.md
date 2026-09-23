@@ -467,3 +467,21 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   are unchanged because distro packages come signed. The four reviewed
   capabilities were again left un-re-argued. `main` is frozen at
   `9f11960` while this is open.
+
+- 2026-09-24: **#6429 blocked again at `9f11960`**, HANCORE-linux, 03:00
+  EEST on the 23rd: "`setup_piper()` explicitly wires voices absent from
+  the pinned checksum catalog, and exact PyPI versions are installed
+  without artifact hashes. Fail closed for unpinned voices and bind
+  installed wheels/sdists to verified hashes before revalidating." Both
+  true of v1.53.0, both answered on `next` for v1.54.0 by doing rather
+  than arguing: `scripts/pins/{kokoro,piper,chatterbox}.txt` are
+  `uv pip compile --generate-hashes` locks (every wheel, every sha256;
+  chatterbox's constrained to the versions of a venv that runs the
+  daemon), and the printed commands are `pip install --require-hashes -r`
+  and `uv pip install --require-hashes -r` against them; `setup_piper`'s
+  "wiring it up anyway" branch is a stop that names
+  `~/.local/share/piper-voices/piper-voices.sha256` as the one place a
+  user can vouch for a newer voice (`piper_pins` reads it next to the
+  catalog). Next step is the v1.54.0 release, then edit #6429's Target
+  commit to it, with a thread comment that quotes the two asks and
+  points at the two files.

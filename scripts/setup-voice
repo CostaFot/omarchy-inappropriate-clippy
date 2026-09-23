@@ -58,8 +58,9 @@ DOCS="the long version is docs/voice.md in the plugin dir"
 
 # What the bytes have to BE. This script fetches nothing, so these are for
 # the commands it prints and for the files you already have: every version
-# is exact, every URL names a commit or a release rather than a branch, and
-# every artifact has a sha256 that is checked before he is pointed at it.
+# is exact and every Python wheel installs against a sha256 (scripts/pins),
+# every URL names a commit or a release rather than a branch, and every
+# model file has a sha256 that is checked before he is pointed at it.
 # A model that is present but isn't the one pinned here is a stop, not a
 # shrug — see mismatch() below.
 KOKORO_VER=0.6.1
@@ -70,6 +71,15 @@ PIPER_VER=1.8.0
 # at run time, so their digests are a file rather than three lines here.
 PIPER_REV=1162a9173d0ce503555aed757976b7a9912eae4c
 PIPER_PINS="$HERE/scripts/piper-voices.sha256"
+# A voice the catalog gained after that pin has no digest there. Vouch for
+# one yourself by putting its two sha256 lines in this file, next to the
+# voices; the script reads both and refuses a voice that is in neither.
+PIPER_USER_PINS="$PIPER_VOICES/piper-voices.sha256"
+# The Python packages, one lock per engine: every wheel with its sha256, so
+# `pip install --require-hashes` refuses bytes the index serves that were
+# not there when the pin was made (made with `uv pip compile
+# --generate-hashes`; the header of each file says how).
+PINS_DIR="$HERE/scripts/pins"
 CLONE_VER=0.1.7
 # ResembleAI/chatterbox at 2026-06-10 and the five files the daemon loads —
 # which it loads by this revision, not by whatever main points at today.
@@ -108,9 +118,9 @@ kokoro_verified() {
 }
 piper_engine_ready() { [ -x "$PIPER_DIR/venv/bin/piper" ]; }
 piper_voice_ready() { [ -s "$PIPER_VOICES/$1.onnx" ] && [ -s "$PIPER_VOICES/$1.onnx.json" ]; }
-# The two pinned lines for one voice, or nothing when the catalog grew a
-# voice after our pin: 0 verified, 1 wrong bytes, 2 not in the catalog.
-piper_pins() { grep -E "^[0-9a-f]{64}  ${1//./\\.}\.onnx(\.json)?$" "$PIPER_PINS" 2>/dev/null; }
+# The two pinned lines for one voice, from the catalog or the user's own
+# file, or nothing when neither has it: 0 verified, 1 wrong bytes, 2 unpinned.
+piper_pins() { grep -hE "^[0-9a-f]{64}  ${1//./\\.}\.onnx(\.json)?$" "$PIPER_PINS" "$PIPER_USER_PINS" 2>/dev/null; }
 piper_voice_verified() {
   local pins
   pins="$(piper_pins "$1")" && [ -n "$pins" ] || return 2
@@ -155,7 +165,7 @@ kokoro isn't here, and this script doesn't install things. Five commands,
 plugin was reviewed against:
 
   python3 -m venv $KOKORO_DIR/venv
-  $KOKORO_DIR/venv/bin/pip install kokoro-onnx==$KOKORO_VER
+  $KOKORO_DIR/venv/bin/pip install --require-hashes -r $PINS_DIR/kokoro.txt
   curl -fL --create-dirs -o $KOKORO_DIR/kokoro-v1.0.onnx \\
     https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
   curl -fL -o $KOKORO_DIR/voices-v1.0.bin \\
@@ -179,7 +189,7 @@ how_piper() {  # $1 voice, $2 lang, $3 locale, $4 speaker, $5 quality
 piper isn't here, and this script doesn't install things. The engine, once:
 
   python3 -m venv $PIPER_DIR/venv
-  $PIPER_DIR/venv/bin/pip install piper-tts==$PIPER_VER
+  $PIPER_DIR/venv/bin/pip install --require-hashes -r $PINS_DIR/piper.txt
 EOF
     echo >&2
   fi
@@ -207,8 +217,11 @@ EOF
 
 $1 is newer than the catalog this plugin pins ($PIPER_REV,
 in $PIPER_PINS), so there is no digest here to
-check it against — that URL is still a commit rather than resolve/main, but
-those bytes are yours to vouch for. Then run this again ($DOCS).
+check it against, and this script won't point him at a voice it can't
+check. To vouch for it yourself, put its two sha256 lines in
+  $PIPER_USER_PINS
+(sha256sum $1.onnx $1.onnx.json, from bytes you trust); the script reads
+that file next to the catalog. Then run this again ($DOCS).
 EOF
   fi
 }
@@ -221,13 +234,14 @@ install things. It wants its own Python 3.12 and ~6 GB of torch, so uv:
 
   sudo pacman -S uv
   uv venv $CLONE_DIR/venv --python 3.12
-  uv pip install --python $CLONE_DIR/venv/bin/python chatterbox-tts==$CLONE_VER "setuptools<81"
+  uv pip install --python $CLONE_DIR/venv/bin/python --require-hashes -r $PINS_DIR/chatterbox.txt
 
-That setuptools pin isn't optional — chatterbox's watermarker still imports
-pkg_resources, and without it the model load dies on "'NoneType' object is
-not callable". The chatterbox pin is the version this plugin was reviewed
-against; pacman's copy of uv comes signed by the distro, which is as pinned
-as a system package gets. Then the model, below.
+That file is chatterbox $CLONE_VER and everything under it, each wheel with
+its sha256, and it holds setuptools below 81 on purpose — chatterbox's
+watermarker still imports pkg_resources, and past that the model load dies
+on "'NoneType' object is not callable". pacman's copy of uv comes signed by
+the distro, which is as pinned as a system package gets. Then the model,
+below.
 EOF
   how_clone_model
 }
@@ -386,10 +400,12 @@ setup_piper() {
     1) mismatch "the $VOICE voice" "$PIPER_VOICES/$VOICE.onnx" "$PIPER_VOICES/$VOICE.onnx.json"
        how_piper "$VOICE" "$lang" "$locale" "$speaker" "$quality"
        exit 1 ;;
-    # Newer than our pin rather than wrong: the catalog gains voices, and
-    # refusing one because this plugin hasn't seen it would be theatre.
+    # Newer than our pin rather than wrong — but a digest nobody wrote down
+    # is no digest, so it is a stop until someone does (#6429).
     *) echo "$VOICE isn't in the pinned catalog (scripts/piper-voices.sha256, rhasspy/piper-voices" >&2
-       echo "  at ${PIPER_REV:0:7}), so its bytes are yours to vouch for. Wiring it up anyway." >&2 ;;
+       echo "  at ${PIPER_REV:0:7}) or in $PIPER_USER_PINS, so he isn't pointed at it." >&2
+       how_piper "$VOICE" "$lang" "$locale" "$speaker" "$quality"
+       exit 1 ;;
   esac
   local rate; rate="$(jq -r .audio.sample_rate "$voices/$VOICE.onnx.json")"
   CMD="$venv/bin/piper -m $voices/$VOICE.onnx --output-raw 2>/dev/null | aplay -q -t raw -r $rate -f S16_LE -c 1 -"
