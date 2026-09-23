@@ -648,7 +648,8 @@ Item {
     running: root.pauseWhenAway
     onTriggered: {
       Hyprland.refreshMonitors()
-      if (!awayProbe.running) awayProbe.running = true
+      // Only where the bindings can't answer (the facade); on ≤ 4.0.2 they do.
+      if (!(root.lockService && root.idleService) && !awayProbe.running) awayProbe.running = true
     }
   }
   // Unlock turns the screens back on; don't wait a poll to notice.

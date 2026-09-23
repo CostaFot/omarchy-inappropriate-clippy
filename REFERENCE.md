@@ -365,14 +365,15 @@ Design rules that outrank any single feature:
     only on omarchy ≤ 4.0.2: 4.0.3's facade scopes `serviceFor` to the
     caller's OWN plugin id, so both lookups return null there (4.0.4 too;
     `firstPartyServiceFor` hands idle only to a `bar` kind, and even that
-    proxy carries no lock or idle-cycle state). So `awayProbe` asks the
-    shell over its own IPC on the dpmsPoll tick: `omarchy-shell lock
-    isLocked` (true/false) and `idle status` (JSON, `inIdleCycle`), the
-    same calls the shell's idle service makes, into `probedLocked` and
-    `probedIdle`, OR-ed into `sessionLocked`/`userIdle`. One bash fork per
-    tick, stderr dropped: a shell that isn't answering prints nothing,
-    which reads as not locked (`-q` would swallow the answer too, it
-    silences stdout as well as failures).
+    proxy carries no lock or idle-cycle state). So when either lookup is
+    null, `awayProbe` asks the shell over its own IPC on the dpmsPoll
+    tick: `omarchy-shell lock isLocked` (true/false) and `idle status`
+    (JSON, `inIdleCycle`), the same calls the shell's idle service makes,
+    into `probedLocked` and `probedIdle`, OR-ed into
+    `sessionLocked`/`userIdle`. One bash fork per tick there, none where
+    the bindings answer, stderr dropped: a shell that isn't answering
+    prints nothing, which reads as not locked (`-q` would swallow the
+    answer too, it silences stdout as well as failures).
     `fallAsleep()` stops walk/brain/quote/bubble/drag timers, stops the
     sprite and drops the bubble (idle/walking/talking only;
     dying/reviving finish on their own); `shown` hides the window.

@@ -58,7 +58,7 @@ kokoro voice are [kokoro](https://github.com/thewh1teagle/kokoro-onnx),
 
 ```bash
 python3 -m venv ~/.local/share/kokoro-tts/venv
-~/.local/share/kokoro-tts/venv/bin/pip install --require-hashes -r scripts/pins/kokoro.txt
+~/.local/share/kokoro-tts/venv/bin/pip install --require-hashes -r ~/.config/omarchy/plugins/costafot.clippy/scripts/pins/kokoro.txt
 curl -fL --create-dirs -o ~/.local/share/kokoro-tts/kokoro-v1.0.onnx \
   https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
 curl -fL -o ~/.local/share/kokoro-tts/voices-v1.0.bin \
@@ -85,7 +85,7 @@ Piper is the engine once, then one model per voice (~60–120 MB each), named
 
 ```bash
 python3 -m venv ~/.local/share/piper-tts/venv
-~/.local/share/piper-tts/venv/bin/pip install --require-hashes -r scripts/pins/piper.txt
+~/.local/share/piper-tts/venv/bin/pip install --require-hashes -r ~/.config/omarchy/plugins/costafot.clippy/scripts/pins/piper.txt
 REV=1162a9173d0ce503555aed757976b7a9912eae4c
 curl -fL --create-dirs -o ~/.local/share/piper-voices/en_US-ryan-high.onnx \
   https://huggingface.co/rhasspy/piper-voices/resolve/$REV/en/en_US/ryan/high/en_US-ryan-high.onnx
@@ -112,7 +112,7 @@ Python 3.12 and about 6 GB of torch, so
 ```bash
 sudo pacman -S uv
 uv venv ~/.local/share/chatterbox-tts/venv --python 3.12
-uv pip install --python ~/.local/share/chatterbox-tts/venv/bin/python --require-hashes -r scripts/pins/chatterbox.txt
+uv pip install --python ~/.local/share/chatterbox-tts/venv/bin/python --require-hashes -r ~/.config/omarchy/plugins/costafot.clippy/scripts/pins/chatterbox.txt
 ~/.local/share/chatterbox-tts/venv/bin/python -c 'from huggingface_hub import hf_hub_download as d
 [d(repo_id="ResembleAI/chatterbox", revision="5bb1f6ee58e50c3b8d408bc82a6d3740c2db6e18", filename=f) for f in ("ve.safetensors", "t3_cfg.safetensors", "s3gen.safetensors", "tokenizer.json", "conds.pt")]'
 ```

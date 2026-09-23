@@ -120,10 +120,12 @@ piper_engine_ready() { [ -x "$PIPER_DIR/venv/bin/piper" ]; }
 piper_voice_ready() { [ -s "$PIPER_VOICES/$1.onnx" ] && [ -s "$PIPER_VOICES/$1.onnx.json" ]; }
 # The two pinned lines for one voice, from the catalog or the user's own
 # file, or nothing when neither has it: 0 verified, 1 wrong bytes, 2 unpinned.
-piper_pins() { grep -hE "^[0-9a-f]{64}  ${1//./\\.}\.onnx(\.json)?$" "$PIPER_PINS" "$PIPER_USER_PINS" 2>/dev/null; }
+# Judge it by its output, never by grep's status: with the user's file
+# missing (the usual case) GNU grep exits 2 even when the catalog matched.
+piper_pins() { grep -hE "^[0-9a-f]{64}  ${1//./\\.}\.onnx(\.json)?$" "$PIPER_PINS" "$PIPER_USER_PINS" 2>/dev/null; return 0; }
 piper_voice_verified() {
   local pins
-  pins="$(piper_pins "$1")" && [ -n "$pins" ] || return 2
+  pins="$(piper_pins "$1")"; [ -n "$pins" ] || return 2
   printf '%s\n' "$pins" | (cd "$PIPER_VOICES" && sha256sum --check --status -) || return 1
 }
 # The daemon's exact imports, not just the venv's python: an install
@@ -202,9 +204,9 @@ https://rhasspy.github.io/piper-samples/):
   curl -fL -o $PIPER_VOICES/$1.onnx.json \\
     $u/$1.onnx.json
 EOF
-  if piper_pins "$1" >/dev/null; then
+  if [ -n "$(piper_pins "$1")" ]; then
     cat >&2 <<EOF
-  grep -E "  $1\\.onnx(\\.json)?\$" $PIPER_PINS | \\
+  grep -hE "  $1\\.onnx(\\.json)?\$" $PIPER_PINS $PIPER_USER_PINS 2>/dev/null | \\
     (cd $PIPER_VOICES && sha256sum -c)
 
 That URL is a commit, not resolve/main: $PIPER_REV, the
