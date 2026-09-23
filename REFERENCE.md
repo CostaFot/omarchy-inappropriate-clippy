@@ -512,19 +512,19 @@ Design rules that outrank any single feature:
   graveyard join hint only while `leaderboard` is unset).
 - `BarWidget.qml` — the bar icon, `kind: "bar-widget"` on the same
   manifest (`qs.Ui` `BarWidget` + `WidgetButton`, nerd-font paperclip
-  `󰏢`, dimmed when he is hidden, and when he is dead where the host lets
-  it see that). One per monitor. No state of its own. On omarchy ≤ 4.0.2
-  it finds the panel instance through
+  `󰏢`). One per monitor. No state of its own, and it shows none: it used
+  to fade to 45% while he was dead or hidden, through the panel handle,
+  and when 4.0.3 took the handle away nobody missed it, so the fade went
+  (COS-157) rather than a poll to bring it back. On omarchy ≤ 4.0.2 it
+  finds the panel instance through
   `bar.shell.panelLoaders["costafot.clippy"].item` and calls
   `showMenuAt(x, screen)` directly. On ≥ 4.0.3 `bar.shell` is the same
   sandboxed facade the panel gets and has no `panelLoaders`, so `clippy`
-  is null there and two things stand in: `bar.shell.isPluginOpen(own id)`,
-  which the facade does allow, polled once a second (a function, not a
-  property, so no binding) for the hidden dim; and the click goes
+  is null there and the click goes
   `bar.run("omarchy-shell costafot.clippy showMenuAt <x> <monitor>")`,
   the IPC verb the panel added for it, so the card still lands under the
-  icon on the clicked monitor. Dead-state dimming has no facade route and
-  was dropped (COS-157). No IpcHandler here — the panel owns the target.
+  icon on the clicked monitor. No IpcHandler here — the panel owns the
+  target.
 - `Bubble.qml` — tooltip-coloured rounded rect + wrapping text, capped at
   320 px. Two rotated-square tails: bordered one behind the body for the
   outline, borderless one on top to hide the body's border across the
@@ -1293,8 +1293,7 @@ stays free text — IPC and agent only.
   avoidance — worked around via the `debugBarGeometry` IPC verb, see that
   bullet), `serviceFor` for anything but our own id (lock/idle
   sleeping — `awayProbe` asks the shell over IPC instead), `panelLoaders`
-  (the bar icon's handle on the panel — `isPluginOpen` plus the
-  `showMenuAt` verb stand in),
+  (the bar icon's handle on the panel — the `showMenuAt` verb stands in),
   `mutateShellConfig` (denied without a `bar` kind, so `adoptIntoBar` is
   a no-op). Three habits fall out of it. Diff the shell before blaming the
   plugin: `bsdtar -xf /var/cache/pacman/pkg/omarchy-<old>.pkg.tar.zst`

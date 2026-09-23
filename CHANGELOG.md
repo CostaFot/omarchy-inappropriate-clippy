@@ -5,7 +5,7 @@
 - The install commands `scripts/setup-voice` prints now pin every Python wheel by sha256, not just the version: `pip install --require-hashes -r scripts/pins/<engine>.txt`, one lock per engine, so a wheel the index serves that isn't the one resolved when the pin was made is refused rather than installed.
 - A piper voice that isn't in the pinned catalog is no longer wired up on trust. The script stops and says where to write its two digests (`~/.local/share/piper-voices/piper-voices.sha256`) if you want to vouch for it yourself.
 - He sleeps on the lock screen and under the screensaver again on omarchy 4.0.3 and later. The shell stopped telling plugins about either, so he asks it over IPC every ten seconds instead.
-- The bar icon dims again when he is hiding, and its click opens the menu under the icon on the monitor you clicked, on omarchy 4.0.3 and later. A new `showMenuAt <x> <monitor>` IPC verb carries that.
+- Clicking the bar icon opens the menu under the icon again, on the monitor you clicked, on omarchy 4.0.3 and later; a new `showMenuAt <x> <monitor>` IPC verb carries that. The icon no longer fades while he is dead or hidden, on any version.
 
 ## v1.53.0
 

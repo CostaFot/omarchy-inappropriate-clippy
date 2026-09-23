@@ -12,10 +12,10 @@ import qs.Ui
 // loaded. On omarchy ≤ 4.0.2 we reach it through the shell's panel loader
 // table, the same object the shell routes summon/hide/toggle through. From
 // 4.0.3 `bar.shell` is a capability-scoped facade with no such table, so
-// the panel is out of reach and two things stand in: `isPluginOpen` on our
-// own id, which the facade does allow, for the hidden dim; and the
-// `showMenuAt` IPC verb, carrying this bar's x and monitor, for the click.
-// Dead-state dimming has no facade route and is not attempted there.
+// the click goes over IPC instead, the `showMenuAt` verb carrying this
+// bar's x and monitor. The icon has no state of its own and shows none: it
+// used to fade while he was dead or hidden, which nobody missed when the
+// facade took it away (COS-157).
 BarWidget {
   id: root
   moduleName: "costafot.clippy"
@@ -26,23 +26,6 @@ BarWidget {
     var loader = loaders ? loaders[moduleName] : null
     return loader && loader.item ? loader.item : null
   }
-  // `isPluginOpen` is a function, not a property, so nothing re-evaluates
-  // when he hides; a once-a-second call is a JS call, no fork.
-  property bool facadeHiding: false
-  function pollOpen() {
-    var sh = bar ? bar.shell : null
-    if (clippy || !sh || typeof sh.isPluginOpen !== "function") { facadeHiding = false; return }
-    facadeHiding = sh.isPluginOpen(moduleName) !== true
-  }
-  Timer {
-    interval: 1000
-    repeat: true
-    running: !root.clippy && root.visible
-    triggeredOnStart: true
-    onTriggered: root.pollOpen()
-  }
-  readonly property bool dead: clippy ? clippy.mood === "dead" : false
-  readonly property bool hiding: clippy ? clippy.opened !== true : facadeHiding
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -64,9 +47,7 @@ BarWidget {
     anchors.fill: parent
     bar: root.bar
     text: "󰏢"
-    dimmed: root.dead || root.hiding
-    tooltipText: root.dead ? "Clippy is dead. Bring him back?"
-      : (root.hiding ? "Clippy is hiding. Bring him back?" : "Inappropriate Clippy")
+    tooltipText: "Inappropriate Clippy"
     onPressed: root.showMenu()
   }
 }
