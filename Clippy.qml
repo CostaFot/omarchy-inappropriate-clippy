@@ -604,8 +604,27 @@ Item {
   readonly property bool pauseWhenAway: setting("pauseWhenAway", true) !== false
   readonly property var lockService: shell && typeof shell.serviceFor === "function" ? shell.serviceFor("omarchy.lock") : null
   readonly property var idleService: shell && typeof shell.serviceFor === "function" ? shell.serviceFor("omarchy.idle") : null
-  readonly property bool sessionLocked: !!(lockService && lockService.locked === true)
-  readonly property bool userIdle: !!(idleService && idleService.idledThisCycle === true)
+  // omarchy ≥ 4.0.3 scopes `serviceFor` to our own id, so both of those
+  // are null there (4.0.4 too). The shell's IPC still answers: `lock
+  // isLocked` with true/false and `idle status` with a JSON whose
+  // inIdleCycle is the screensaver-then-lock cycle — the same two calls its
+  // own idle service makes. `awayProbe` asks on the dpmsPoll cadence: one
+  // bash fork every 10 s, 2 s while asleep. A shell that isn't answering
+  // prints nothing (stderr dropped), which reads as not locked, not idle.
+  property bool probedLocked: false
+  property bool probedIdle: false
+  readonly property bool sessionLocked: !!(lockService && lockService.locked === true) || probedLocked
+  readonly property bool userIdle: !!(idleService && idleService.idledThisCycle === true) || probedIdle
+  Process {
+    id: awayProbe
+    command: ["bash", "-c", "l=$(omarchy-shell lock isLocked 2>/dev/null); s=$(omarchy-shell idle status 2>/dev/null); printf '%s %s' \"$l\" \"$([[ $s == *'\"inIdleCycle\":true'* ]] && echo true || echo false)\""]
+    stdout: StdioCollector { id: awayOut }
+    onExited: function (code) {
+      var parts = String(awayOut.text || "").trim().split(/\s+/)
+      root.probedLocked = parts[0] === "true"
+      root.probedIdle = parts[1] === "true"
+    }
+  }
   readonly property bool screensOff: {
     var list = Hyprland.monitors ? Hyprland.monitors.values : []
     var known = 0, lit = 0
@@ -627,7 +646,10 @@ Item {
     interval: root.screensOff ? 2000 : 10000
     repeat: true
     running: root.pauseWhenAway
-    onTriggered: Hyprland.refreshMonitors()
+    onTriggered: {
+      Hyprland.refreshMonitors()
+      if (!awayProbe.running) awayProbe.running = true
+    }
   }
   // Unlock turns the screens back on; don't wait a poll to notice.
   onSessionLockedChanged: if (!sessionLocked) Hyprland.refreshMonitors()
@@ -2759,7 +2781,7 @@ Item {
         "epitaph — poke the grave while he's dead",
         "snooze <minutes> / unsnooze",
         "show / hide / toggle — show also revives him",
-        "showMenu / hideMenu — the right-click menu, no pointer needed",
+        "showMenu / showMenuAt <x> <monitor> / hideMenu — the right-click menu, no pointer needed",
         "state / stats — what he's doing, the lifetime tally",
         "ai / voice — the agent lines and the voice; each answers with what's wrong and the fix",
         "voices / useVoice <name> — every voice installed on this machine, switching to one, and how to add a new one (clone anyone from a 10-20 s clip)",
@@ -2882,6 +2904,17 @@ Item {
     }
     function hideMenu(): string { menu.open = false; return "ok" }
     function showMenu(): string { root.showMenu(); return "ok" }
+    // The bar icon's route on omarchy ≥ 4.0.3, where the facade hides the
+    // panel from the widget: screen x and the monitor's name, so the card
+    // lands under the icon that was clicked rather than under the actor.
+    function showMenuAt(x: string, screen: string): string {
+      var screens = Quickshell.screens, on = null
+      for (var i = 0; screens && i < screens.length; i++)
+        if (String(screens[i].name) === String(screen)) { on = screens[i]; break }
+      var at = Number(x)
+      root.showMenuAt(isNaN(at) ? actor.x + actor.width / 2 : at, on)
+      return on || !screen ? "ok" : "ok (no screen " + screen + "; his monitor instead)"
+    }
     // What the agent side is doing: "off", or "<agent>: N cached[, busy]",
     // plus what the last `look` or `listen`/`reply` is up to.
     function ai(): string {

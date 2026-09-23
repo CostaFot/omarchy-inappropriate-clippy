@@ -23,6 +23,7 @@ omarchy-shell costafot.clippy hide
 omarchy-shell costafot.clippy show        # brings him back, from hidden or dead
 omarchy-shell costafot.clippy toggle
 omarchy-shell costafot.clippy showMenu    # the menu, no pointer needed
+omarchy-shell costafot.clippy showMenuAt 1200 DP-3  # the same card, under screen x 1200 on that monitor — what the bar icon sends
 omarchy-shell costafot.clippy hideMenu
 omarchy-shell costafot.clippy state      # idle | walking | talking | peeking | dying | dead | snoozed | hidden | asleep
 omarchy-shell costafot.clippy ai         # off, or "claude: 2 cached (40s old), last call 41s ago"

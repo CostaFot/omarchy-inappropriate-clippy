@@ -9,8 +9,13 @@ import qs.Ui
 //
 // The bar mounts one of these per monitor. Clippy himself, his menu and his
 // state live in the panel (Clippy.qml), a single instance the shell keeps
-// loaded; we reach it through the shell's panel loader table, the same
-// object the shell routes summon/hide/toggle through.
+// loaded. On omarchy ≤ 4.0.2 we reach it through the shell's panel loader
+// table, the same object the shell routes summon/hide/toggle through. From
+// 4.0.3 `bar.shell` is a capability-scoped facade with no such table, so
+// the panel is out of reach and two things stand in: `isPluginOpen` on our
+// own id, which the facade does allow, for the hidden dim; and the
+// `showMenuAt` IPC verb, carrying this bar's x and monitor, for the click.
+// Dead-state dimming has no facade route and is not attempted there.
 BarWidget {
   id: root
   moduleName: "costafot.clippy"
@@ -21,23 +26,37 @@ BarWidget {
     var loader = loaders ? loaders[moduleName] : null
     return loader && loader.item ? loader.item : null
   }
+  // `isPluginOpen` is a function, not a property, so nothing re-evaluates
+  // when he hides; a once-a-second call is a JS call, no fork.
+  property bool facadeHiding: false
+  function pollOpen() {
+    var sh = bar ? bar.shell : null
+    if (clippy || !sh || typeof sh.isPluginOpen !== "function") { facadeHiding = false; return }
+    facadeHiding = sh.isPluginOpen(moduleName) !== true
+  }
+  Timer {
+    interval: 1000
+    repeat: true
+    running: !root.clippy && root.visible
+    triggeredOnStart: true
+    onTriggered: root.pollOpen()
+  }
   readonly property bool dead: clippy ? clippy.mood === "dead" : false
-  readonly property bool hiding: clippy ? clippy.opened !== true : false
+  readonly property bool hiding: clippy ? clippy.opened !== true : facadeHiding
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
   function showMenu() {
-    if (!clippy) {
-      // Panel not mounted yet. IPC still works; it anchors under the actor.
-      if (bar) bar.run("omarchy-shell costafot.clippy showMenu")
-      return
-    }
     // The bar window spans the screen, so window x is screen x. The menu
     // goes on this bar's monitor, which need not be the one Clippy is on.
     var win = button.QsWindow.window
     var p = button.mapToItem(null, button.width / 2, 0)
-    clippy.showMenuAt(p.x, win ? win.screen : null)
+    if (clippy) { clippy.showMenuAt(p.x, win ? win.screen : null); return }
+    // Panel unreachable (the facade) or not mounted yet: IPC, with the same
+    // two facts, so the card still lands under this icon on this screen.
+    var screen = win && win.screen ? String(win.screen.name || "") : ""
+    if (bar) bar.run("omarchy-shell costafot.clippy showMenuAt " + Math.round(p.x) + " " + screen)
   }
 
   WidgetButton {

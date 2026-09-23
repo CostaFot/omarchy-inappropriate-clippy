@@ -38,7 +38,7 @@ to it at `~/.config/omarchy/shell.json.bak.*`.
 | `gags` | `true` | Scripted stunts: a respawn sometimes tumbles in along the bar from the screen edge or gets lobbed back in on an arc, face-first (or on demand: `gag entrance`, `gag lob`), a throw off a top bar falls the whole screen, and once in a while he peeks in from a far corner. `false` turns them all off |
 | `peekChance` | `0.04` | 0–1, chance per idle beat (every 10–30 s) that he slides in from a far screen corner — blown up to about five times his size — says a line and slips back out. Very roughly every ten minutes of idle time at the default, and he can be slapped mid-peek — that gets its own short yelps (`slappedPeek`) instead of the full slapped rants. `0` = never, `1` = every beat; needs `gags` on |
 | `respawn` | `300` | Seconds he stays dead after you kill him. `0` = dead until told otherwise |
-| `pauseWhenAway` | `true` | He sleeps while the screen is off. `false` and he carries on regardless. He used to sleep for the lock screen and the screensaver too; the shell no longer tells plugins about either |
+| `pauseWhenAway` | `true` | He sleeps while the screen is off, the session is locked or the screensaver is up. `false` and he carries on regardless |
 | `screen` | — | A monitor name (`hyprctl monitors`) to pin him to one screen; unset, he takes the focused one |
 | `quotesFile` | — | Path to your own quotes JSON, merged into his |
 | `slap` | `true` | `false` turns slapping off. Middle-click snoozes again |
