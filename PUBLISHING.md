@@ -506,5 +506,10 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   `:194`, `:239` against `scripts/pins/`. It flags the host-IPC probe
   (`lock isLocked`, `idle status`, read-only, 10 s) and the `showMenuAt`
   verb so the diff doesn't surprise the reviewer. Labels at posting:
-  validated / security-review-required / plugin-update; the bots re-run
-  off the body edit. `main` is frozen at `2a52414` while it is open.
+  validated / security-review-required / plugin-update. The bots re-ran
+  off the body edit within 30 s and **edited their original 12 Sept
+  comments in place** rather than posting new ones (so a "last comment
+  isn't mine" check never sees them; only a maintainer trips it):
+  validation passed at `2a52414`, baseline amber with `"findings":[]`
+  and the same four capabilities. `main` is frozen at `2a52414` while
+  it is open.
