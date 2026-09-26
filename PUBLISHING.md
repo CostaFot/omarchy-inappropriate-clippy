@@ -493,3 +493,18 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   catalog). Next step is the v1.54.0 release, then edit #6429's Target
   commit to it, with a thread comment that quotes the two asks and
   points at the two files.
+
+- 2026-09-26: **v1.54.0 released at `2a52414` and #6429 retargeted to it**,
+  the same move as on the 13th, after a run on the live shell first
+  (COS-285): asleep 5-8 s after a lock and awake after the unlock, the
+  menu centred under the icon over `showMenuAt`, and all four piper paths
+  of `setup-voice` (nothing on disk, uncatalogued, wrong bytes, vouched)
+  doing what the changelog says. The thread comment opens with thanks
+  for the three reviews, then quotes the two asks and answers each with
+  the file and line: `setup_piper`'s stop at `:407` plus the user pins
+  file it names, and the three `--require-hashes` installs at `:170`,
+  `:194`, `:239` against `scripts/pins/`. It flags the host-IPC probe
+  (`lock isLocked`, `idle status`, read-only, 10 s) and the `showMenuAt`
+  verb so the diff doesn't surprise the reviewer. Labels at posting:
+  validated / security-review-required / plugin-update; the bots re-run
+  off the body edit. `main` is frozen at `2a52414` while it is open.
