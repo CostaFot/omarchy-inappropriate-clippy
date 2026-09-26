@@ -76,8 +76,9 @@ package under it, each wheel with its sha256, so `--require-hashes` makes
 pip refuse a wheel the index serves that isn't the one resolved when the
 pin was made. The piper and chatterbox files next to it are the same thing
 for their engines. If you'd rather run newer versions, regenerate one with
-`uv pip compile --generate-hashes` (the header of each file has the exact
-command) and the script's checks carry on from your pins instead.
+`uv pip compile --universal --generate-hashes` (the header of each file has
+the exact command, and why chatterbox's isn't universal) and the script's
+checks carry on from your pins instead.
 
 Piper is the engine once, then one model per voice (~60–120 MB each), named
 `locale-speaker-quality` out of the

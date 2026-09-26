@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.54.1
+
+- The wheel locks under `scripts/pins/` carry environment markers now, so a `--require-hashes` install of kokoro or piper resolves on any Python from 3.10 up, not only the minor the lock was compiled on. Chatterbox stays a 3.12 lock: its venv is built with `--python 3.12`, and on 3.14 chatterbox-tts wants a newer torch than the daemon runs.
+
 ## v1.54.0
 
 - The install commands `scripts/setup-voice` prints now pin every Python wheel by sha256, not just the version: `pip install --require-hashes -r scripts/pins/<engine>.txt`, one lock per engine, so a wheel the index serves that isn't the one resolved when the pin was made is refused rather than installed.

@@ -4,6 +4,10 @@
 #   uv pip compile --generate-hashes --python-version 3.12
 # from chatterbox-tts==0.1.7 and setuptools<81, constrained to the versions
 # of a venv that runs the clone daemon (transformers 5.2.0, torch 2.6.0).
+# Not `--universal` like the other two: for Python >= 3.14 chatterbox-tts
+# 0.1.7 asks for torch >= 2.9, which no lock can reconcile with the 2.6.0
+# the daemon runs, so uv finds no solution. The venv is made with
+# `--python 3.12` (docs/voice.md), so the minor does not drift here.
 aiofiles==24.1.0 \
     --hash=sha256:22a075c9e5a3810f0c2e48f3008c94d68c65d763b9b03857924c99e57355166c \
     --hash=sha256:b4ec55f4195e3eb5d7abd1bf7e061763e864dd4954231fb8539a0ef8bb8260e5
