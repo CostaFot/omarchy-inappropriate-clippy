@@ -24,8 +24,16 @@ command pins a version, a commit and a sha256, and `setup-voice` checks
 them against the bytes on disk before it wires a voice up. Because a
 block means there is no approval to invalidate, this released and
 **#6429 was retargeted** to the new HEAD rather than filed again — the
-edit is what re-runs the bots. `main` is frozen here now, on the same
-rule as before.
+edit is what re-runs the bots. That drew a **third block** on 2026-09-23:
+`setup_piper()` still wired a voice absent from the catalog, and the
+exact versions installed without wheel hashes. The answer is
+**v1.54.0**, this commit: `scripts/pins/` holds a `--generate-hashes`
+lock per engine and the printed installs run `--require-hashes` against
+it, a voice with no digest is a stop rather than a shrug, and the two
+omarchy 4.0.3+ facade fixes (lock/idle over IPC, the bar icon's
+`showMenuAt`) ride along. Same rule again: this releases and **#6429
+gets retargeted** to the new HEAD, not filed again. `main` is frozen
+here from then on.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
