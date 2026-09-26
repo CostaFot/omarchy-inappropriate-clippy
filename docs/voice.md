@@ -58,7 +58,7 @@ kokoro voice are [kokoro](https://github.com/thewh1teagle/kokoro-onnx),
 
 ```bash
 python3 -m venv ~/.local/share/kokoro-tts/venv
-~/.local/share/kokoro-tts/venv/bin/pip install --require-hashes -r ~/.config/omarchy/plugins/costafot.clippy/scripts/pins/kokoro.txt
+~/.local/share/kokoro-tts/venv/bin/pip install --ignore-requires-python --require-hashes -r ~/.config/omarchy/plugins/costafot.clippy/scripts/pins/kokoro.txt
 curl -fL --create-dirs -o ~/.local/share/kokoro-tts/kokoro-v1.0.onnx \
   https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
 curl -fL -o ~/.local/share/kokoro-tts/voices-v1.0.bin \
@@ -70,6 +70,13 @@ printf '%s  %s\n%s  %s\n' \
 
 `model-files-v1.0` is a release tag, so those two digests are what that URL
 has served since January 2025 and what `setup-voice` expects to find.
+
+`--ignore-requires-python` is there because kokoro-onnx 0.6.1 still labels
+itself Python `<3.14`, a bound written before 3.14 existed, and Omarchy ships
+3.14. The wheel is pure Python and every package under it has 3.14 wheels, so
+the flag overrules the label and nothing else: the same pinned bytes go in.
+Upstream's [PR #195](https://github.com/thewh1teagle/kokoro-onnx/pull/195)
+lifts the bound; the flag goes when a release carries it.
 
 `scripts/pins/kokoro.txt` is the other half: kokoro-onnx 0.6.1 and every
 package under it, each wheel with its sha256, so `--require-hashes` makes

@@ -2,6 +2,7 @@
 
 ## v1.54.1
 
+- Robot George installs on the Python 3.14 that Omarchy ships: the kokoro command `scripts/setup-voice` prints (and `docs/voice.md` shows) passes `--ignore-requires-python`. kokoro-onnx 0.6.1 still labels itself `<3.14`, a bound written before 3.14 existed and lifted in upstream's pending PR #195; the wheel is pure Python and every package under it has 3.14 wheels, so the flag overrules the label and nothing else. Same pinned bytes.
 - The wheel locks under `scripts/pins/` carry environment markers now, so a `--require-hashes` install of kokoro or piper resolves on any Python from 3.10 up, not only the minor the lock was compiled on. Chatterbox stays a 3.12 lock: its venv is built with `--python 3.12`, and on 3.14 chatterbox-tts wants a newer torch than the daemon runs.
 
 ## v1.54.0

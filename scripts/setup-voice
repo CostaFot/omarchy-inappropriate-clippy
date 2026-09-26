@@ -167,7 +167,7 @@ kokoro isn't here, and this script doesn't install things. Five commands,
 plugin was reviewed against:
 
   python3 -m venv $KOKORO_DIR/venv
-  $KOKORO_DIR/venv/bin/pip install --require-hashes -r $PINS_DIR/kokoro.txt
+  $KOKORO_DIR/venv/bin/pip install --ignore-requires-python --require-hashes -r $PINS_DIR/kokoro.txt
   curl -fL --create-dirs -o $KOKORO_DIR/kokoro-v1.0.onnx \\
     https://github.com/thewh1teagle/kokoro-onnx/releases/download/model-files-v1.0/kokoro-v1.0.onnx
   curl -fL -o $KOKORO_DIR/voices-v1.0.bin \\
@@ -179,6 +179,9 @@ plugin was reviewed against:
 They are still your commands, run in your shell: read the release page
 first, and swap the pins for newer ones if you'd rather (this script will
 then tell you the bytes aren't the ones it knows, which is it working).
+--ignore-requires-python is there because kokoro-onnx 0.6.1 still labels
+itself Python <3.14 (a bound written before 3.14 existed; upstream PR #195
+lifts it) while Omarchy ships 3.14 — it overrules the label, not the pins.
 Then run this again ($DOCS).
 EOF
 }

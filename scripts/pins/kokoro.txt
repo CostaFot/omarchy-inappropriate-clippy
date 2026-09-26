@@ -4,9 +4,10 @@
 # the `;` markers pick the numpy/onnxruntime set for each minor — with
 #   uv pip compile --universal --generate-hashes --python-version 3.10
 # from the single line: kokoro-onnx==0.6.1
-# kokoro-onnx 0.6.1 itself declares Python <3.14, so on a 3.14 interpreter
-# pip stops at its line before reading a single hash: that ceiling is the
-# package's, not this lock's.
+# kokoro-onnx 0.6.1 itself declares Python <3.14, a bound written before
+# 3.14 existed (upstream PR #195 lifts it); the wheel is pure Python and
+# everything under it has 3.14 wheels, so the printed install passes
+# --ignore-requires-python. The same bytes go in either way.
 attrs==26.1.0 \
     --hash=sha256:c647aa4a12dfbad9333ca4e71fe62ddc36f4e63b2d260a37a8b83d2f043ac309 \
     --hash=sha256:d03ceb89cb322a8fd706d4fb91940737b6642aa36998fe130a9bc96c985eff32
