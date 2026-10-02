@@ -532,3 +532,17 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   `SO_PEERCRED` uid isn't its own, and both clients check the daemon's
   uid the same way before sending anything. `scripts/duck`'s `/tmp`
   fallback went in the same pass, before a fifth block could name it.
+
+- 2026-10-02: **v1.54.1 released at `e6dad8d` and #6429 retargeted to it**,
+  the same move as on the 13th and the 26th, carrying the two Python 3.14
+  pin commits that were waiting on `next`. The thread comment quotes the
+  one ask and answers it with file and line: the `~/.cache/clippy-voice`
+  fallback (`scripts/setup-voice:522`, `:632`, `scripts/warm-voice:91`),
+  the clients' `SO_PEERCRED` check (`scripts/setup-voice:647-652`,
+  `scripts/warm-voice:97-102`), the daemon's `0600` and peer drop
+  (`scripts/setup-voice:538`, `:566`); then `scripts/duck:23`, and flatly
+  the `--universal` relock and `--ignore-requires-python` so the bigger
+  pins diff doesn't surprise anyone. No thanks this time. The bots
+  re-ran in place within a minute: validation passed at `e6dad8d`,
+  baseline amber with `"findings":[]` and the same four capabilities.
+  `main` is frozen at `e6dad8d` while it is open.
