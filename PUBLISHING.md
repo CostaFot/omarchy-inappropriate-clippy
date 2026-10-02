@@ -32,8 +32,13 @@ lock per engine and the printed installs run `--require-hashes` against
 it, a voice with no digest is a stop rather than a shrug, and the two
 omarchy 4.0.3+ facade fixes (lock/idle over IPC, the bar icon's
 `showMenuAt`) ride along. Same rule again: this releases and **#6429
-gets retargeted** to the new HEAD, not filed again. `main` is frozen
-here from then on.
+gets retargeted** to the new HEAD, not filed again. A **fourth block**
+came on 2026-09-30, with the pinning confirmed done and a new ask: the
+clone socket fell back to a fixed `/tmp` path and neither end checked
+who held it. The answer is **v1.54.1**, this commit: the fallback is
+`~/.cache/clippy-voice` and both ends check the other's uid, with the
+Python 3.14 kokoro install riding along. #6429 gets retargeted again,
+and `main` is frozen here from then on.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
