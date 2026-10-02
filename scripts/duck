@@ -18,7 +18,11 @@
 # ignored (pactl errors are dropped).
 set -uo pipefail
 
-state="${XDG_RUNTIME_DIR:-/tmp}/clippy-duck"
+# The session's own 0700 runtime dir, else $HOME — never a shared /tmp that
+# another account could pre-seed with a snapshot for `stop` to "restore".
+run="${XDG_RUNTIME_DIR:-$HOME/.cache}"
+mkdir -p "$run"
+state="$run/clippy-duck"
 cmd="${1:-}"
 factor="${2:-0.8}"
 [[ $factor =~ ^[0-9]*\.?[0-9]+$ ]] || factor=0.8

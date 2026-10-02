@@ -513,3 +513,17 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   validation passed at `2a52414`, baseline amber with `"findings":[]`
   and the same four capabilities. `main` is frozen at `2a52414` while
   it is open.
+
+- 2026-09-30: **#6429 blocked a fourth time at `2a52414`**, HANCORE-linux,
+  19:30Z. The pinning asks are confirmed done ("missing Piper digests now
+  fail closed and the printed pip installs use `--require-hashes`"); the
+  new blocker is the clone socket: with no `XDG_RUNTIME_DIR`, the
+  generated `speak-clone` and `scripts/warm-voice` connected to a fixed
+  `/tmp/clippy-voice.sock` without checking who held it, so another
+  local account could bind it first and read the lines and the sample's
+  path. Answered on `next` for v1.54.1 by doing: the fallback is
+  `~/.cache/clippy-voice` (all three of daemon, client and warm-voice),
+  the daemon `chmod 600`s the socket and drops any connection whose
+  `SO_PEERCRED` uid isn't its own, and both clients check the daemon's
+  uid the same way before sending anything. `scripts/duck`'s `/tmp`
+  fallback went in the same pass, before a fifth block could name it.

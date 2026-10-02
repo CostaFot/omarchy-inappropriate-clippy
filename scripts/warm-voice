@@ -11,7 +11,7 @@
 # The plugin also runs the bare form itself whenever the live voice becomes
 # a clone (mount, useVoice, set tts), so a user never has to; by hand it's
 # for a knob change. A full cache is a ~0.3 s no-op.
-import hashlib, json, os, re, socket, subprocess, sys, time
+import hashlib, json, os, re, socket, struct, subprocess, sys, time
 
 def setting(key):
     r = subprocess.run(["omarchy-shell", "costafot.clippy", "get", key],
@@ -86,12 +86,20 @@ else:
 
 cache = os.path.expanduser("~/.cache/clippy-voice")
 os.makedirs(cache, exist_ok=True)
-sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "clippy-voice.sock")
+# The session's own 0700 runtime dir, else the cache under $HOME — never a
+# shared path like /tmp. Same path the daemon binds (setup-voice's daemon.py).
+sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or cache, "clippy-voice.sock")
 
 def ask(text, out):
     c = socket.socket(socket.AF_UNIX)
     c.settimeout(120)
     c.connect(sockp)
+    # Lines and the sample's path go only to a daemon running as us.
+    uid = struct.unpack("3i", c.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED,
+                                           struct.calcsize("3i")))[1]
+    if uid != os.getuid():
+        c.close()
+        sys.exit(f"warm-voice: {sockp} is held by uid {uid}, not you — sent it nothing")
     c.sendall((json.dumps({"text": text, "ref": ref, "exag": exag,
                            "cfg": cfg, "out": out}) + "\n").encode())
     r = c.makefile().readline().strip()

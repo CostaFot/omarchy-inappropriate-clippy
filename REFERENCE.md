@@ -1023,7 +1023,10 @@ is one opaque string and ignores all three (clones bend via
   `ChatterboxTTS.from_local`, which is literally what `from_pretrained`
   does minus the pin (chatterbox 0.1.7, `tts.py:168`). Per-line spawn would
   reload 2 GB onto the GPU, so `speak-clone` (stdlib client) talks to
-  `daemon.py` (venv python) over `$XDG_RUNTIME_DIR/clippy-voice.sock`;
+  `daemon.py` (venv python) over `$XDG_RUNTIME_DIR/clippy-voice.sock`
+  (`~/.cache/clippy-voice/clippy-voice.sock` with no runtime dir, never
+  `/tmp`, since v1.54.1; both ends check the other's uid with
+  `SO_PEERCRED` before a line or a path crosses);
   the daemon self-starts on demand and exits after 15 idle minutes
   (~4 GB VRAM). Lines are cached in `~/.cache/clippy-voice` by (ref
   path, ref contents hash, knobs, text) — repeats instant, fresh line
@@ -1144,7 +1147,8 @@ path, clamps numbers 0-1, clears the stash on an explicit ratio, and
 refuses non-numbers.
 `scripts/duck` snapshots `pactl list sink-inputs` volumes (raw values,
 not the rounded percent — a 100 %+0.12 dB stream must restore exactly)
-into `$XDG_RUNTIME_DIR/clippy-duck` and scales each; the snapshot is
+into `$XDG_RUNTIME_DIR/clippy-duck` (`~/.cache/clippy-duck` with no
+runtime dir, never `/tmp`) and scales each; the snapshot is
 taken BEFORE the engine spawns, so his own stream is never in it — no
 name-matching, any engine works. The one name-match: sink-inputs with
 `node.name = "quickshell"` are skipped — the slap/fall SoundEffects are
@@ -1374,7 +1378,9 @@ stays free text — IPC and agent only.
   options. less to debug"). `voices/grossman.wav` is a second, unapproved
   clone reference (v1.28.0's test subject; source clip in `~/Downloads`).
 - The clone line cache is `~/.cache/clippy-voice`; the daemon socket is
-  `$XDG_RUNTIME_DIR/clippy-voice.sock`.
+  `$XDG_RUNTIME_DIR/clippy-voice.sock`. The installed client and daemon
+  predate v1.54.1's socket change, which only matters with no
+  `$XDG_RUNTIME_DIR` (never on this box).
 - codex and pi are installed but not logged in (401 / no key); only
   claude and opencode have actually been run through clippy-ai. The
   shell's env has the mise shims on PATH, so agent binaries resolve.

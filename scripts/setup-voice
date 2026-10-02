@@ -478,7 +478,7 @@ setup_clone() {
 # 0 means no cap. speak-clone/warm-voice touch a file's mtime on every hit,
 # so "oldest" is least-recently-played, not first-rendered — a warmed book
 # stays put while agent one-offs and lines from a superseded sample age out.
-import json, os, socket, sys
+import json, os, socket, struct, sys
 os.environ.setdefault("TQDM_DISABLE", "1")  # no progress bars in daemon.log
 # Nothing here fetches: the model is fetched once, by hand, by whoever
 # installed chatterbox (setup-voice prints the command, docs/voice.md
@@ -514,8 +514,15 @@ def prune(cache, keep=None):
             total -= sz
         except OSError:
             pass
-RUN = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
-SOCK = os.path.join(RUN, "clippy-voice.sock")
+CACHE = os.path.expanduser("~/.cache/clippy-voice")
+os.makedirs(CACHE, exist_ok=True)
+# $XDG_RUNTIME_DIR is the session's own 0700 dir. Without one the socket
+# goes in the cache under $HOME, never a shared path like /tmp that another
+# account could bind first. speak-clone and warm-voice pick the same path.
+SOCK = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or CACHE, "clippy-voice.sock")
+def peer_uid(c):
+    return struct.unpack("3i", c.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED,
+                                            struct.calcsize("3i")))[1]
 s = socket.socket(socket.AF_UNIX)
 try:
     s.bind(SOCK)
@@ -528,6 +535,7 @@ except OSError:
     except OSError:
         os.unlink(SOCK)
         s.bind(SOCK)
+os.chmod(SOCK, 0o600)
 s.listen(4)
 s.settimeout(900)
 import torchaudio
@@ -548,13 +556,15 @@ except OSError as e:
              " and this daemon never downloads it"
              " — run scripts/setup-voice and it prints the one command that fetches it"
              " (five files, ~3 GB); the loader said: " + str(e).replace("\n", " ")[:200])
-prune(os.path.expanduser("~/.cache/clippy-voice"))
+prune(CACHE)
 while True:
     try:
         c, _ = s.accept()
     except socket.timeout:
         break
     try:
+        if peer_uid(c) != os.getuid():
+            continue  # only our own account renders, or names files to write
         req = json.loads(c.makefile().readline())
         wav = model.generate(req["text"], audio_prompt_path=req["ref"],
                              exaggeration=req.get("exag", 0.5), cfg_weight=req.get("cfg", 0.5))
@@ -589,7 +599,7 @@ PY
 # — and is applied in the same ffmpeg step, as its own derivative.
 # Every hit touches the file's mtime: the daemon prunes least-recently-played
 # first, so a line that keeps getting said keeps its render.
-import argparse, hashlib, json, os, socket, subprocess, sys, time
+import argparse, hashlib, json, os, socket, struct, subprocess, sys, time
 p = argparse.ArgumentParser()
 p.add_argument("--ref", required=True)
 p.add_argument("--exag", type=float, default=0.5)
@@ -617,7 +627,9 @@ if os.path.exists(raw):
     except OSError:
         pass  # pruned in the exists/utime gap; the next call re-renders it
 else:
-    sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR", "/tmp"), "clippy-voice.sock")
+    # The session's own 0700 runtime dir, else the cache under $HOME — never
+    # a shared path like /tmp (daemon.py binds the same one).
+    sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or cache, "clippy-voice.sock")
     here = os.path.dirname(os.path.realpath(__file__))
     BUSY = ("speak-clone: the daemon is still working after 2 minutes — a cold"
             " start loads ~3 GB onto the GPU, and a busy machine takes longer"
@@ -632,6 +644,12 @@ else:
         c = socket.socket(socket.AF_UNIX)
         c.settimeout(120)
         c.connect(sockp)
+        # The line and the sample's path go only to a daemon running as us.
+        uid = struct.unpack("3i", c.getsockopt(socket.SOL_SOCKET, socket.SO_PEERCRED,
+                                               struct.calcsize("3i")))[1]
+        if uid != os.getuid():
+            c.close()
+            sys.exit(f"speak-clone: {sockp} is held by uid {uid}, not you — sent it nothing")
         c.sendall((json.dumps({"text": text, "ref": ref, "exag": a.exag,
                                "cfg": a.cfg, "out": raw}) + "\n").encode())
         r = c.makefile().readline().strip()
