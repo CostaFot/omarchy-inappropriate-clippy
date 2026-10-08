@@ -567,3 +567,7 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   gemini, grok and omp aren't logged in here (their argv form fails the
   same way), so those four follow their docs, as before. The TTS path
   was already stdin end to end.
+  Live in the shell on 2026-10-08 (repo symlinked in, `ai` on for the
+  run): an IPC `reply` carrying a marker came back as a comeback and the
+  enable-triggered batch brought 5 lines from claude, with the marker on
+  no command line but the test's own `omarchy-shell … reply` call.
