@@ -37,8 +37,14 @@ came on 2026-09-30, with the pinning confirmed done and a new ask: the
 clone socket fell back to a fixed `/tmp` path and neither end checked
 who held it. The answer is **v1.54.1**, this commit: the fallback is
 `~/.cache/clippy-voice` and both ends check the other's uid, with the
-Python 3.14 kokoro install riding along. #6429 gets retargeted again,
-and `main` is frozen here from then on.
+Python 3.14 kokoro install riding along. #6429 got retargeted again.
+A **fifth block** came on 2026-10-04, with the socket fix confirmed and
+a new ask: `clippy-ai` passed the prompt (window titles, transcribed
+replies) as agent arguments, readable through `/proc`. The answer is
+**v1.54.2**, this commit: every agent reads the prompt on stdin or from
+a 0700 file, and the plugin's own hops to `clippy-ai` and `warm-voice`
+go over stdin too. #6429 gets retargeted again, and `main` is frozen
+here from then on.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
