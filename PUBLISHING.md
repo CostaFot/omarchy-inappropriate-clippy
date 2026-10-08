@@ -577,3 +577,13 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   run): an IPC `reply` carrying a marker came back as a comeback and the
   enable-triggered batch brought 5 lines from claude, with the marker on
   no command line but the test's own `omarchy-shell … reply` call.
+
+- 2026-10-08: **v1.54.2 released at `a618775` and #6429 retargeted to it**,
+  the same move as on the 13th, the 26th and the 2nd. The thread comment
+  quotes the one ask and answers it with file and line: the `0700`
+  `mktemp -d` (`scripts/clippy-ai:484`) and each agent's stdin or path
+  form (`:498`-`:531`), then the hop before it (`--stdin` at
+  `scripts/clippy-ai:68`, `Clippy.qml:1060`, `AgentBrain.qml:127`), then
+  `warm-voice --lines` off argv (`scripts/warm-voice:62`,
+  `Clippy.qml:2083`), volunteered before a sixth block could name it.
+  No thanks. `main` is frozen at `a618775` while it is open.
