@@ -555,8 +555,16 @@ Design rules that outrank any single feature:
   only a name in `~/.config/omarchy/defaults/agent` plus `omarchy-agent`
   (interactive); there is no headless API, so the script carries its own
   one-shot table mirroring `omarchy-agent`'s `case` (`claude -p --tools
-  "" --setting-sources "" --system-prompt`, `codex exec -o`, `pi -p
-  --no-tools`, `opencode run --pure`; `--model` mapped per agent). It
+  "" --setting-sources "" --system-prompt-file`, `codex exec -o … -`, `pi -p
+  --no-tools`, `opencode run --pure`; `--model` mapped per agent). The
+  prompt never rides an agent's argv (v1.54.2, the fifth #6429 block:
+  `/proc/<pid>/cmdline` is world-readable): it is written into a 0700
+  `mktemp -d` under `$XDG_RUNTIME_DIR` and each agent reads it on stdin,
+  or by path where it wants a file (claude's and pi/omp's system prompt,
+  grok's `--prompt-file`). The QML side keeps its own private text off
+  `clippy-ai`'s argv the same way: `--stdin` takes `{reply, said,
+  recent}` as JSON, and `warm-voice --lines` with no arguments reads a
+  JSON array. It
   gathers the facts itself in three tiers (v1.33.0 — the flat always-on
   list had the model doing nothing but clock/uptime/usage jokes): a core
   always sent (time, focused window, all mapped window titles, playerctl,
@@ -680,8 +688,8 @@ Design rules that outrank any single feature:
   line, then the transcript, so the parse takes everything after the
   last blank line, ANSI-stripped. A punctuation-only transcript (whisper
   hallucinates "." on silence) gets a `heardNothing` book line and no
-  agent call; a real one goes to `clippy-ai --reply <text> --said
-  <bubble.text>` (his last line survives bubble hide) — one combative
+  agent call; a real one goes to `clippy-ai --stdin` with `{reply: <text>,
+  said: <bubble.text>}` on stdin (his last line survives bubble hide) — one combative
   comeback, image-mode-shaped prompt (fight rules, an escalate rule —
   the comeback ends bigger and stupider than the insult started — and
   it mocks questions instead of answering: the heckler, never an
@@ -1106,8 +1114,8 @@ is one opaque string and ignores all three (clones bend via
   client and falls back to the pre-v1.28.0 path-only key (with a stderr
   nudge to rerun setup-voice) if that client predates the contents
   hash, so an updated plugin never warms into keys an old client won't
-  look up. `--lines <line>...`
-  warms explicit strings: `AgentBrain.linesArrived` → root's
+  look up. `--lines <line>...` (or a bare `--lines` and a JSON array on
+  stdin, which is how the plugin calls it) warms explicit strings: `AgentBrain.linesArrived` → root's
   `warmAgentLines()` (gated on `ttsOn` + `"speak-clone" in ttsSetting`)
   pre-renders each fresh agent batch fire-and-forget (`warmProc`,
   overlap parked in `warmQueued`), so agent lines don't trail the

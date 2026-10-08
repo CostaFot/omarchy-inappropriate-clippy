@@ -1055,10 +1055,11 @@ Item {
   function sendReply(userText) {
     replying = true
     lastHeard = userText
-    var cmd = [pluginDir + "/scripts/clippy-ai", "--reply", userText]
+    // Their words and his last line go in on stdin, not the command line:
+    // /proc/<pid>/cmdline is readable by every local account.
+    var cmd = [pluginDir + "/scripts/clippy-ai", "--stdin"]
     // bubble.text survives the hide — his last line is what they answered.
-    var said = String(bubble.text || "").trim()
-    if (said !== "") cmd.push("--said", said)
+    replyProc.input = JSON.stringify({ reply: userText, said: String(bubble.text || "").trim() })
     if (clean) cmd.push("--clean")
     if (aiAgent !== "") cmd.push("--agent", aiAgent)
     if (aiModel !== "") cmd.push("--model", aiModel)
@@ -1068,6 +1069,7 @@ Item {
     if (quotesFile !== "") cmd.push("--quotes", quotesFile)
     if (promptFile !== "") cmd.push("--prompt-file", promptFile)
     replyProc.command = cmd
+    replyProc.stdinEnabled = true
     replyProc.running = true
     walkAnim.stop()
     brain.stop()
@@ -1077,6 +1079,8 @@ Item {
 
   Process {
     id: replyProc
+    property string input: ""
+    onStarted: { write(input + "\n"); stdinEnabled = false }
     stdout: StdioCollector { id: replyOut }
     stderr: StdioCollector { id: replyErr }
     onExited: function (code) {
@@ -2073,7 +2077,11 @@ Item {
   function warmAgentLines(lines) {
     if (!ttsOn || typeof ttsSetting !== "string" || ttsSetting.indexOf("speak-clone") === -1) return
     if (warmProc.running) { warmQueued = warmQueued.concat(lines); return }
-    warmProc.command = [pluginDir + "/scripts/warm-voice", "--lines"].concat(lines)
+    // The lines go in on stdin, not the command line: /proc/<pid>/cmdline
+    // is readable by every local account.
+    warmProc.input = JSON.stringify(lines)
+    warmProc.command = [pluginDir + "/scripts/warm-voice", "--lines"]
+    warmProc.stdinEnabled = true
     warmProc.running = true
   }
   // The book itself is warmed by the plugin, not by the user: whenever the
@@ -2115,6 +2123,8 @@ Item {
   Process {
     id: warmProc
     environment: root.voiceEnv // a warm may be what spawns the daemon
+    property string input: ""
+    onStarted: { write(input + "\n"); stdinEnabled = false }
     stderr: StdioCollector { id: warmErr }
     onExited: function (code) {
       // Not-a-speak-clone is gated before the spawn, so nonzero is real.

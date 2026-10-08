@@ -546,3 +546,24 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   re-ran in place within a minute: validation passed at `e6dad8d`,
   baseline amber with `"findings":[]` and the same four capabilities.
   `main` is frozen at `e6dad8d` while it is open.
+
+- 2026-10-04: **#6429 blocked a fifth time at `e6dad8d`**, HANCORE-linux,
+  13:25Z. The socket fix is confirmed; the new blocker is
+  `scripts/clippy-ai:468-505` passing the prompt (window titles,
+  transcribed replies) as agent arguments, readable by any local account
+  through `/proc/<pid>/cmdline`. The comment also says "the complete
+  remaining source review is unfinished", so more can come. Answered on
+  `next` for v1.54.2 by closing the whole class rather than the cited
+  lines: `run_agent` writes system, user and combined prompt into a 0700
+  `mktemp -d` under `$XDG_RUNTIME_DIR` and every agent reads it on stdin
+  or by path (claude `--system-prompt-file`, codex `exec -`, pi/omp
+  `--system-prompt <path>` plus stdin, opencode/copilot/crush/gemini
+  stdin, grok `--prompt-file`); and the two hops before it, which the
+  "transcribed replies" wording also covers — `clippy-ai --reply/--said/
+  --recent` from Clippy.qml and AgentBrain.qml, and `warm-voice --lines`
+  carrying agent lines — now go over stdin as JSON. Checked with a
+  `/proc/*/cmdline` watcher and a random marker in the reply: zero hits
+  for claude, codex, pi, opencode and copilot, all answering; crush,
+  gemini, grok and omp aren't logged in here (their argv form fails the
+  same way), so those four follow their docs, as before. The TTS path
+  was already stdin end to end.

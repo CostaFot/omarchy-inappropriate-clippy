@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.54.2
+
+- What he sends your coding agent no longer shows up in the process list. The prompt carries your window titles, what you said to him and his own last lines, and it used to ride the agent's command line, which any other account on the machine can read. Every agent now gets it on stdin, or from a file only you can read; the plugin passes your words and his lines to its own scripts the same way.
+
 ## v1.54.1
 
 - Robot George installs on the Python 3.14 that Omarchy ships: the kokoro command `scripts/setup-voice` prints (and `docs/voice.md` shows) passes `--ignore-requires-python`. kokoro-onnx 0.6.1 still labels itself `<3.14`, a bound written before 3.14 existed and lifted in upstream's pending PR #195; the wheel is pure Python and every package under it has 3.14 wheels, so the flag overrules the label and nothing else. Same pinned bytes.

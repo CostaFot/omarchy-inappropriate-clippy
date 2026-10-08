@@ -7,7 +7,9 @@
 # sample's contents; --pitch derives instantly and needs no warming). Templated lines ({away}, {back}, {kills}, {slaps}) are substituted at say-time and
 # are skipped. ~2-3 s of GPU per line, 10-20 min for the built-in book.
 # `--lines <line>...` warms exactly those strings instead of the book — the
-# plugin uses it to pre-render each fresh batch of agent lines on arrival.
+# plugin uses it to pre-render each fresh batch of agent lines on arrival,
+# as a bare `--lines` with a JSON array on stdin, so the lines never sit in
+# /proc/<pid>/cmdline where every local account can read them.
 # The plugin also runs the bare form itself whenever the live voice becomes
 # a clone (mount, useVoice, set tts), so a user never has to; by hand it's
 # for a knob change. A full cache is a ~0.3 s no-op.
@@ -57,7 +59,8 @@ exag, cfg = flag("exag", 0.5), flag("cfg", 0.5)
 daemon = os.path.join(os.path.dirname(os.path.realpath(m.group(1))), "daemon.py")
 
 if argv[:1] == ["--lines"]:
-    lines = [t for t in argv[1:] if "{" not in t]
+    lines = argv[1:] or json.load(sys.stdin)
+    lines = [t for t in lines if isinstance(t, str) and "{" not in t]
 else:
     here = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
     book = json.load(open(os.path.join(here, "quotes.json")))

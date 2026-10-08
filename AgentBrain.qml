@@ -122,8 +122,12 @@ Item {
     if (model !== "") cmd.push("--model", model)
     if (quotesFile !== "") cmd.push("--quotes", quotesFile)
     if (promptFile !== "") cmd.push("--prompt-file", promptFile)
-    if (recent.length) cmd.push("--recent", recent.join("; "))
+    // What they did to him lately goes in on stdin, not the command line:
+    // /proc/<pid>/cmdline is readable by every local account.
+    cmd.push("--stdin")
+    proc.input = JSON.stringify({ recent: recent.join("; ") })
     proc.command = cmd
+    proc.stdinEnabled = true
     proc.running = true
   }
 
@@ -131,6 +135,8 @@ Item {
 
   Process {
     id: proc
+    property string input: ""
+    onStarted: { write(input + "\n"); stdinEnabled = false }
     stdout: StdioCollector { id: out }
     stderr: StdioCollector { id: err }
     onExited: function (code) {

@@ -16,6 +16,9 @@
 #   scripts/clippy-ai --prompt         # the whole prompt, examples and all
 #   scripts/clippy-ai --prompt-file f   # YOUR prompt instead of the built-in
 #                                       # character (the `promptFile` key)
+#   echo '{"reply":"words"}' | scripts/clippy-ai --stdin
+#                                      # --reply/--said/--recent as JSON on
+#                                      # stdin: how the plugin passes them
 #
 # The agent is picked the way `omarchy agent` picks it (omarchy-default-agent,
 # ~/.config/omarchy/defaults/agent), but launched in its one-shot mode with
@@ -38,6 +41,7 @@ image=""
 reply=""
 said=""
 prompt_file=""
+from_stdin=false
 
 while (($#)); do
   case "$1" in
@@ -53,9 +57,21 @@ while (($#)); do
     --reply) reply=${2:?}; shift 2 ;;
     --said) said=${2:-}; shift 2 ;;
     --prompt-file) prompt_file=${2:-}; shift 2 ;;
+    --stdin) from_stdin=true; shift ;;
     *) echo "clippy-ai: unexpected argument: $1" >&2; exit 2 ;;
   esac
 done
+
+# The user's own words, his last line and the recent-actions list come in on
+# stdin from the plugin, never as arguments: /proc/<pid>/cmdline is readable
+# by every local account. The flags above stay for typing by hand.
+if $from_stdin; then
+  input=$(cat)
+  reply=$(jq -r '.reply // empty' <<<"$input" 2>/dev/null)
+  said=$(jq -r '.said // empty' <<<"$input" 2>/dev/null)
+  recent=$(jq -r '.recent // empty' <<<"$input" 2>/dev/null)
+  unset input
+fi
 
 # The screenshot mode: one jab about what is visibly on screen. Absolute
 # path, because the agent launches from $TMPDIR, not from here.
@@ -445,8 +461,15 @@ fi
 
 # One-shot, tool-less, stateless: the same shape as omarchy-agent's launch
 # table but for a single answer, each under a timeout so a stuck agent
-# doesn't hang around. Entries below the first four are from the
-# agents' documentation; they were not run here.
+# doesn't hang around.
+#
+# The prompt never goes on the agent's command line: it carries window
+# titles, the user's own words and Clippy's last lines, and
+# /proc/<pid>/cmdline is readable by every local account. Each agent reads
+# it from stdin or, where its CLI wants a file, from one in a 0700 directory
+# of our own; only that path is ever an argument. claude, codex, pi and
+# opencode were run here that way; the rest follow their own documentation
+# for stdin and prompt files, untested here.
 #
 # `--model` goes to the agents that take one; unset means the agent's own
 # default. Mind that for claude that is the CLI's default (opus at the time
@@ -458,6 +481,12 @@ fi
 # prompt names the file (verified: the model reads the png natively); codex
 # has --image (documented). Everyone else gets the path in the prompt text
 # and does what it can with it — generic on purpose, untested here.
+priv=$(mktemp -d -p "${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}" clippy-ai.XXXXXX) || exit 1
+trap 'rm -rf "$priv"' EXIT
+printf '%s' "$system" >"$priv/system"
+printf '%s' "$user" >"$priv/user"
+printf '%s' "$prompt" >"$priv/prompt"
+
 run_agent() {
   local m=()
   case "$agent" in
@@ -466,42 +495,40 @@ run_agent() {
       local tools=""
       [[ -n $image ]] && tools="Read"
       timeout 90 claude -p --tools "$tools" --no-session-persistence --setting-sources "" \
-        --output-format text --system-prompt "$system" "${m[@]}" "$user"
+        --output-format text --system-prompt-file "$priv/system" "${m[@]}" <"$priv/user"
       ;;
     codex)
       [[ -n $model ]] && m=(-m "$model")
       [[ -n $image ]] && m+=(-i "$image")
-      out=$(mktemp)
       timeout 90 codex exec --skip-git-repo-check --ephemeral --ignore-rules -s read-only \
-        "${m[@]}" -o "$out" "$prompt" >/dev/null 2>&1
-      cat "$out"
-      rm -f "$out"
+        "${m[@]}" -o "$priv/out" - <"$priv/prompt" >/dev/null 2>&1
+      cat "$priv/out"
       ;;
     pi)
       [[ -n $model ]] && m=(--model "$model")
       timeout 90 pi -p --no-tools --no-session --no-extensions --no-skills --no-prompt-templates \
-        --no-context-files --system-prompt "$system" "${m[@]}" "$user"
+        --no-context-files --system-prompt "$priv/system" "${m[@]}" <"$priv/user"
       ;;
     opencode)
       [[ -n $model ]] && m=(-m "$model")
-      timeout 90 opencode run --pure "${m[@]}" "$prompt"
+      timeout 90 opencode run --pure "${m[@]}" <"$priv/prompt"
       ;;
     omp)
       [[ -n $model ]] && m=(--model "$model")
-      timeout 90 omp -p --no-tools --no-session --system-prompt "$system" "${m[@]}" "$user"
+      timeout 90 omp -p --no-tools --no-session --system-prompt "$priv/system" "${m[@]}" <"$priv/user"
       ;;
     gemini)
       [[ -n $model ]] && m=(-m "$model")
-      timeout 90 gemini "${m[@]}" -p "$prompt"
+      timeout 90 gemini "${m[@]}" -p "" <"$priv/prompt"
       ;;
     copilot)
-      timeout 90 copilot -p "$prompt"
+      timeout 90 copilot <"$priv/prompt"
       ;;
     crush)
-      timeout 90 crush run "$prompt"
+      timeout 90 crush run <"$priv/prompt"
       ;;
     grok)
-      timeout 90 grok -p "$prompt"
+      timeout 90 grok --prompt-file "$priv/prompt"
       ;;
     *)
       echo "clippy-ai: don't know how to run $agent one-shot" >&2

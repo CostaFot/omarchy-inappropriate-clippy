@@ -95,3 +95,5 @@ scripts/clippy-ai --quotes ~/mine.json     # merge a quotesFile into the example
 scripts/clippy-ai --prompt-file ~/who.txt  # your character instead of the built-in one, the `promptFile` key
 scripts/clippy-ai --recent "slapped him"   # the note the plugin passes about what you did to him lately
 ```
+
+The plugin itself never puts your words, his lines or the recent note on a command line, since any account on the machine can read those: it pipes them in as JSON (`echo '{"reply":"make me"}' | scripts/clippy-ai --stdin`), and the script hands the whole prompt to the agent on stdin or in a file only you can read.
