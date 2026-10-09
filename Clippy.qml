@@ -2137,6 +2137,21 @@ Item {
       }
     }
   }
+  // The clone cache outlives the clone voice: one switched away or turned
+  // off before v1.54.3 left its renders, agent lines never said included,
+  // readable by other accounts, and the warms above only run for a clone.
+  // So every mount closes it, whatever the voice is; with no cache it's a
+  // no-op.
+  Process {
+    id: sealProc
+    command: [root.pluginDir + "/scripts/warm-voice", "--seal"]
+    stderr: StdioCollector { id: sealErr }
+    onExited: function (code) {
+      if (code !== 0)
+        console.warn("clippy: voice cache seal failed (exit " + code + "): " + String(sealErr.text).trim())
+    }
+    Component.onCompleted: running = true
+  }
 
   // ---- leaderboard --------------------------------------------------------
   // Default-on bragging: every slap and kill is POSTed as a delta to the

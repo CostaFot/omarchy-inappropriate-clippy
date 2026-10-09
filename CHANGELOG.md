@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.54.4
+
+- A voice cache that an older version left open is now closed whenever he starts, whatever voice he has. Before, only a clone voice closed it, so if you had moved off one or turned voice off before upgrading, the lines it had rendered stayed readable by other accounts on the machine. The `chmod` from v1.54.3's notes isn't needed any more.
+
 ## v1.54.3
 
 - What a cloned voice renders is yours alone now. Every line goes into `~/.cache/clippy-voice` as audio, including the coding agent's lines, which are rendered as soon as they arrive and before he ever says them, and that folder used to be readable by any other account on the machine. It is closed to everyone but you now, and so is every file in it. A cache an older version left open gets closed the next time the clone voice comes up. An existing clone install needs one `setup-voice --clone` rerun to refresh its client and daemon. If you used a clone voice and have since moved off it, nothing writes there any more: `chmod -R go= ~/.cache/clippy-voice` closes what is left, or delete the folder. The clone's sample (it can be your own voice) and audio ducking's volume snapshot are written owner-only too.

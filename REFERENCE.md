@@ -1069,9 +1069,14 @@ is one opaque string and ignores all three (clones bend via
   with group or other bits to 0600, symlinks skipped. speak-clone chmods
   the dir on every call, since a cache hit never reaches the daemon.
   warm-voice is the one that matters for existing installs: it ships
-  with the plugin, so it is current the moment the plugin is, and runs on
-  every mount with a clone voice, while the installed client and daemon
-  stay whatever age they were until `setup-voice --clone` reruns.
+  with the plugin, so it is current the moment the plugin is, while the
+  installed client and daemon stay whatever age they were until
+  `setup-voice --clone` reruns. Its warms only run for a clone voice, and
+  a cache outlives the voice that filled it (the seventh #6429 block: a
+  user who switched voice or turned it off before upgrading kept the
+  open cache), so since v1.54.4 `sealProc` in Clippy.qml runs
+  `warm-voice --seal` on every mount whatever the voice: close the dir
+  and its files if the dir exists, create nothing, exit.
   setup-voice also makes the clone's `voices/` dir 0700, since the sample
   can be the user's own voice.
   `--pitch`/`--tempo` derive from the cached raw take via ffmpeg
@@ -1404,7 +1409,8 @@ stays free text — IPC and agent only.
   `$XDG_RUNTIME_DIR/clippy-voice.sock`. The installed client and daemon
   predate v1.54.1's socket change, which only matters with no
   `$XDG_RUNTIME_DIR` (never on this box), and v1.54.3's umask; the cache
-  was 0755 with 0644 files until warm-voice first runs from v1.54.3.
+  (1,286 files) was 0755/0644 until the first shell mount on v1.54.4,
+  which seals it with tts off.
 - codex and pi are installed but not logged in (401 / no key); only
   claude and opencode have actually been run through clippy-ai. The
   shell's env has the mise shims on PATH, so agent binaries resolve.

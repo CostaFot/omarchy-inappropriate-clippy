@@ -631,3 +631,20 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   validation passed at `6cdff5a`, baseline review-required with
   `"findings":[]` and the same four capabilities. `main` is frozen at
   `6cdff5a` while it is open.
+
+- 2026-10-09: **#6429 blocked a seventh time at `6cdff5a`**, HANCORE-linux,
+  14:04Z, two and a half hours after the retarget. The new writers and
+  the clone path are confirmed private; the new blocker is migration:
+  an existing cache was only sealed while a clone voice was selected,
+  so one switched away or turned off before upgrading stayed readable.
+  This was the case the v1.54.3 entry above left to a CHANGELOG `chmod`.
+  Answered on `next` for v1.54.4 (COS-333): `warm-voice --seal` closes
+  `~/.cache/clippy-voice` if it exists, creates nothing and exits, and
+  `sealProc` in Clippy.qml runs it on every mount whatever the voice.
+  Checked by running that exact QML block in a throwaway `quickshell -p`
+  against a scratch HOME (0755/0644 in, 0700/0600 out), plus `--seal`
+  alone on an old cache (symlink left alone), on no cache (nothing
+  created), and the normal warm path. Not live in the shell: the session
+  was locked and `omarchy restart shell` refuses then. This box is the
+  reviewer's exact case (tts false, 1,286 files 0644 in a 0755 dir), so
+  the next shell start is the live check.

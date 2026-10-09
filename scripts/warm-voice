@@ -13,12 +13,37 @@
 # The plugin also runs the bare form itself whenever the live voice becomes
 # a clone (mount, useVoice, set tts), so a user never has to; by hand it's
 # for a knob change. A full cache is a ~0.3 s no-op.
+# `--seal` only closes an existing cache (below) and exits: the plugin runs
+# it on every mount, whatever the voice is, clone or not.
 import hashlib, json, os, re, socket, struct, subprocess, sys, time
 
 # The lines it warms are private — an agent's, rendered before they are
 # ever said — so everything this and the daemon it may start write is
 # 0600, whatever umask the shell handed down.
 os.umask(0o077)
+
+CACHE = os.path.expanduser("~/.cache/clippy-voice")
+
+# A cache from before v1.54.3 is 0755 with 0644 renders in it, agent lines
+# never said included. Close the dir, then each file. Every run does it,
+# and so does the daemon; `--seal` does only this, for the plugin to run on
+# every mount, since a cache outlives the clone voice that filled it: a user
+# who switched voice or turned it off before upgrading never warms again.
+def seal():
+    try:
+        os.chmod(CACHE, 0o700)
+    except FileNotFoundError:
+        return  # never had a clone voice, nothing to close
+    for e in os.scandir(CACHE):
+        try:
+            if e.is_file(follow_symlinks=False) and e.stat(follow_symlinks=False).st_mode & 0o077:
+                os.chmod(e.path, 0o600)
+        except OSError:
+            pass  # pruned or replaced under us; the next run gets it
+
+if sys.argv[1:] == ["--seal"]:
+    seal()
+    sys.exit(0)
 
 def setting(key):
     r = subprocess.run(["omarchy-shell", "costafot.clippy", "get", key],
@@ -92,19 +117,9 @@ else:
     lines = [e["text"] for e in flat
              if "{" not in e["text"] and not (clean and e.get("nsfw"))]
 
-cache = os.path.expanduser("~/.cache/clippy-voice")
-# A cache from before v1.54.3 is 0755 with 0644 renders in it, and the
-# client and daemon that wrote them stay that age until setup-voice --clone
-# reruns. This script ships with the plugin and runs whenever the voice is a
-# clone, so it closes the dir and each file — the daemon does the same.
+cache = CACHE
 os.makedirs(cache, mode=0o700, exist_ok=True)
-os.chmod(cache, 0o700)
-for e in os.scandir(cache):
-    try:
-        if e.is_file(follow_symlinks=False) and e.stat(follow_symlinks=False).st_mode & 0o077:
-            os.chmod(e.path, 0o600)
-    except OSError:
-        pass  # pruned or replaced under us; the next run gets it
+seal()
 # The session's own 0700 runtime dir, else the cache under $HOME — never a
 # shared path like /tmp. Same path the daemon binds (setup-voice's daemon.py).
 sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or cache, "clippy-voice.sock")
