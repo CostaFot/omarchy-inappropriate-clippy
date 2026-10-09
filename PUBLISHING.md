@@ -616,3 +616,18 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   cache left alone, and a `warm-voice --lines` batch on the same daemon
   the same. A user who used a clone and moved off it keeps an old cache
   nothing touches any more; the CHANGELOG gives the one `chmod` for it.
+
+- 2026-10-09: **v1.54.3 released at `6cdff5a` and #6429 retargeted to it**,
+  the same move as on the 13th, the 26th, the 2nd and the 8th. The thread
+  comment quotes the one ask and answers it with file and line: umask 077
+  in the daemon (`scripts/setup-voice:488`), speak-clone (`:625`) and
+  `scripts/warm-voice:21`; the 0700 dir (`seal()` at
+  `scripts/setup-voice:528-538`, speak-clone `:647-648`,
+  `scripts/warm-voice:100-101`); an older cache's files closed in place
+  (`scripts/setup-voice:531-536`, `scripts/warm-voice:102-107`) and why
+  warm-voice reaches existing installs (`Clippy.qml:2101-2107`); then,
+  flatly, the 0700 `voices/` dir (`scripts/setup-voice:437-438`) and
+  `scripts/duck:20`. No thanks. The bots re-ran in place within a minute:
+  validation passed at `6cdff5a`, baseline review-required with
+  `"findings":[]` and the same four capabilities. `main` is frozen at
+  `6cdff5a` while it is open.
