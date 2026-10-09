@@ -663,3 +663,7 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   minute: validation passed at `81bee87`, baseline review-required with
   `"findings":[]` and the same four capabilities. `main` is frozen at
   `81bee87` while it is open.
+  Live in the shell the same evening, once unlocked: with tts false,
+  `omarchy restart shell` took `~/.cache/clippy-voice` from 0755 with
+  1,286 files at 0644 to 0700 with none left open, no clippy warnings in
+  the journal (COS-334).

@@ -1409,8 +1409,8 @@ stays free text — IPC and agent only.
   `$XDG_RUNTIME_DIR/clippy-voice.sock`. The installed client and daemon
   predate v1.54.1's socket change, which only matters with no
   `$XDG_RUNTIME_DIR` (never on this box), and v1.54.3's umask; the cache
-  (1,286 files) was 0755/0644 until the first shell mount on v1.54.4,
-  which seals it with tts off.
+  (1,286 files) was 0755/0644 until the first shell mount on v1.54.4
+  sealed it with tts off (2026-10-09).
 - codex and pi are installed but not logged in (401 / no key); only
   claude and opencode have actually been run through clippy-ai. The
   shell's env has the mise shims on PATH, so agent binaries resolve.
