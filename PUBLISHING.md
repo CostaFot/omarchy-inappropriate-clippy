@@ -587,3 +587,27 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   `warm-voice --lines` off argv (`scripts/warm-voice:62`,
   `Clippy.qml:2083`), volunteered before a sixth block could name it.
   No thanks. `main` is frozen at `a618775` while it is open.
+
+- 2026-10-08: **#6429 blocked a sixth time at `a618775`**, HANCORE-linux,
+  23:16Z, five hours after the retarget. The stdin and peer-UID fixes
+  are confirmed; the new blocker is persisted audio: Clippy.qml prewarms
+  private agent lines through `scripts/warm-voice`, and `setup-voice`'s
+  daemon saves them under `~/.cache/clippy-voice` with no owner-only
+  modes, so under umask 022 another local account can read the WAVs,
+  including lines never played. True on this box: the dir was 0755 with
+  0644 files. Answered on `next` for v1.54.3 (COS-332) by closing every
+  writer, not the one cited: daemon.py, speak-clone and warm-voice set
+  umask 077 first (so their ffmpeg, aplay and spawned daemon inherit
+  it); the daemon on start and warm-voice on every run seal an older
+  cache (dir 0700, any group/other-readable regular file 0600, symlinks
+  skipped); speak-clone chmods the dir on every call. warm-voice is what
+  reaches existing installs, since it ships with the plugin and runs on
+  every mount with a clone voice. Volunteered alongside: setup-voice
+  makes the clone's `voices/` dir 0700 (the sample can be the user's
+  own voice), and `scripts/duck` runs under umask 077. Checked in a
+  scratch HOME under umask 022 with the real GPU and model: a seeded
+  0755/0644 cache came out 0700/0600, the fresh render, its tempo
+  derivative, daemon.log and the socket all 0600, a symlink in the
+  cache left alone, and a `warm-voice --lines` batch on the same daemon
+  the same. A user who used a clone and moved off it keeps an old cache
+  nothing touches any more; the CHANGELOG gives the one `chmod` for it.

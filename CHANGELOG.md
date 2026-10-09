@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.54.3
+
+- What a cloned voice renders is yours alone now. Every line goes into `~/.cache/clippy-voice` as audio, including the coding agent's lines, which are rendered as soon as they arrive and before he ever says them, and that folder used to be readable by any other account on the machine. It is closed to everyone but you now, and so is every file in it. A cache an older version left open gets closed the next time the clone voice comes up. An existing clone install needs one `setup-voice --clone` rerun to refresh its client and daemon. If you used a clone voice and have since moved off it, nothing writes there any more: `chmod -R go= ~/.cache/clippy-voice` closes what is left, or delete the folder. The clone's sample (it can be your own voice) and audio ducking's volume snapshot are written owner-only too.
+
 ## v1.54.2
 
 - What he sends your coding agent no longer shows up in the process list. The prompt carries your window titles, what you said to him and his own last lines, and it used to ride the agent's command line, which any other account on the machine can read. Every agent now gets it on stdin, or from a file only you can read; the plugin passes your words and his lines to its own scripts the same way.

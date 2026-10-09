@@ -15,6 +15,11 @@
 # for a knob change. A full cache is a ~0.3 s no-op.
 import hashlib, json, os, re, socket, struct, subprocess, sys, time
 
+# The lines it warms are private — an agent's, rendered before they are
+# ever said — so everything this and the daemon it may start write is
+# 0600, whatever umask the shell handed down.
+os.umask(0o077)
+
 def setting(key):
     r = subprocess.run(["omarchy-shell", "costafot.clippy", "get", key],
                        capture_output=True, text=True)
@@ -88,7 +93,18 @@ else:
              if "{" not in e["text"] and not (clean and e.get("nsfw"))]
 
 cache = os.path.expanduser("~/.cache/clippy-voice")
-os.makedirs(cache, exist_ok=True)
+# A cache from before v1.54.3 is 0755 with 0644 renders in it, and the
+# client and daemon that wrote them stay that age until setup-voice --clone
+# reruns. This script ships with the plugin and runs whenever the voice is a
+# clone, so it closes the dir and each file — the daemon does the same.
+os.makedirs(cache, mode=0o700, exist_ok=True)
+os.chmod(cache, 0o700)
+for e in os.scandir(cache):
+    try:
+        if e.is_file(follow_symlinks=False) and e.stat(follow_symlinks=False).st_mode & 0o077:
+            os.chmod(e.path, 0o600)
+    except OSError:
+        pass  # pruned or replaced under us; the next run gets it
 # The session's own 0700 runtime dir, else the cache under $HOME — never a
 # shared path like /tmp. Same path the daemon binds (setup-voice's daemon.py).
 sockp = os.path.join(os.environ.get("XDG_RUNTIME_DIR") or cache, "clippy-voice.sock")

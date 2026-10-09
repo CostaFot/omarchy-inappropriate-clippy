@@ -432,7 +432,10 @@ setup_clone() {
     mismatch "chatterbox's model at revision ${CLONE_REV:0:7}" "$(clone_model_dir)"
     how_clone_model; exit 1
   }
+  # The sample can be your own voice, so its dir is yours alone, like the
+  # line cache the renders go to.
   mkdir -p "$base/voices"
+  chmod 700 "$base/voices"
   if [ -n "$SHIPPED" ]; then
     # the shipped sample is already the exact approved 20 s mono take —
     # copy it verbatim, a re-encode sounds subtly different
@@ -479,6 +482,10 @@ setup_clone() {
 # so "oldest" is least-recently-played, not first-rendered — a warmed book
 # stays put while agent one-offs and lines from a superseded sample age out.
 import json, os, socket, struct, sys
+# Every render is a private line — the agent's, prewarmed before it is ever
+# said, or your own reply — so whatever this writes is yours alone: 0600
+# files in a 0700 dir, whatever umask the shell handed down.
+os.umask(0o077)
 os.environ.setdefault("TQDM_DISABLE", "1")  # no progress bars in daemon.log
 # Nothing here fetches: the model is fetched once, by hand, by whoever
 # installed chatterbox (setup-voice prints the command, docs/voice.md
@@ -514,8 +521,21 @@ def prune(cache, keep=None):
             total -= sz
         except OSError:
             pass
+
+# A cache from before v1.54.3 is 0755 with 0644 renders in it: close the
+# dir, then each file, so lines already on disk stop being readable by
+# another account the first time this runs. warm-voice does the same.
+def seal(cache):
+    os.makedirs(cache, mode=0o700, exist_ok=True)
+    os.chmod(cache, 0o700)
+    for e in os.scandir(cache):
+        try:
+            if e.is_file(follow_symlinks=False) and e.stat(follow_symlinks=False).st_mode & 0o077:
+                os.chmod(e.path, 0o600)
+        except OSError:
+            pass  # pruned or replaced under us; the next run gets it
 CACHE = os.path.expanduser("~/.cache/clippy-voice")
-os.makedirs(CACHE, exist_ok=True)
+seal(CACHE)
 # $XDG_RUNTIME_DIR is the session's own 0700 dir. Without one the socket
 # goes in the cache under $HOME, never a shared path like /tmp that another
 # account could bind first. speak-clone and warm-voice pick the same path.
@@ -600,6 +620,9 @@ PY
 # Every hit touches the file's mtime: the daemon prunes least-recently-played
 # first, so a line that keeps getting said keeps its render.
 import argparse, hashlib, json, os, socket, struct, subprocess, sys, time
+# The renders are private lines, so everything this writes is 0600 — and
+# so is what the ffmpeg, aplay and daemon it starts write, by inheritance.
+os.umask(0o077)
 p = argparse.ArgumentParser()
 p.add_argument("--ref", required=True)
 p.add_argument("--exag", type=float, default=0.5)
@@ -619,7 +642,10 @@ with open(ref, "rb") as f:
     refhash = hashlib.sha256(f.read()).hexdigest()[:12]
 key = hashlib.sha256(f"{ref}|{refhash}|{a.exag}|{a.cfg}|{text}".encode()).hexdigest()[:24]
 cache = os.path.expanduser("~/.cache/clippy-voice")
-os.makedirs(cache, exist_ok=True)
+# 0700 every call, not just on create: one chmod, and a cache hit never
+# reaches the daemon, which is the other place it gets closed.
+os.makedirs(cache, mode=0o700, exist_ok=True)
+os.chmod(cache, 0o700)
 raw = f"{cache}/{key}.wav"
 if os.path.exists(raw):
     try:

@@ -17,6 +17,7 @@
 # flock serializes overlapping calls; a vanished stream at restore is
 # ignored (pactl errors are dropped).
 set -uo pipefail
+umask 077  # the snapshot and its lock are nobody else's business either
 
 # The session's own 0700 runtime dir, else $HOME — never a shared /tmp that
 # another account could pre-seed with a snapshot for `stop` to "restore".

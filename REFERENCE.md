@@ -1059,6 +1059,21 @@ is one opaque string and ignores all three (clones bend via
   342-line book, five re-key waves plus every AI line ever said). The
   daemon.log is truncated per daemon start and tqdm is silenced
   (`TQDM_DISABLE`). The whole dir is still disposable.
+  It is also private (v1.54.3, the sixth #6429 block: the agent lines
+  warm-voice prerenders sat in a 0755 dir as 0644 files under umask 022,
+  readable by any local account before they were ever said). daemon.py,
+  speak-clone and warm-voice each set umask 077 first, so every render,
+  derivative and log is 0600, and so is whatever their ffmpeg, aplay and
+  spawned daemon write. The daemon (on start, `seal()`) and warm-voice
+  (every run) also close an older cache: the dir to 0700, any regular file
+  with group or other bits to 0600, symlinks skipped. speak-clone chmods
+  the dir on every call, since a cache hit never reaches the daemon.
+  warm-voice is the one that matters for existing installs: it ships
+  with the plugin, so it is current the moment the plugin is, and runs on
+  every mount with a clone voice, while the installed client and daemon
+  stay whatever age they were until `setup-voice --clone` reruns.
+  setup-voice also makes the clone's `voices/` dir 0700, since the sample
+  can be the user's own voice.
   `--pitch`/`--tempo` derive from the cached raw take via ffmpeg
   (asetrate*P shifts pitch and tempo together, one atempo of T/P lands
   the final tempo on T; atempo's 0.5 floor handled by chaining) into
@@ -1388,7 +1403,8 @@ stays free text — IPC and agent only.
 - The clone line cache is `~/.cache/clippy-voice`; the daemon socket is
   `$XDG_RUNTIME_DIR/clippy-voice.sock`. The installed client and daemon
   predate v1.54.1's socket change, which only matters with no
-  `$XDG_RUNTIME_DIR` (never on this box).
+  `$XDG_RUNTIME_DIR` (never on this box), and v1.54.3's umask; the cache
+  was 0755 with 0644 files until warm-voice first runs from v1.54.3.
 - codex and pi are installed but not logged in (401 / no key); only
   claude and opencode have actually been run through clippy-ai. The
   shell's env has the mise shims on PATH, so agent binaries resolve.
