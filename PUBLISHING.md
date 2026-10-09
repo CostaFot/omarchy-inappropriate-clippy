@@ -652,3 +652,14 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   was locked and `omarchy restart shell` refuses then. This box is the
   reviewer's exact case (tts false, 1,286 files 0644 in a 0755 dir), so
   the next shell start is the live check.
+
+- 2026-10-09: **v1.54.4 released at `81bee87` and #6429 retargeted to it**,
+  the same move as the five before. The thread comment quotes the one ask
+  and answers it with file and line: `sealProc` on every mount
+  (`Clippy.qml:2145-2154`), `--seal` (`scripts/warm-voice:44-46`) running
+  only `seal()` (`:32-42`, creates nothing, reads no setting, contacts no
+  daemon), and the clone path's seals unchanged (`scripts/warm-voice:122`,
+  `scripts/setup-voice:528-538`). The bots re-ran in place within a
+  minute: validation passed at `81bee87`, baseline review-required with
+  `"findings":[]` and the same four capabilities. `main` is frozen at
+  `81bee87` while it is open.
