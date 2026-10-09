@@ -49,7 +49,11 @@ new ask: the clone voice's line cache, prewarmed agent lines included,
 sat world-readable under `~/.cache/clippy-voice`. The answer is
 **v1.54.3**, this commit: every writer runs under umask 077, and an older
 cache is closed to 0700/0600 the next time the clone voice comes up.
-#6429 gets retargeted again, and `main` is frozen here from then on.
+#6429 got retargeted again. A **seventh block** came the next day: that
+migration only ran for a clone voice, so a cache whose voice was switched
+away or turned off stayed open. The answer is **v1.54.4**, this commit:
+every mount runs `warm-voice --seal`, whatever the voice. #6429 gets
+retargeted again, and `main` is frozen here from then on.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
