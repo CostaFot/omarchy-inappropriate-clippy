@@ -703,3 +703,16 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   cleared the reason. A full-screen `grim -t jpeg` on DP-2 came out
   336 KB against 684 KB as PNG. The look itself wasn't run, since it
   would send his real screen; `ai` went back off (COS-342).
+
+- 2026-10-20: **v1.55.0 released at `261242d` and #6429 retargeted to it**,
+  the same move as the six before. The thread comment quotes the one ask
+  and answers it with file and line: the claude/pi gate
+  (`scripts/clippy-ai:109-115`) and what it drops and why; claude's
+  `--tools "" --strict-mcp-config` (`:516`) and why the second flag is
+  new; pi's `--no-tools --no-mcp` (`:532-533`); the screenshot attached
+  instead of opened by a tool (`:522-527`, `:531`) and the JPEG look
+  (`Clippy.qml:874`, `:885`); then, flatly, `docs/ai.md:18-25` and the
+  `ai` verb's reason (`AgentBrain.qml:54`, `:153`). The bots re-ran in
+  place within a minute: validation "Ready for verified update review"
+  at `261242d`, baseline review-required with the same four
+  capabilities. `main` is frozen at `261242d` while it is open.
