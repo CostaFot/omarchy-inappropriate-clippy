@@ -52,8 +52,13 @@ cache is closed to 0700/0600 the next time the clone voice comes up.
 #6429 got retargeted again. A **seventh block** came the next day: that
 migration only ran for a clone voice, so a cache whose voice was switched
 away or turned off stayed open. The answer is **v1.54.4**, this commit:
-every mount runs `warm-voice --seal`, whatever the voice. #6429 gets
-retargeted again, and `main` is frozen here from then on.
+every mount runs `warm-voice --seal`, whatever the voice. #6429 got
+retargeted again. An **eighth block** came on 2026-10-20: `crush run`
+approves its own tools on a prompt full of window titles a web page
+writes. The answer is **v1.55.0**, this commit: only claude and pi, the
+two that start with every tool off, are run, and the look's screenshot
+goes inline instead of through claude's Read tool. #6429 gets retargeted
+again, and `main` is frozen here from then on.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
