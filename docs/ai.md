@@ -16,9 +16,14 @@ from the book (and your `quotesFile`) as examples of how far to go. They're
 cached and handed out one at a time, so a click never waits on a model.
 
 The agent is whichever `omarchy default agent` picked, run the way `omarchy
-agent prompt` runs it but in its one-shot mode with tools off: it gets the
-facts as text and can only answer. Nothing on your machine is touched. It does
-mean the window title and the rest of that list are sent wherever that agent
+agent prompt` runs it but in its one-shot mode with every tool off, MCP
+servers included: it gets the facts as text and can only answer. Nothing on
+your machine is touched. That takes an agent that can be started with no
+tools at all, and only two can: `claude` and `pi`. With any other default
+(codex, opencode, omp, gemini, copilot, crush, grok) he stays on the book,
+and `omarchy-shell costafot.clippy ai` says why. A window title is text any
+web page writes, and an agent holding a tool could be told by one to use it.
+It does mean the window title and the rest of that list are sent wherever that agent
 sends its prompts, and every batch spends a little of your plan: one small
 call every 15 minutes or so at the default pace, more if you keep clicking
 him, never more than one a minute. It runs on the agent's default model
@@ -40,9 +45,9 @@ This one cites what it can actually **see** (the tab, the window, the thing
 you are pretending to read), which is where the good material was all along.
 The screenshot goes wherever your agent sends its prompts, same as the facts
 above — but only when you ask: he never takes one on his own, not on a timer,
-not ever, and the file is deleted the moment the call returns. `claude` reads
-the image natively and `codex` gets it attached; any other agent gets the
-file path in the prompt and does what it can with it.
+not ever, and the file is deleted the moment the call returns. The picture
+goes in attached to the request, so the agent still has no tool to open
+anything with.
 
 And you can talk back. "Say it to his face" in the menu (or `omarchy-shell
 costafot.clippy listen`) opens the microphone — he visibly leans in — and
@@ -78,14 +83,14 @@ Fair warning: his built-in taste rules (no clock jokes, the length
 cap, "never be hateful") are part of what you are replacing — your prompt,
 your responsibility.
 
-Verified with `claude` and `opencode`; `codex` and `pi` are wired the same way
-but weren't run here, and the rest are best guesses from their docs. To see
-what he'd send, or try an agent by hand:
+claude and pi were both checked here with no tools at all: claude starts with
+an empty tool list and no MCP server, and pi, told to run a command, can't.
+To see what he'd send, or try an agent by hand:
 
 ```bash
 cd ~/.config/omarchy/plugins/costafot.clippy
 scripts/clippy-ai                          # a JSON array of lines from the default agent (--count N, default 3)
-scripts/clippy-ai --agent opencode         # a specific agent; --model <name> where it takes one
+scripts/clippy-ai --agent pi               # a specific agent (claude or pi); --model <name>
 scripts/clippy-ai --context                # the facts it would send (one random draw of the shame pool)
 scripts/clippy-ai --prompt                 # the whole prompt, register examples and all
 scripts/clippy-ai --image shot.png         # one jab about a screenshot — what `look` runs

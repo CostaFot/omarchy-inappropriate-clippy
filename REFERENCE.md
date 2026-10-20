@@ -554,14 +554,24 @@ Design rules that outrank any single feature:
   coding agent (`ai: true`, off by default). Omarchy's "default agent" is
   only a name in `~/.config/omarchy/defaults/agent` plus `omarchy-agent`
   (interactive); there is no headless API, so the script carries its own
-  one-shot table mirroring `omarchy-agent`'s `case` (`claude -p --tools
-  "" --setting-sources "" --system-prompt-file`, `codex exec -o … -`, `pi -p
-  --no-tools`, `opencode run --pure`; `--model` mapped per agent). The
-  prompt never rides an agent's argv (v1.54.2, the fifth #6429 block:
-  `/proc/<pid>/cmdline` is world-readable): it is written into a 0700
-  `mktemp -d` under `$XDG_RUNTIME_DIR` and each agent reads it on stdin,
-  or by path where it wants a file (claude's and pi/omp's system prompt,
-  grok's `--prompt-file`). The QML side keeps its own private text off
+  one-shot table, and since v1.55.0 (the eighth #6429 block: `crush run`
+  approves its own shell and file tools, and window titles are text a web
+  page writes) only for the two agents that start with no tool at all:
+  `claude -p --tools "" --strict-mcp-config --setting-sources ""
+  --system-prompt-file` and `pi -p --no-tools --no-mcp --no-extensions
+  …`. Every other name exits 3 before the facts are gathered, so the
+  brain backs off and the book takes over; `status()` shows the reason
+  (`store.lastError`). Checked 2026-10-20: claude's stream-json init
+  lists `"tools":[]` and no MCP server for both modes (without
+  `--strict-mcp-config`, `--setting-sources user` brings railway and
+  linear's tools back past `--tools ""`); pi answers NONE when asked for
+  its tools and refuses an injected `touch`. Dropped: codex (exec keeps a
+  read-only shell and loads `~/.codex/config.toml`'s MCP servers), omp
+  (`--no-tools` is built-ins only), opencode, gemini, copilot, crush,
+  grok. The prompt never rides an agent's argv (v1.54.2, the fifth #6429
+  block: `/proc/<pid>/cmdline` is world-readable): it is written into a
+  0700 `mktemp -d` under `$XDG_RUNTIME_DIR` and each agent reads it on
+  stdin plus its system prompt by path. The QML side keeps its own private text off
   `clippy-ai`'s argv the same way: `--stdin` takes `{reply, said,
   recent}` as JSON, and `warm-voice --lines` with no arguments reads a
   JSON array. It
@@ -654,14 +664,17 @@ Design rules that outrank any single feature:
   `journalctl --user -o cat | grep clippy` tells the story. The screen
   look (v1.32.0): IPC `look` / the menu's "Judge my screen" (shown only
   while `ai` is on) → `lookAtScreen()` — grims his screen to
-  `$XDG_RUNTIME_DIR/clippy-look.png`, runs `clippy-ai --image <path>`
+  `$XDG_RUNTIME_DIR/clippy-look.jpg` (JPEG since v1.55.0: the image
+  goes inline now, and a full-screen PNG can pass the API's 5 MB cap),
+  runs `clippy-ai --image <path>`
   (one jab; the prompt hunts the most absurd visible detail — "the
   stupid little detail is the kill" — and bans assistant behavior
   outright: no summarizing, no noticing like a productivity tool, no
-  competence, no time/day; same register examples; claude gets
-  `--tools "Read"` — its only image route, verified — codex gets `-i`,
-  every other agent just gets the path in the prompt, generic
-  best-effort), deletes the file when the call returns, and says the
+  competence, no time/day; same register examples; the image is
+  attached, never opened by a tool: claude gets it as a base64 image
+  block in a `--input-format stream-json` user turn and the answer is
+  the `result` event's text, pi gets `@<path>`; until v1.55.0 claude had
+  `--tools "Read"` switched on for this), deletes the file when the call returns, and says the
   line agent-dressed. Async: the IPC reply is immediate ("ok — looking
   …"); while it runs `looking` gates `decide()`/`unprompted()` and he
   plays a looping CheckingSomething; failures set `lookFailed`
@@ -1411,9 +1424,13 @@ stays free text — IPC and agent only.
   `$XDG_RUNTIME_DIR` (never on this box), and v1.54.3's umask; the cache
   (1,286 files) was 0755/0644 until the first shell mount on v1.54.4
   sealed it with tts off (2026-10-09).
-- codex and pi are installed but not logged in (401 / no key); only
-  claude and opencode have actually been run through clippy-ai. The
-  shell's env has the mise shims on PATH, so agent binaries resolve.
+- pi is logged in to openai-codex with a ChatGPT account, but its
+  default `gpt-5.5` is refused on that plan; `--model
+  openai-codex/gpt-5.6-luna` answers in ~5 s. omp isn't logged in. The
+  claude CLI's OAuth had expired on 2026-10-20 (the desktop app's own
+  login is separate), so every claude call failed with exit 4 until
+  `claude` is logged in again. The shell's env has the mise shims on
+  PATH, so agent binaries resolve.
 - The leaderboard DB was cleaned of test rows before launch. Costa's box
   posts as `costafot` (#1, 36 kills / 343 slaps at 2026-08-29) — so every
   IPC `slap`/`kill`/`fling` test on this machine posts REAL deltas to the

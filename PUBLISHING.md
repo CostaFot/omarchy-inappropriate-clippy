@@ -667,3 +667,25 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   `omarchy restart shell` took `~/.cache/clippy-voice` from 0755 with
   1,286 files at 0644 to 0700 with none left open, no clippy warnings in
   the journal (COS-334).
+
+- 2026-10-20: **#6429 blocked an eighth time at `81bee87`**, HANCORE-linux,
+  17:40Z, eleven days after the retarget: `scripts/clippy-ai:127-131,
+  527-528` feeds window titles, which a web page sets, to `crush run`, and
+  Crush v0.98.1 approves that session's shell and file tools, so a page
+  could prompt-inject commands against `docs/ai.md`'s "tools off". The
+  same was true or unproven for every agent but claude and pi: opencode,
+  gemini, copilot and grok ran with no tools flag, codex exec keeps a
+  read-only shell and loads `~/.codex/config.toml`'s MCP servers (railway
+  on this box), omp's `--no-tools` is built-ins only, and claude's image
+  mode switched Read on. Answered on `next` for v1.55.0 (COS-342, Costa's
+  option 1 of two): clippy-ai runs claude and pi only, any other agent
+  exits 3 before a fact is gathered; claude adds `--strict-mcp-config`
+  and takes the screenshot as a stream-json image block, pi adds
+  `--no-mcp` and takes it as `@<path>`; the look grims a JPEG. Checked
+  here: claude's init event reads `"tools":[]` with no MCP server in both
+  modes (and does list railway and linear without `--strict-mcp-config`
+  once user settings load), the image turn is accepted up to the API
+  call; pi through clippy-ai makes a batch, judges an image, answers
+  NONE for its tools and leaves an injected `touch` undone. Not checked
+  live: a claude answer (the CLI's login had expired) and the look in the
+  shell (the session was locked).

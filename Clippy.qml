@@ -868,7 +868,10 @@ Item {
     if (listening || replying) return "busy — he's mid-conversation; wait for the comeback"
     if (lookProc.running) return "busy — already looking; the verdict lands in his bubble"
     if (!targetScreen) return "not now"
-    var file = Quickshell.env("XDG_RUNTIME_DIR") + "/clippy-look.png"
+    // JPEG: the picture rides inline in the agent's request now (no tool
+    // opens it, so nothing downsizes it), and a full-screen PNG can pass
+    // the API's 5 MB per-image cap where a JPEG stays well under.
+    var file = Quickshell.env("XDG_RUNTIME_DIR") + "/clippy-look.jpg"
     var cmd = [pluginDir + "/scripts/clippy-ai", "--image", file]
     if (clean) cmd.push("--clean")
     if (aiAgent !== "") cmd.push("--agent", aiAgent)
@@ -879,7 +882,7 @@ Item {
     if (quotesFile !== "") cmd.push("--quotes", quotesFile)
     if (promptFile !== "") cmd.push("--prompt-file", promptFile)
     lookProc.command = ["bash", "-c",
-      'f=$1; out=$2; shift 2; grim -o "$out" "$f" || exit 6; "$@"; rc=$?; rm -f "$f"; exit $rc',
+      'f=$1; out=$2; shift 2; grim -t jpeg -o "$out" "$f" || exit 6; "$@"; rc=$?; rm -f "$f"; exit $rc',
       "clippy-look", file, String(targetScreen.name)].concat(cmd)
     lookProc.running = true
     looking = true

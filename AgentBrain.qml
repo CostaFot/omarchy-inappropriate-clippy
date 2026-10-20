@@ -51,7 +51,7 @@ Item {
     var s = (agent || "no agent") + ": " + cached + " cached"
     if (cached) s += " (" + Math.round((Date.now() - store.madeAt) / 1000) + "s old)"
     if (store.lastRun) s += ", last call " + Math.round((Date.now() - store.lastRun) / 1000) + "s ago"
-    if (store.failures) s += ", " + store.failures + " failed"
+    if (store.failures) s += ", " + store.failures + " failed" + (store.lastError ? " (" + store.lastError + ")" : "")
     if (busy) s += ", busy"
     return s
   }
@@ -63,6 +63,8 @@ Item {
     property real madeAt: 0
     property real lastRun: 0
     property int failures: 0
+    // Why the last call failed, e.g. an agent clippy-ai refuses to run.
+    property string lastError: ""
   }
 
   // The name from ~/.config/omarchy/defaults/agent, for the menu label.
@@ -148,10 +150,12 @@ Item {
       } catch (e) {}
       if (code !== 0 || !lines.length) {
         store.failures = Math.min(6, store.failures + 1)
+        store.lastError = String(err.text).trim().replace(/^clippy-ai: /, "")
         console.warn("clippy: agent lines failed (exit " + code + "): " + String(err.text).trim())
         return
       }
       store.failures = 0
+      store.lastError = ""
       if (lines.length < brain.batch)
         console.warn("clippy: asked " + brain.agent + " for " + brain.batch + " lines, got " + lines.length + ": " + String(out.text).trim())
       var keep = brain.fresh()

@@ -67,7 +67,7 @@ to it at `~/.config/omarchy/shell.json.bak.*`.
 | `duck` | `0.8` | The fraction of volume everything else keeps while he talks (0–1). `0.5` halves your music, `1` or `false` turns ducking off. The menu only toggles; the ratio is IPC-only |
 | `duckSaved` | — | Where a custom `duck` ratio parks while ducking is toggled off, so toggling doesn't lose it. Managed for you |
 | `ai` | `false` | `true` and his lines come from your AI agent, about what you're actually doing. See [ai](ai.md) |
-| `aiAgent` | your default | Which agent to use (`claude`, `codex`, `opencode`, `pi`, ...) if not the one `omarchy default agent` set |
+| `aiAgent` | your default | Which agent to use, `claude` or `pi`, if not the one `omarchy default agent` set. Those are the two he runs, since they start with every tool off. See [ai](ai.md) |
 | `aiModel` | the agent's default | A model name for it, e.g. `claude-sonnet-5`. Cheaper is fine; it's a paperclip. The menu shows it next to the agent's name |
 | `promptFile` | — | Path to a text file that replaces his entire built-in AI prompt — persona, rules, tone, all of it. Your file decides who he is. See [ai](ai.md) |
 | `greeted` | `false` | Set to `true` by his first-boot hello (the one telling you to set him up), so he only says it once per install. `set greeted unset` to hear it again |

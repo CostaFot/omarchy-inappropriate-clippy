@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.55.0
+
+- Agent lines come from claude or pi only now. He hands your agent your window titles, and a web page sets its own title, so an agent holding any tool could be talked into using it by a page you had open. Those two are the only ones that start with every tool off, MCP servers included. With codex, opencode, omp, gemini, copilot, crush or grok as your default he stays on the book, and `omarchy-shell costafot.clippy ai` says why. Set `aiAgent` to `claude` or `pi` to keep the agent lines.
+- "Judge my screen" no longer switches on claude's Read tool. The screenshot goes in attached to the request instead, as a JPEG.
+
 ## v1.54.4
 
 - A voice cache that an older version left open is now closed whenever he starts, whatever voice he has. Before, only a clone voice closed it, so if you had moved off one or turned voice off before upgrading, the lines it had rendered stayed readable by other accounts on the machine. The `chmod` from v1.54.3's notes isn't needed any more.

@@ -25,7 +25,9 @@
 # tools off: the facts are gathered here and handed over as text, so the call
 # is one round trip, spends as little of the user's plan as it can, and the
 # agent can't do anything besides answer. Tool-less, stateless, no project
-# config, so it doesn't answer as the user's coding assistant.
+# config, so it doesn't answer as the user's coding assistant. Only claude
+# and pi are run, the two whose one-shot mode switches off every tool,
+# MCP included; any other agent is refused (see the gate below).
 
 set -uo pipefail
 
@@ -81,6 +83,11 @@ if [[ -n $image ]]; then
     echo "clippy-ai: can't read image: $image" >&2
     exit 2
   fi
+  mime=$(file -b --mime-type "$image")
+  case "$mime" in
+    image/png | image/jpeg | image/gif | image/webp) ;;
+    *) echo "clippy-ai: not a png, jpeg, gif or webp: $image ($mime)" >&2; exit 2 ;;
+  esac
 fi
 
 if [[ -z $agent ]]; then
@@ -90,6 +97,22 @@ if [[ -z $agent ]]; then
   echo "clippy-ai: no default agent (omarchy default agent <name>)" >&2
   exit 3
 fi
+# The prompt carries window titles, and a web page sets its own, so an agent
+# that holds any tool can be told by a page to use it. Only agents whose
+# one-shot mode can be started with none at all are run, each checked here
+# to report none: claude (`--tools "" --strict-mcp-config`) and pi
+# (`--no-tools --no-mcp --no-extensions`). Not the others: `crush run`
+# approves its own tools and has no switch for them, codex exec keeps a
+# shell (read-only) and loads the user's MCP servers, omp's --no-tools
+# covers its built-ins only, and opencode, gemini, copilot and grok were
+# launched with their tools as configured, with no switch checked here.
+case "$agent" in
+  claude | pi) ;;
+  *)
+    echo "clippy-ai: $agent can't be run with its tools off; agent lines need claude or pi" >&2
+    exit 3
+    ;;
+esac
 if ! command -v "$agent" >/dev/null 2>&1; then
   echo "clippy-ai: $agent is not installed" >&2
   exit 3
@@ -348,24 +371,22 @@ fi
 # The screenshot mode swaps the task: one jab about what is visibly on the
 # screen, specificity mandatory — a jab that could have been made blind is
 # a failed call. The facts stay in as backup for cross-referencing, never
-# as the star. The phrasing covers both
-# deliveries: agents that attach the image natively (codex --image) and
-# agents that read the file themselves (claude, whose Read tool is switched
-# on for this mode only).
+# as the star. Both agents get the picture attached to the turn (no tool
+# opens it), so the prompt only has to point at it.
 if [[ -n $image ]]; then
   if [[ -n $custom ]]; then
     user="Here is what is going on right now on the user's machine:
 
 $context
 
-Their screen right now is the screenshot at $image — look at it (read the file if it is not already attached). React to it in character.
+Their screen right now is the attached screenshot — look at it. React to it in character.
 Reply with only a valid JSON array of 1 string, on one line, and nothing else."
   else
   user="Here is what is going on right now on the user's machine:
 
 $context
 
-Their screen right now is the screenshot at $image — look at it (read the file if it is not already attached). They asked you to look; punish them for it. Rules:
+Their screen right now is the attached screenshot — look at it. They asked you to look; punish them for it. Rules:
 - Hunt for the most absurd thing on the screen and attack THAT: the typo, the tab they forgot was open, the error they are scrolling past, the 47 of something, the file named final-final-v2, the thing that does not belong next to the thing it is next to. The obvious main activity is the boring target; the stupid little detail is the kill.
 - Cite something concrete you can actually see. A jab that could have been made without the screenshot is a failure.
 - Cite it, then escalate: the sighting is the setup, the disproportion is the joke. One real detail blown wildly out of proportion beats three details reported.
@@ -460,75 +481,56 @@ if [[ $show_prompt == "true" ]]; then
 fi
 
 # One-shot, tool-less, stateless: the same shape as omarchy-agent's launch
-# table but for a single answer, each under a timeout so a stuck agent
-# doesn't hang around.
+# table but for a single answer, under a timeout so a stuck agent doesn't
+# hang around. Both were checked to start with no tool at all: claude's
+# init event lists `"tools":[]` and no MCP server (without
+# --strict-mcp-config a user-scoped server's tools come back despite
+# --tools ""), and pi answers NONE when asked for its tools and can't be
+# talked into running a command.
 #
 # The prompt never goes on the agent's command line: it carries window
 # titles, the user's own words and Clippy's last lines, and
-# /proc/<pid>/cmdline is readable by every local account. Each agent reads
-# it from stdin or, where its CLI wants a file, from one in a 0700 directory
-# of our own; only that path is ever an argument. claude, codex, pi and
-# opencode were run here that way; the rest follow their own documentation
-# for stdin and prompt files, untested here.
+# /proc/<pid>/cmdline is readable by every local account. claude reads it
+# from stdin and a file, pi from stdin and a file (its --system-prompt
+# takes a path), both in a 0700 directory of our own; only paths are ever
+# arguments.
 #
-# `--model` goes to the agents that take one; unset means the agent's own
-# default. Mind that for claude that is the CLI's default (opus at the time
-# of writing), not the `model` in ~/.claude/settings.json: settings are
-# switched off (`--setting-sources ""`) so the call doesn't drag in the
-# user's CLAUDE.md and hooks.
-# The image reaches each agent however that agent takes one: claude has no
-# image flag, so its Read tool — and only Read — is switched back on and the
-# prompt names the file (verified: the model reads the png natively); codex
-# has --image (documented). Everyone else gets the path in the prompt text
-# and does what it can with it — generic on purpose, untested here.
+# `--model` goes to both; unset means the agent's own default. Mind that
+# for claude that is the CLI's default (opus at the time of writing), not
+# the `model` in ~/.claude/settings.json: settings are switched off
+# (`--setting-sources ""`) so the call doesn't drag in the user's CLAUDE.md
+# and hooks.
+# The image is attached to the turn, never opened by a tool: claude takes
+# it as a base64 image block in a stream-json user message, pi as an @file
+# argument (a path, like the --image that brought it here).
 priv=$(mktemp -d -p "${XDG_RUNTIME_DIR:-${TMPDIR:-/tmp}}" clippy-ai.XXXXXX) || exit 1
 trap 'rm -rf "$priv"' EXIT
 printf '%s' "$system" >"$priv/system"
 printf '%s' "$user" >"$priv/user"
-printf '%s' "$prompt" >"$priv/prompt"
 
 run_agent() {
   local m=()
   case "$agent" in
     claude)
       [[ -n $model ]] && m=(--model "$model")
-      local tools=""
-      [[ -n $image ]] && tools="Read"
-      timeout 90 claude -p --tools "$tools" --no-session-persistence --setting-sources "" \
-        --output-format text --system-prompt-file "$priv/system" "${m[@]}" <"$priv/user"
-      ;;
-    codex)
-      [[ -n $model ]] && m=(-m "$model")
-      [[ -n $image ]] && m+=(-i "$image")
-      timeout 90 codex exec --skip-git-repo-check --ephemeral --ignore-rules -s read-only \
-        "${m[@]}" -o "$priv/out" - <"$priv/prompt" >/dev/null 2>&1
-      cat "$priv/out"
+      local c=(-p --tools "" --strict-mcp-config --no-session-persistence --setting-sources ""
+        --system-prompt-file "$priv/system" "${m[@]}")
+      if [[ -z $image ]]; then
+        timeout 90 claude "${c[@]}" --output-format text <"$priv/user"
+        return
+      fi
+      base64 -w0 "$image" >"$priv/image"
+      jq -nc --rawfile d "$priv/image" --rawfile u "$priv/user" --arg t "$mime" '{type: "user",
+        message: {role: "user", content: [{type: "image", source: {type: "base64", media_type: $t, data: $d}},
+          {type: "text", text: $u}]}}' >"$priv/turn" || return 1
+      timeout 90 claude "${c[@]}" --input-format stream-json --output-format stream-json --verbose <"$priv/turn" \
+        | jq -j 'select(.type == "result" and .is_error != true) | .result'
       ;;
     pi)
       [[ -n $model ]] && m=(--model "$model")
-      timeout 90 pi -p --no-tools --no-session --no-extensions --no-skills --no-prompt-templates \
+      [[ -n $image ]] && m+=("@$image")
+      timeout 90 pi -p --no-tools --no-mcp --no-session --no-extensions --no-skills --no-prompt-templates \
         --no-context-files --system-prompt "$priv/system" "${m[@]}" <"$priv/user"
-      ;;
-    opencode)
-      [[ -n $model ]] && m=(-m "$model")
-      timeout 90 opencode run --pure "${m[@]}" <"$priv/prompt"
-      ;;
-    omp)
-      [[ -n $model ]] && m=(--model "$model")
-      timeout 90 omp -p --no-tools --no-session --system-prompt "$priv/system" "${m[@]}" <"$priv/user"
-      ;;
-    gemini)
-      [[ -n $model ]] && m=(-m "$model")
-      timeout 90 gemini "${m[@]}" -p "" <"$priv/prompt"
-      ;;
-    copilot)
-      timeout 90 copilot <"$priv/prompt"
-      ;;
-    crush)
-      timeout 90 crush run <"$priv/prompt"
-      ;;
-    grok)
-      timeout 90 grok --prompt-file "$priv/prompt"
       ;;
     *)
       echo "clippy-ai: don't know how to run $agent one-shot" >&2
