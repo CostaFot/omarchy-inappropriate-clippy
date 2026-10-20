@@ -689,3 +689,12 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   NONE for its tools and leaves an injected `touch` undone. Not checked
   live: a claude answer (the CLI's login had expired) and the look in the
   shell (the session was locked).
+  Live the next day, once Costa logged the CLI back in and unlocked:
+  claude through clippy-ai made a batch in 11 s and left an injected
+  `touch` undone; the exact image call read "ZEBRA 7431" off a test PNG.
+  After `omarchy restart shell` with `ai` on, `aiAgent crush` put "crush
+  can't be run with its tools off" in the `ai` verb, and with the
+  override cleared the next refill brought 5 lines from claude and
+  cleared the reason. A full-screen `grim -t jpeg` on DP-2 came out
+  336 KB against 684 KB as PNG. The look itself wasn't run, since it
+  would send his real screen; `ai` went back off (COS-342).

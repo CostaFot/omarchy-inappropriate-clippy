@@ -1429,7 +1429,7 @@ stays free text — IPC and agent only.
   openai-codex/gpt-5.6-luna` answers in ~5 s. omp isn't logged in. The
   claude CLI's OAuth had expired on 2026-10-20 (the desktop app's own
   login is separate), so every claude call failed with exit 4 until
-  `claude` is logged in again. The shell's env has the mise shims on
+  Costa ran `claude auth login` on 2026-10-21. The shell's env has the mise shims on
   PATH, so agent binaries resolve.
 - The leaderboard DB was cleaned of test rows before launch. Costa's box
   posts as `costafot` (#1, 36 kills / 343 slaps at 2026-08-29) — so every
