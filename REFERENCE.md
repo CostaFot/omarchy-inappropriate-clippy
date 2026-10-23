@@ -1267,7 +1267,15 @@ change handler announces everything else, and a forced flush landing
 while a POST is in flight parks in `lbFlushQueued` instead of being
 dropped (it once left `lbCache` showing the wrong stone). `lbProbe` surfaces a missing curl (a Process that can't
 start never fires onExited); `lbProc` collects stderr into the failure
-warn. The curl sends `-A costafot.clippy/<manifest version>`. Pending
+warn. The curl sends `-A costafot.clippy/<manifest version>` and
+`--max-filesize 65536` (the ninth #6429 block: `lbOut` is a
+StdioCollector, unbounded, in the shared shell's memory, and `-m 10`
+alone let a bad server stream ten seconds of its link into it). The
+reply is ~100 bytes;
+curl refuses a bigger one up front on a Content-Length and cuts it at
+64 KiB mid-stream without one (curl 8.4+), exit 63, which is the
+ordinary failure path: deltas held, backoff. `lbProc` is the plugin's
+only curl. Pending
 deltas die with the shell — the tally's own documented trade. IPC
 `leaderboard` verb (off-with-instructions / "posting anonymously to the
 shared … stone" / "posting as X: #4 of 31…" + pending / unreachable /

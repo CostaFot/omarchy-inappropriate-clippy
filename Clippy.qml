@@ -2241,7 +2241,11 @@ Item {
     var body = JSON.stringify({ handle: leaderboardHandle, kills: lbSentKills, slaps: lbSentSlaps })
     // The server's doorman: /bump only answers to this User-Agent prefix.
     var ua = "costafot.clippy/" + (manifest && manifest.version ? manifest.version : "dev")
-    lbProc.command = ["curl", "-fsS", "-m", "10", "-A", ua, "-H", "content-type: application/json", "-d", body, leaderboardUrl + "/bump"]
+    // The reply is ~100 bytes of JSON, and lbOut keeps whatever arrives in
+    // the shell's own memory, so curl stops reading at 64 KiB: up front on
+    // a Content-Length, mid-transfer without one (curl 8.4+). Exit 63 takes
+    // the failure path in onExited, held deltas and backoff included.
+    lbProc.command = ["curl", "-fsS", "-m", "10", "--max-filesize", "65536", "-A", ua, "-H", "content-type: application/json", "-d", body, leaderboardUrl + "/bump"]
     lbProc.running = true
   }
   Process {

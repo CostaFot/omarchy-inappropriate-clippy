@@ -716,3 +716,23 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   place within a minute: validation "Ready for verified update review"
   at `261242d`, baseline review-required with the same four
   capabilities. `main` is frozen at `261242d` while it is open.
+
+- 2026-10-21: **#6429 blocked a ninth time at `261242d`**, HANCORE-linux,
+  12:27Z, fifteen hours after the retarget: `Clippy.qml:2233-2253` sends
+  the default-on graveyard POST through curl into an unbounded
+  `StdioCollector` and parses only once curl exits, so a compromised
+  graveyard endpoint could answer 200 with a body big enough to exhaust
+  the shared shell's memory before `-m 10` acts. The comment ends "the
+  remaining source review is incomplete", so a tenth block is likely.
+  Answered on `next` for v1.55.1 (COS-345): `lbProc` passes
+  `--max-filesize 65536`. The reply is ~100 bytes (`{handle, kills,
+  slaps, rank, total}`), and `lbProc` is the plugin's only curl. Checked
+  here against a local server: a 50 MB reply with a Content-Length is
+  refused before a byte reaches stdout, one without is cut at exactly
+  65,536 bytes, both exit 63 into the existing failure path (deltas held,
+  backoff), and a normal reply and a 500 behave as before. The same
+  `Process`/`StdioCollector` block in a throwaway `quickshell -p` peaked
+  at 191 MB capped against 662 MB uncapped on two 50 MB replies. Live
+  in the shell: after `omarchy restart shell` the real `/bump` reply
+  parsed under the cap (`leaderboard` read "#2 of 6"), no clippy
+  warnings in the journal.

@@ -1,5 +1,9 @@
 # Changelog
 
+## v1.55.1
+
+- The graveyard's reply is capped at 64 KiB. He reads it into the shell's own memory, and it is normally about 100 bytes, so a graveyard server gone bad could have answered a slap with enough to fill it. A bigger reply now counts as a failed post: your kills and slaps are held and sent again later, the same as when the server is down.
+
 ## v1.55.0
 
 - Agent lines come from claude or pi only now. He hands your agent your window titles, and a web page sets its own title, so an agent holding any tool could be talked into using it by a page you had open. Those two are the only ones that start with every tool off, MCP servers included. With codex, opencode, omp, gemini, copilot, crush or grok as your default he stays on the book, and `omarchy-shell costafot.clippy ai` says why. Set `aiAgent` to `claude` or `pi` to keep the agent lines.
