@@ -740,3 +740,16 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   in the shell: after `omarchy restart shell` the real `/bump` reply
   parsed under the cap (`leaderboard` read "#2 of 6"), no clippy
   warnings in the journal.
+
+- 2026-10-23: **v1.55.1 released at `43cf733` and #6429 retargeted to it**,
+  the same move as the seven before. The thread comment quotes the one ask
+  and answers it with file and line: `--max-filesize 65536`
+  (`Clippy.qml:2248`) and the ~100-byte reply, refused up front on a
+  Content-Length and cut at 65,536 bytes without one (curl 8.4+), so
+  `lbOut` (`:2253`) never holds more than 64 KiB; exit 63 into the
+  existing failure path (`:2266-2275`, deltas held, backoff up to 16
+  minutes); the local-server check; then, flatly, that `lbProc` is the
+  only curl the plugin runs. The bots re-ran in place within a minute:
+  validation "Ready for verified update review" at `43cf733`, baseline
+  review-required with `"findings":[]` and the same four capabilities.
+  `main` is frozen at `43cf733` while it is open.
