@@ -57,7 +57,11 @@ retargeted again. An **eighth block** came on 2026-10-20: `crush run`
 approves its own tools on a prompt full of window titles a web page
 writes. The answer is **v1.55.0**, this commit: only claude and pi, the
 two that start with every tool off, are run, and the look's screenshot
-goes inline instead of through claude's Read tool. #6429 gets retargeted
+goes inline instead of through claude's Read tool. #6429 got retargeted
+again. A **ninth block** came on 2026-10-21: the graveyard POST read its
+reply into an unbounded collector in the shell's memory. The answer is
+**v1.55.1**, this commit: curl stops at 64 KiB (`--max-filesize`) and an
+oversized reply takes the ordinary failure path. #6429 gets retargeted
 again, and `main` is frozen here from then on.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
