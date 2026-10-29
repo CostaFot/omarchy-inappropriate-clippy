@@ -301,3 +301,10 @@ agent: `voices` lists what's installed and where new ones come from,
 missing engine, no GPU, unknown name). Both are fed by
 `scripts/voice-scan`, one JSON object of every voice on the machine, which
 your agent can also run directly.
+
+The picker builds the command he speaks through out of a voice file's
+name, so it leaves out any piper model or clone sample whose name has
+something other than letters, digits, `_`, `.` and `-` (a clone's has
+no dots), and any piper voice whose sample rate isn't a whole number. A
+model somebody sent you, named to carry a shell command, stays a file.
+Rename it and it shows up.

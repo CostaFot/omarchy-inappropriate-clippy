@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.55.2
+
+- A voice file whose name holds shell syntax is no longer offered. Picking a piper model or a clone in the menu builds the command he speaks through out of that file's name, so a model you downloaded from somewhere, named to carry a command, would have run it the moment you picked it. The picker now skips a voice whose name has anything but letters, digits, `_`, `.` and `-` (a clone's has no dots), and a piper voice whose sample rate isn't a whole number. Rename the file and it's back.
+- A voice set from such a file before this version is never run. He stays quiet, `voice` says why, and picking the renamed voice sets it right.
+
 ## v1.55.1
 
 - The graveyard's reply is capped at 64 KiB. He reads it into the shell's own memory, and it is normally about 100 bytes, so a graveyard server gone bad could have answered a slap with enough to fill it. A bigger reply now counts as a failed post: your kills and slaps are held and sent again later, the same as when the server is down.

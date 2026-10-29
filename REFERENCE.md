@@ -922,6 +922,28 @@ is one opaque string and ignores all three (clones bend via
   a hand-set command is live or parked); `applyVoice(name)` is the one
   resolver behind both the menu chips and IPC `useVoice <name>`, and
   parks an unrecognized custom command in `ttsSaved` before overwriting.
+  Names and piper rates are data off disk spliced unquoted into the
+  `bash -c` string (the tenth #6429 block: the picker skips
+  setup-voice's checksum gate, so a downloaded `x;cmd;.onnx` ran on a
+  tap). `voice-scan` offers a piper model only when its name has no
+  ASCII outside `[A-Za-z0-9_.-]` (past ASCII nothing is special to bash,
+  and `pt_PT-tugão-medium` is in the catalog) and its rate matches
+  `^[1-9][0-9]{0,5}$`, with jq writing the entry; a clone only when its
+  name is `[A-Za-z0-9_-]+`, checked with a glob because bash's `=~`
+  `A-Z` matches `ã` in a UTF-8 locale and `globasciiranges` doesn't.
+  `piperCmd`/`cloneCmd` apply the same checks and build `""`, which
+  `applyVoice` answers with `unsafeVoice`. `ttsCmdSafe` gates `startTts`
+  (before the duck) and `launchTts`: a string that starts like the
+  builders' (piper with or without the v1.21.2 trap wrap; a clone's
+  `exec …/speak-clone --ref …/voices/`) runs only when it is exactly
+  what they build from the name and rate in it, a clone's tail being
+  only `--exag|cfg|pitch|tempo <number>` pairs. Anything else is
+  `refuseTts` (no bash, duck released, one journal line, `voice` says
+  "not run") and `currentVoiceId` reads it as custom. That covers a
+  string saved before v1.55.2 and the same one restored from
+  `ttsSaved`; every other `set tts` string is the user's and runs as
+  written. Quoting the paths was the other way out, not taken:
+  warm-voice and `currentVoiceId` parse these strings with `\S+`.
   IPC `voices` lists active + installed + how to install more + the
   drop-in dir + the raw `set tts` contract. Switching lives in the
   plugin (instant `set tts`); installing an engine is the user's own

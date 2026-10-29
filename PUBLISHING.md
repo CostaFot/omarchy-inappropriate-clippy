@@ -753,3 +753,32 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   validation "Ready for verified update review" at `43cf733`, baseline
   review-required with `"findings":[]` and the same four capabilities.
   `main` is frozen at `43cf733` while it is open.
+
+- 2026-10-25: **#6429 blocked a tenth time at `43cf733`**, HANCORE-linux,
+  20:34Z, two days after the retarget, rated Medium: `scripts/voice-scan:45-51`
+  keeps a downloaded Piper model's basename as-is, `applyVoice` hands it
+  to `piperCmd` (`Clippy.qml:489`), which splices it into the command
+  unquoted, and `launchTts` (`:1982`) runs that with `bash -c`. The GUI
+  picker never goes through `setup_piper`'s checksum gate. The ask:
+  structured arguments, or quoting plus validated names and rates; check
+  saved settings on upgrade; a regression that keeps shell syntax inert.
+  It again ends with the full-source review and approval "still
+  pending". Clone wav names had the same shape and weren't flagged.
+  Answered on `next` for v1.55.2 (COS-349) with validation, not quoting,
+  because warm-voice and `currentVoiceId` parse these strings with `\S+`:
+  voice-scan and `piperCmd`/`cloneCmd` refuse a piper name with ASCII
+  outside `[A-Za-z0-9_.-]`, a clone name outside `[A-Za-z0-9_-]`, and a
+  rate that isn't a whole number, and `ttsCmdSafe` keeps any saved string
+  that starts like a picker-built one from reaching bash unless it is
+  exactly what the builders make. Checked here: voice-scan on a fake
+  HOME with eleven piper models and five wavs offers only the safe ones
+  (the old one listed all of them and broke its JSON on a string rate);
+  27 node cases on the builders and the gate, nested shapes and knob
+  injection included, and `piperCmd` byte-identical for a safe voice.
+  Live: the old picker's string for `x;cd;touch${IFS}clippy-pwned;.onnx`,
+  saved as `tts`, created `~/clippy-pwned` on the next `say` under the
+  old QML; after `omarchy restart shell` the same saved string did not
+  run (no marker, one journal line, `voice` "not run", picker "custom"),
+  nor once restored from `ttsSaved`; a safe piper voice still listed,
+  built and passed the gate. `tts` and `ttsSaved` put back as they were,
+  `omarchy-plugin-validate` exit 0.

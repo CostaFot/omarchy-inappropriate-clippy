@@ -15,13 +15,19 @@ k=false; kk="$HOME/.local/share/kokoro-tts"
 [ -x "$kk/say.py" ] && [ -s "$kk/kokoro-v1.0.onnx" ] && [ -s "$kk/voices-v1.0.bin" ] \
   && command -v ffmpeg >/dev/null && k=true
 
-# clones: every reference wav next to a working speak-clone. Names are
-# already [A-Za-z0-9_-] only — setup-voice filters them on the way in.
+# clones: every reference wav next to a working speak-clone, named
+# [A-Za-z0-9_-] only. setup-voice names them that way on the way in, but a
+# wav copied in by hand isn't, and the name lands unquoted in the bash -c
+# string the plugin speaks through (Clippy.qml cloneCmd), so any other name
+# isn't offered (#6429). A glob, not =~: bash's globasciiranges keeps A-Z
+# ASCII, where the regex's A-Z matches ã in a UTF-8 locale.
 cb="$HOME/.local/share/chatterbox-tts"; c=""
 if [ -x "$cb/speak-clone" ]; then
   for f in "$cb"/voices/*.wav; do
     [ -e "$f" ] || continue
-    c="$c\"$(basename "$f" .wav)\","
+    n="$(basename "$f" .wav)"
+    [[ -n "$n" && "$n" != *[!A-Za-z0-9_-]* ]] || continue
+    c="$c\"$n\","
   done
 fi
 
@@ -42,13 +48,24 @@ if [ -d "$dv" ] && command -v jq >/dev/null; then
   done
 fi
 
-# piper: every downloaded model, with the sample rate aplay needs.
+# piper: every downloaded model, with the sample rate aplay needs. Both go
+# unquoted into the bash -c string the plugin speaks through (Clippy.qml
+# piperCmd), and the GUI picker skips setup-voice's checksum gate, so a model
+# is offered only when its name holds no ASCII but letters, digits and _ . -
+# and its rate is a whole number (#6429). Characters past ASCII mean nothing
+# to bash, so they stay: piper's catalog has pt_PT-tugão-medium. The same
+# two checks guard piperCmd. jq writes the entry, so no name can break the
+# JSON either, and reads only the file's first value.
 pp="$HOME/.local/share/piper-tts/venv/bin/piper"; pv="$HOME/.local/share/piper-voices"; p=""
 if [ -x "$pp" ] && command -v jq >/dev/null; then
   for f in "$pv"/*.onnx; do
     [ -e "$f" ] || continue
-    r="$(jq -r '.audio.sample_rate // empty' "$f.json" 2>/dev/null)"
-    [ -n "$r" ] && p="$p{\"name\":\"$(basename "$f" .onnx)\",\"rate\":$r},"
+    v="$(jq -nc --arg n "$(basename "$f" .onnx)" '
+      input | select($n | test("^(?:[A-Za-z0-9_.-]|[^\\x00-\\x7f])+$"))
+      | .audio.sample_rate
+      | select(type == "number" and (tostring | test("^[1-9][0-9]{0,5}$")))
+      | {name: $n, rate: .}' "$f.json" 2>/dev/null)"
+    [ -n "$v" ] && p="$p$v,"
   done
 fi
 

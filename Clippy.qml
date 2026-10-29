@@ -482,13 +482,61 @@ Item {
     + " | ffmpeg -hide_banner -loglevel quiet -f s16le -ar 24000 -ac 1 -i -"
     + " -af 'asetrate=24000*1.15,aresample=24000,atempo=0.870,tremolo=f=45:d=0.8,acrusher=bits=6:mode=log:aa=1,highpass=f=250,lowpass=f=3400'"
     + " -f s16le - | aplay -q -t raw -r 24000 -f S16_LE -c 1 - & wait $!"
+  // A voice's name is a filename and a piper rate comes from its .onnx.json,
+  // and both land unquoted in the bash -c string launchTts runs — the picker
+  // skips setup-voice's checksum gate. So the builders take no name with
+  // ASCII other than letters, digits and _ . - (a clone's has no dot, as
+  // setup-voice names them) and no rate but a whole number, and build ""
+  // instead (#6429). Characters past ASCII mean nothing to bash and stay:
+  // piper's catalog has pt_PT-tugão-medium. scripts/voice-scan applies the
+  // same checks, so the picker never offers such a voice in the first place.
+  function cloneNameOk(name) { return /^[A-Za-z0-9_-]+$/.test(String(name)) }
+  function piperNameOk(name) { return /^(?:[A-Za-z0-9_.-]|[^\x00-\x7f])+$/.test(String(name)) }
+  function piperRateOk(rate) { return /^[1-9][0-9]{0,5}$/.test(String(rate)) }
   function cloneCmd(name) {
+    if (!cloneNameOk(name)) return ""
     var cb = homeDir + "/.local/share/chatterbox-tts"
     return "exec " + cb + "/speak-clone --ref " + cb + "/voices/" + name + ".wav --exag 0.5 --cfg 0.5"
   }
+  // The bare pipeline is what the picker and setup-voice wrote before
+  // v1.21.2 wrapped it; ttsCmdSafe still takes it from a saved setting.
+  function piperPipe(name, rate) {
+    if (!piperNameOk(name) || !piperRateOk(rate)) return ""
+    return homeDir + "/.local/share/piper-tts/venv/bin/piper -m " + homeDir + "/.local/share/piper-voices/" + name
+      + ".onnx --output-raw 2>/dev/null | aplay -q -t raw -r " + rate + " -f S16_LE -c 1 -"
+  }
   function piperCmd(name, rate) {
-    return "trap 'kill $! 2>/dev/null' TERM; " + homeDir + "/.local/share/piper-tts/venv/bin/piper -m " + homeDir + "/.local/share/piper-voices/" + name
-      + ".onnx --output-raw 2>/dev/null | aplay -q -t raw -r " + rate + " -f S16_LE -c 1 - & wait $!"
+    var p = piperPipe(name, rate)
+    return p === "" ? "" : "trap 'kill $! 2>/dev/null' TERM; " + p + " & wait $!"
+  }
+  // A tts string that starts the way piperCmd, cloneCmd or setup-voice start
+  // theirs was built from a voice file's name, so it runs only in exactly the
+  // shape they build, from a name and rate the checks above pass. That covers
+  // a string saved before v1.55.2 from a voice whose filename carried shell
+  // syntax, and the same string coming back out of ttsSaved (#6429). A clone
+  // keeps its --exag/--cfg/--pitch/--tempo numbers, which are yours to tune
+  // (warm-voice says to rerun it after you do). Any other `set tts` command
+  // is your own and runs as you wrote it.
+  function ttsCmdSafe(cmd) {
+    if (typeof cmd !== "string") return true
+    var trap = "trap 'kill $! 2>/dev/null' TERM; "
+    var pp = homeDir + "/.local/share/piper-tts/venv/bin/piper -m " + homeDir + "/.local/share/piper-voices/"
+    var start = cmd.indexOf(trap + pp) === 0 ? trap + pp : cmd.indexOf(pp) === 0 ? pp : ""
+    if (start !== "") {
+      var mid = ".onnx --output-raw 2>/dev/null | aplay -q -t raw -r "
+      var rest = cmd.slice(start.length), i = rest.indexOf(mid)
+      if (i < 0) return false
+      var name = rest.slice(0, i), after = rest.slice(i + mid.length)
+      var rate = after.slice(0, Math.max(after.indexOf(" "), 0))
+      return cmd === piperCmd(name, rate) || cmd === piperPipe(name, rate)
+    }
+    var cp = "exec " + homeDir + "/.local/share/chatterbox-tts/speak-clone --ref " + homeDir + "/.local/share/chatterbox-tts/voices/"
+    if (cmd.indexOf(cp) === 0) {
+      var r = cmd.slice(cp.length), j = r.indexOf(".wav")
+      return j > 0 && cloneNameOk(r.slice(0, j))
+          && /^(?: --(?:exag|cfg|pitch|tempo) [0-9]+(?:\.[0-9]+)?)*$/.test(r.slice(j + 4))
+    }
+    return true
   }
   // The tts value, as a name: "off", "robot" (espeak), "george", a clone or
   // piper name, or "custom" for any other command string. A clone keeps its
@@ -497,9 +545,10 @@ Item {
     if (!ttsOn) return "off"
     if (typeof ttsSetting !== "string") return "robot"
     if (ttsSetting === georgeCmd) return "george"
+    if (!ttsCmdSafe(ttsSetting)) return "custom" // never run, so never a voice by name
     var m = ttsSetting.match(/speak-clone .*--ref \S*\/([A-Za-z0-9_-]+)\.wav/)
     if (m) return m[1]
-    m = ttsSetting.match(/\/piper -m \S*\/([A-Za-z0-9_.-]+)\.onnx/)
+    m = ttsSetting.match(/\/piper -m \S*\/((?:[A-Za-z0-9_.-]|[^\x00-\x7f])+)\.onnx/)
     if (m) return m[1]
     var ds = voiceInv.dropins || []
     for (var i = 0; i < ds.length; i++) if (ds[i].cmd === ttsSetting) return ds[i].name
@@ -518,6 +567,10 @@ Item {
     for (i = 0; i < ds.length; i++) if (opts.indexOf(ds[i].name) === -1) opts.push(ds[i].name)
     if (currentVoiceId === "custom" || String(setting("ttsSaved", "") || "") !== "") opts.push("custom")
     return opts
+  }
+  // voice-scan already skips these, so this answers only a stale inventory.
+  function unsafeVoice(id) {
+    return id + " isn't used: its file's name (or a piper voice's sample rate) holds characters he won't put in a shell command — rename it to letters, digits, _ . - only (#6429)"
   }
   // One resolver behind the menu picker and IPC `useVoice`: a name in, the
   // right tts/ttsSaved write out, an agent-first reply either way. Leaving a
@@ -555,6 +608,7 @@ Item {
     if ((voiceInv.clones || []).indexOf(id) !== -1) {
       if (!voiceInv.gpu) return id + " is a clone, and clones synthesize on an NVIDIA GPU — none found here"
       changes.tts = cloneCmd(id)
+      if (changes.tts === "") return root.unsafeVoice(id)
       if (!setSettings(changes)) return root.writeFail()
       return "ok — the " + id + " clone (the book is pre-rendered for him in the background if it wasn't already)"
     }
@@ -562,6 +616,7 @@ Item {
     for (var i = 0; i < ps.length; i++) {
       if (ps[i].name !== id) continue
       changes.tts = piperCmd(id, ps[i].rate)
+      if (changes.tts === "") return root.unsafeVoice(id)
       if (!setSettings(changes)) return root.writeFail()
       return "ok — " + id + " (piper)"
     }
@@ -1968,10 +2023,20 @@ Item {
     // replacement line finds `ducked` already true and skips straight to
     // the engine.
     duckRelease.stop() // a line inside the release window keeps the duck
+    if (!ttsCmdSafe(ttsSetting)) { refuseTts(); return } // no duck for a line that won't play
     // Ducking off skips the fork entirely; a duck already held (the
     // setting flipped mid-window) still gets its restore via duckStop.
     if (!ducked && duckOn) { ducked = true; duckRun("start"); return }
     launchTts()
+  }
+  // What a tts string ttsCmdSafe turns down gets: no bash, the duck let go,
+  // one journal line per setting, and `voice` saying why.
+  function refuseTts() {
+    ttsQueued = ""
+    duckRelease.restart()
+    if (ttsWarned) return
+    ttsWarned = true
+    console.warn("clippy: tts not run — it starts like a piper or clone command the picker builds but isn't one, so a voice file's name may carry shell syntax (#6429); useVoice <name> rebuilds it: " + ttsSetting)
   }
   function launchTts() {
     // Always through bash: bash itself always starts, so a missing engine is
@@ -1982,6 +2047,9 @@ Item {
     var cmd = typeof ttsSetting === "string" ? ttsSetting
             : "exec espeak-ng -v '" + (mood === "dead" ? "en+whisper" : ttsVoice)
               + "' -s " + ttsSpeed + " -p " + ttsPitch + " -a " + Math.round(voiceVolume * 100)
+    // Checked here too, where bash starts: the setting can change while the
+    // duck runs ahead of this.
+    if (!ttsCmdSafe(ttsSetting)) { refuseTts(); return }
     // The clone knobs ride here, not in the stored string. Appended last,
     // so on a hand-set command that already carries the flags these win
     // (argparse keeps the final occurrence).
@@ -2985,7 +3053,9 @@ Item {
                ? "espeak-ng: not installed — silent (sudo pacman -S espeak-ng, or set tts to a shell command)"
                : "espeak-ng: ready — " + root.ttsVoice + ", " + root.ttsSpeed + " wpm, pitch " + root.ttsPitch
                  + " (a better voice: docs/voice.md installs one, scripts/setup-voice in the plugin dir then points him at it)")
-      if (root.ttsWarned) s += "; failing, see journal"
+      if (!root.ttsCmdSafe(root.ttsSetting))
+        s += "; not run: it starts like a piper or clone command the picker builds but isn't one, so a voice file's name may carry shell syntax — useVoice <name> rebuilds it"
+      else if (root.ttsWarned) s += "; failing, see journal"
       if (ttsProc.running) s += "; speaking"
       s += root.duckOn
         ? "; other audio ducks to " + Math.round(root.duckFactor * 100) + "% of its volume while he talks"
