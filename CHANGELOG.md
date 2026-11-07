@@ -1,5 +1,10 @@
 # Changelog
 
+## v1.55.3
+
+- **A clone voice set up before v1.54.3 is stopped whole now, not just its daemon.** v1.55.2 stopped the old daemon but left the old `speak-clone` able to run, and one from before v1.54.1 sends the line and your sample's path to whatever holds its socket without checking who that is. With no `$XDG_RUNTIME_DIR`, that socket is at a fixed path in `/tmp` another account could claim first. He stops both now, and those clones leave the picker, until you rerun `scripts/setup-voice --clone`. Your journal says so on every start.
+- A clone line that arrives while he's still starting up waits for that check.
+
 ## v1.55.2
 
 - A voice file whose name holds shell syntax is no longer offered. Picking a piper model or a clone in the menu builds the command he speaks through out of that file's name, so a model you downloaded from somewhere, named to carry a command, would have run it the moment you picked it. The picker now skips a voice whose name has anything but letters, digits, `_`, `.` and `-` (a clone's has no dots), and a piper voice whose sample rate isn't a whole number. Rename the file and it's back.
