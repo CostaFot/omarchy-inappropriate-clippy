@@ -26,6 +26,7 @@ os.umask(0o077)
 CACHE = os.path.expanduser("~/.cache/clippy-voice")
 VOICES = os.path.expanduser("~/.local/share/chatterbox-tts/voices")
 DAEMON = os.path.expanduser("~/.local/share/chatterbox-tts/daemon.py")
+CLIENT = os.path.expanduser("~/.local/share/chatterbox-tts/speak-clone")
 
 # A cache from before v1.54.3 is 0755 with 0644 renders in it, agent lines
 # never said included. Close the dir, then each file. Every run does it,
@@ -46,25 +47,35 @@ def close(path):
         except OSError:
             pass  # pruned or replaced under us; the next run gets it
 
-# setup-voice writes the daemon once and nothing here replaces it. One from
-# before v1.54.3 can fetch the model at whatever `main` is, doesn't check who
-# is on its socket and leaves its renders open, and every clone line starts
-# it. So it loses its exec bit, which stops that speak-clone and this script
-# alike, until setup-voice writes a current one.
-def old_daemon():
+# setup-voice writes the daemon and its client once and nothing here replaces
+# them. A daemon from before v1.54.3 can fetch the model at whatever `main` is,
+# doesn't check who is on its socket and leaves its renders open. A client from
+# before v1.54.1 hands the line and the sample's path to whoever holds the
+# socket, and with no $XDG_RUNTIME_DIR that's a fixed path in /tmp any account
+# can bind first; one from before v1.54.3 leaves its renders open. One run
+# writes both, so they're judged together and both lose their exec bit, until
+# setup-voice writes a current pair. Bash then can't start the client, whatever
+# the daemon's state, and voice-scan stops offering its clones.
+def current(path, marks):
     try:
-        with open(DAEMON) as f:
+        with open(path, encoding="utf-8", errors="replace") as f:
             text = f.read()
     except OSError:
-        return False  # no clone voice here
-    return not all(s in text for s in ("MODEL_REV", "SO_PEERCRED", "os.umask(0o077)"))
+        return True  # no clone voice here
+    return all(s in text for s in marks)
 
 def seal():
     close(CACHE)
     close(VOICES)
-    if old_daemon():
-        os.chmod(DAEMON, 0o644)
-        sys.exit("the clone daemon is from before v1.54.3, so it won't be started: rerun scripts/setup-voice --clone")
+    if current(DAEMON, ("MODEL_REV", "SO_PEERCRED", "os.umask(0o077)")) \
+            and current(CLIENT, ("SO_PEERCRED", "os.umask(0o077)")):
+        return
+    for path in (DAEMON, CLIENT):
+        try:
+            os.chmod(path, 0o644)
+        except FileNotFoundError:
+            pass
+    sys.exit("the clone voice is from before v1.54.3, so it won't be started: rerun scripts/setup-voice --clone")
 
 if sys.argv[1:] == ["--seal"]:
     seal()

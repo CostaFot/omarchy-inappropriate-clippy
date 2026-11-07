@@ -1973,6 +1973,7 @@ Item {
   property string ttsLine: ""    // what the running process is speaking
   property string ttsQueued: ""  // spoken once the old process has died
   property bool ttsWarned: false // one journal line per engine, not per quote
+  property bool ttsAwaitsSeal: false // a clone line parked until sealProc exits
   function syncSpeech() {
     if (ttsOn && opened && bubble.shown && bubble.text !== "" && !bubble.silent) {
       if (ttsLine === bubble.text && (ttsProc.running || ttsQueued !== "")) return
@@ -2050,6 +2051,9 @@ Item {
     // Checked here too, where bash starts: the setting can change while the
     // duck runs ahead of this.
     if (!ttsCmdSafe(ttsSetting)) { refuseTts(); return }
+    // A clone line that beats the mount's seal waits for it: the seal is
+    // what stops a client too old to trust (scripts/warm-voice).
+    if (cloneKnobsApply && sealProc.running) { ttsAwaitsSeal = true; return }
     // The clone knobs ride here, not in the stored string. Appended last,
     // so on a hand-set command that already carries the flags these win
     // (argparse keeps the final occurrence).
@@ -2212,7 +2216,7 @@ Item {
   // off before v1.54.3 left its renders, agent lines never said included,
   // readable by other accounts, and the warms above only run for a clone.
   // So every mount closes it, whatever the voice is; with no cache it's a
-  // no-op.
+  // no-op. A clone install too old to trust gets stopped here too.
   Process {
     id: sealProc
     command: [root.pluginDir + "/scripts/warm-voice", "--seal"]
@@ -2220,6 +2224,10 @@ Item {
     onExited: function (code) {
       if (code !== 0)
         console.warn("clippy: voice seal (exit " + code + "): " + String(sealErr.text).trim())
+      if (!root.ttsAwaitsSeal) return
+      root.ttsAwaitsSeal = false
+      if (root.ttsLine === "") duckRelease.restart()
+      else if (!ttsProc.running) root.launchTts()
     }
     Component.onCompleted: running = true
   }

@@ -1107,8 +1107,9 @@ is one opaque string and ignores all three (clones bend via
   warm-voice is the one that matters for existing installs: it ships
   with the plugin, so it is current the moment the plugin is, while the
   installed client and daemon stay whatever age they were until
-  `setup-voice --clone` reruns (a daemon from before v1.54.3 loses its
-  exec bit on mount, since v1.55.2, so it can't be started). Its warms only run for a clone voice, and
+  `setup-voice --clone` reruns (an install with a daemon or client from
+  before v1.54.3 has both lose their exec bit on mount, since v1.55.3, so
+  neither can be started and voice-scan stops offering its clones). Its warms only run for a clone voice, and
   a cache outlives the voice that filled it (the seventh #6429 block: a
   user who switched voice or turned it off before upgrading kept the
   open cache), so since v1.54.4 `sealProc` in Clippy.qml runs
@@ -1331,6 +1332,10 @@ stays free text — IPC and agent only.
   plain `ok`, stores 5, `get` returns 5; the clamp happens only at the
   property binding (`clamp()` on size/speed/restless, `Math.max` on the
   intervals/respawn/slapsToKill). Known gap, stated in scripting.md.
+- `node tests/voice-seal.mjs` is the regression for a clone install too old to
+  trust: the real v1.54.0 and v1.54.2 daemon and client out of their tags, the
+  current pair from this tree, a stand-in on the socket, and the real launch
+  string through bash. It needs the tags.
 - `node tests/voice-names.mjs` is the regression for a voice file's name
   carrying a command (#6429): a fake HOME, the real voice-scan, the real
   builders cut out of Clippy.qml, and bash running the old strings.
