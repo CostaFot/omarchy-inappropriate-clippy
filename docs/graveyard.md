@@ -11,8 +11,9 @@ omarchy-shell costafot.clippy set leaderboard yourname
 ```
 
 What leaves your machine: that alias (or your handle) and small kill/slap
-counts, POSTed when you slap or kill him. Nothing else — no hostname, no
-install ID, no usage data, no cookies. The server stores only handles and
+counts, POSTed when you slap or kill him, plus an empty POST when he starts or
+wakes up, which is how he gets your rank back. The request names the plugin's
+version. Nothing else — no hostname, no install ID, no cookies. The server stores only handles and
 counts; like any web request it sees your IP in transit, and keeps nothing
 of it. Don't want even that? The menu's "Online leaderboard" row toggles the
 posting off, or:

@@ -116,7 +116,7 @@ finds the stupidest thing to comment on it hopefully.
 
 **Leaves your machine:**
 - those facts, to your own coding agent, nowhere else
-- never your files — he doesn't read them
+- no file contents — he counts your most-typed shell command and dates your last commit, that's it
 - a screenshot of your screen only when you ask for the verdict
 - the mic is transcribed locally; only the text goes out
 
@@ -143,7 +143,8 @@ A public leaderboard with how many times clippy has been killed/slapped. Half th
 **Leaves your machine:**
 - one alias shared by every install, or a handle you claim
 - small kill/slap counts, when you slap or kill him
-- no hostname, no install ID, no usage data
+- an empty post when he starts or wakes up, to get your rank back
+- no hostname, no install ID
 - `set leaderboard off` and nothing is sent
 
 Read the source code.
@@ -169,14 +170,17 @@ omarchy plugin remove costafot.clippy   # when you've had enough
 
 **Is there telemetry?**
 
-The kill/slap counts are logged to the graveyard. Shared alias, so
+The kill/slap counts are logged to the graveyard, and he checks in
+with it when he starts or wakes up to get your rank. Shared alias, so
 nobody knows it's you. `set leaderboard off` to disable it. That's
-it — no hostname, no install ID, no usage data.
+it — no hostname, no install ID.
 
 **Does he read my files?**
 
-No. With `ai` off nothing about what you're doing leaves the machine. With it on, your window
-titles and stuff like that go to your own coding agent. Read the source.
+Barely. With `ai` on he counts your most-typed shell command out of your history and dates
+your last commit out of `.git` in `~/Work`. With `ai` off nothing about what you're doing
+leaves the machine. With it on, your window titles and stuff like that go to your own coding
+agent. Read the source.
 
 **Can I make him nicer?**
 
