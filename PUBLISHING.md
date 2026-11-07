@@ -67,8 +67,11 @@ A **tenth block** came on 2026-10-25, a voice filename reaching `bash -c`.
 The fix was done on `next` by the 29th but never pushed, so nothing answered
 the comment, and the marketplace's sweep closed #6429 on 2026-11-02 under its
 7-day response rule. An author can't reopen a maintainer's close, so
-**v1.55.2** went in on a **new Verify request, #14282**, not a retarget,
-and `main` is frozen at `f958b93` while it is open.
+**v1.55.2** went in on a **new Verify request, #14282**, not a retarget.
+HANCORE-linux answered within the hour with one Medium finding: the seal
+stopped an old daemon but not the old `speak-clone` beside it. **v1.55.3**
+closes both, #14282 is retargeted to it, and `main` is frozen at `7c5010e`
+while it is open.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
@@ -840,3 +843,14 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   minutes: validation passed at `f958b93`, baseline amber with the same
   four capabilities and no findings. `main` is frozen at `f958b93` while
   it is open. Reply to any review comment inside seven days.
+- 2026-11-07: **HANCORE-linux's first comment on #14282**, 30 minutes after
+  the reply, one Medium at `f958b93`: `warm-voice` sealed an old `daemon.py`
+  but `speak-clone` ran anyway, and one from before v1.54.1 sends the line
+  and sample path to whoever holds the socket, in `/tmp` when
+  `$XDG_RUNTIME_DIR` is unset. True of this box's own client. **v1.55.3**
+  (`7c5010e`) judges the pair together and closes both, a clone line that
+  beats the mount's seal waits for it, and `tests/voice-seal.mjs` runs the
+  real v1.54.0 and v1.54.2 clients (37 of 85 checks fail on `f958b93`).
+  Target edited and the reply posted the same evening; the bots rewrote
+  their two comments in place: validation passed at `7c5010e`, baseline
+  amber with the same four capabilities and no findings.
