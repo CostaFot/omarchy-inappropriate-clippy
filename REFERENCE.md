@@ -583,7 +583,8 @@ Design rules that outrank any single feature:
   memory ≥85%, uptime >3 days, disk ≥85%, coredumps today, failed units,
   live mic, agent usage only ≥50%); and a shame pool where each fact
   self-gates on notability (days since pacman -Syu, package/orphan
-  count, dirty repos and commit drought in `~/Work`, most-typed history
+  count, commit drought in `~/Work` (out of `.git/logs/HEAD`, never by
+  running git, which obeys a repo's own config), most-typed history
   command, workspace and browser-tab counts) and `shuf -n 3` of the
   survivors go in — so `--context` is one random draw and batches don't
   converge on one stat (keep ≥7 candidates in the pool or the draw stops
@@ -1106,7 +1107,8 @@ is one opaque string and ignores all three (clones bend via
   warm-voice is the one that matters for existing installs: it ships
   with the plugin, so it is current the moment the plugin is, while the
   installed client and daemon stay whatever age they were until
-  `setup-voice --clone` reruns. Its warms only run for a clone voice, and
+  `setup-voice --clone` reruns (a daemon from before v1.54.3 loses its
+  exec bit on mount, since v1.55.2, so it can't be started). Its warms only run for a clone voice, and
   a cache outlives the voice that filled it (the seventh #6429 block: a
   user who switched voice or turned it off before upgrading kept the
   open cache), so since v1.54.4 `sealProc` in Clippy.qml runs
@@ -1329,6 +1331,9 @@ stays free text — IPC and agent only.
   plain `ok`, stores 5, `get` returns 5; the clamp happens only at the
   property binding (`clamp()` on size/speed/restless, `Math.max` on the
   intervals/respawn/slapsToKill). Known gap, stated in scripting.md.
+- `node tests/voice-names.mjs` is the regression for a voice file's name
+  carrying a command (#6429): a fake HOME, the real voice-scan, the real
+  builders cut out of Clippy.qml, and bash running the old strings.
 - Test harnesses that worked: widget avoidance = `set restless 1` and
   screenshot pairs against `omarchy-shell shell debugBarGeometry` (same
   coordinate space as stage x) — his exact x comes out of a `grim` with

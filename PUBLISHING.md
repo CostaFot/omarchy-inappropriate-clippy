@@ -63,6 +63,11 @@ reply into an unbounded collector in the shell's memory. The answer is
 **v1.55.1**, this commit: curl stops at 64 KiB (`--max-filesize`) and an
 oversized reply takes the ordinary failure path. #6429 gets retargeted
 again, and `main` is frozen here from then on.
+A **tenth block** came on 2026-10-25, a voice filename reaching `bash -c`.
+The fix was done on `next` by the 29th but never pushed, so nothing answered
+the comment, and the marketplace's sweep closed #6429 on 2026-11-02 under its
+7-day response rule. An author can't reopen a maintainer's close, so
+**v1.55.2** goes in on a **new Verify request**, not a retarget.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
@@ -132,6 +137,11 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
    is already unverified, holding a fix off `main` buys nothing and
    costs every new install — which is why v1.50.1 was released into
    exactly that state.
+   **A review comment has seven days.** A maintainer comment with no
+   contributor reply for a week gets the Verify issue closed by a sweep
+   (2026-11-02, dozens of issues in one run, #6429 among them), and
+   GitHub won't let the author reopen it. Reply inside the week, even
+   if the release isn't ready.
 6. **`main` is the marketplace.** Local and remote `main` sit exactly on
    the last release tag and move only at release time; everything in
    between is committed on the `next` branch (pushed freely — the
@@ -782,3 +792,42 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   nor once restored from `ttsSaved`; a safe piper voice still listed,
   built and passed the gate. `tts` and `ttsSaved` put back as they were,
   `omarchy-plugin-validate` exit 0.
+
+- 2026-11-02: **#6429 closed unapproved** by HANCORE-linux at 09:41Z, state
+  reason "not planned", under the 7-day response rule: the tenth block sat
+  a week with no reply, because v1.55.2 was finished on `next` on 10-29 and
+  never pushed. It was a sweep, not a verdict; the same run closed dozens
+  of Verify issues. The closing note says to reopen or submit an updated
+  request once the review points are addressed. `viewerCanReopen` is false
+  for Costa, so it's a new request.
+
+- 2026-11-07: **v1.55.2 grew before it was released.** The block's own ask
+  for a regression had nothing in the tree, so `tests/voice-names.mjs` went
+  in: a fake HOME, the real voice-scan, the builders cut out of Clippy.qml,
+  and bash running the old picker's strings, with a control that the
+  payloads fire without the gate. 138 checks, and it fails on `43cf733`.
+  A read-only self-audit of the whole tree, written to find the next block
+  first, turned up these, all fixed here and each checked in a scratch HOME:
+  `clippy-ai` ran `git status`/`git log` in every `~/Work` repo, and git
+  obeys that repo's `.git/config` (`core.fsmonitor` fired under the old
+  script, not the new one), so the last commit's date now comes out of
+  `.git/logs/HEAD` and the uncommitted-changes jab is gone; the agent's
+  reply had no cap (block 9's shape), now `head -c 65536` plus a cut to the
+  count asked for and 280 characters a line; the agent's cwd was `/tmp`,
+  now the 0700 `$priv`; clone samples were 0644 in a 0755 dir, `seal()` now
+  closes them; a `daemon.py` from before v1.54.3 was never replaced and
+  every clone line started it, so `seal()` clears its exec bit and says to
+  rerun setup-voice (the three strings it looks for are the fixes of
+  v1.53.0, v1.54.1 and v1.54.3); `warmBook` and `warmAgentLines` skipped
+  `ttsCmdSafe`; setup-voice took an unchecked voice or clone name into its
+  `bash -c "$CMD"` and piper_pins' regex, and an unchecked rate;
+  AgentBrain logged a short batch's raw lines to the journal; BarWidget put
+  the screen name in a shell string; and the docs said "nothing else" about
+  the graveyard while it POSTs empty on every mount and wake (for the
+  rank), and "he doesn't read your files" while the agent context counts
+  shell history. The docs now say so. Live after `omarchy restart shell`:
+  mounts clean, `voice` answers, this box's old daemon lost its exec bit
+  with the journal line, samples 0700/0600. Left alone on purpose: the
+  picker offers a Piper model with no digest check. The reviewer named
+  that path on 10-25 and asked only about the filename, and gating it
+  takes away a model you trained or were sent. COS has the issue.

@@ -4,6 +4,14 @@
 
 - A voice file whose name holds shell syntax is no longer offered. Picking a piper model or a clone in the menu builds the command he speaks through out of that file's name, so a model you downloaded from somewhere, named to carry a command, would have run it the moment you picked it. The picker now skips a voice whose name has anything but letters, digits, `_`, `.` and `-` (a clone's has no dots), and a piper voice whose sample rate isn't a whole number. Rename the file and it's back.
 - A voice set from such a file before this version is never run. He stays quiet, `voice` says why, and picking the renamed voice sets it right.
+- `scripts/setup-voice` takes the same plain names, for a voice and for a clone.
+- He doesn't run git in your repos any more. git obeys a repo's own `.git/config`, so a folder unpacked into `~/Work` with a config of its own could have run a command the next time he gathered agent lines. He reads the date of your last commit out of `.git` himself now. The uncommitted-changes jab is gone, since that one needs git.
+- What your agent sends back is capped: 64 KiB off the wire, then only as many lines as he asked for, 280 characters each.
+- Your agent now starts in a private directory instead of `/tmp`, where any account on the machine can leave files.
+- A clone's voice samples are owner-only now, closed whenever he starts, since one can be your own voice.
+- **A clone voice set up before v1.54.3 stops working until you rerun `scripts/setup-voice --clone`.** Its daemon was written once and never replaced, and that old one could fetch the model at whatever version was newest, so he won't start it. Your journal says so on every start until you rerun it.
+- A short batch from your agent no longer writes its lines to the journal.
+- The docs now say what the graveyard already did: he sends it an empty post when he starts or wakes up, to get your rank back.
 
 ## v1.55.1
 
