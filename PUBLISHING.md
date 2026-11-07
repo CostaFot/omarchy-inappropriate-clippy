@@ -67,7 +67,8 @@ A **tenth block** came on 2026-10-25, a voice filename reaching `bash -c`.
 The fix was done on `next` by the 29th but never pushed, so nothing answered
 the comment, and the marketplace's sweep closed #6429 on 2026-11-02 under its
 7-day response rule. An author can't reopen a maintainer's close, so
-**v1.55.2** goes in on a **new Verify request**, not a retarget.
+**v1.55.2** went in on a **new Verify request, #14282**, not a retarget,
+and `main` is frozen at `f958b93` while it is open.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
@@ -831,3 +832,11 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   picker offers a Piper model with no digest check. The reviewer named
   that path on 10-25 and asked only about the filename, and gating it
   takes away a model you trained or were sent. COS has the issue.
+
+- 2026-11-07: **v1.55.2 released at `f958b93` and #14282 filed at it**, the
+  form as on #6429 with the new Target. The form has no notes field, so the
+  first comment names #6429, answers the block's three asks with file and
+  line, and lists the rest of the diff flatly. The bots ran within two
+  minutes: validation passed at `f958b93`, baseline amber with the same
+  four capabilities and no findings. `main` is frozen at `f958b93` while
+  it is open. Reply to any review comment inside seven days.
