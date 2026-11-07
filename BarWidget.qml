@@ -38,7 +38,7 @@ BarWidget {
     if (clippy) { clippy.showMenuAt(p.x, win ? win.screen : null); return }
     // Panel unreachable (the facade) or not mounted yet: IPC, with the same
     // two facts, so the card still lands under this icon on this screen.
-    var screen = win && win.screen ? String(win.screen.name || "") : ""
+    var screen = win && win.screen ? String(win.screen.name || "").replace(/[^A-Za-z0-9_.-]/g, "") : ""
     if (bar) bar.run("omarchy-shell costafot.clippy showMenuAt " + Math.round(p.x) + " " + screen)
   }
 

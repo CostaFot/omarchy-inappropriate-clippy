@@ -7,9 +7,9 @@ done to him lately (slaps, drags, the odd murder), and anything currently
 embarrassing — a dying battery, an uptime or a pacman sync measured in weeks,
 a program that dumped core today, a live microphone, more than half your
 agent plan gone. Plus a random few draws from the shame pool: how long since
-your last pacman sync, the package count, repos in `~/Work` with uncommitted
-changes (names included), your most-typed shell command, the workspace and
-browser tab counts. He never digs through your folders — no Downloads
+your last pacman sync, the package count, how long since your last commit in
+`~/Work` (read out of `.git`, he doesn't run git there), your most-typed shell
+command, the workspace and browser tab counts. He never digs through your folders — no Downloads
 inventory, no screenshot hoard, no trash. He hands all of it to your coding
 agent as text and asks for five lines in his voice, with a handful of lines
 from the book (and your `quotesFile`) as examples of how far to go. They're

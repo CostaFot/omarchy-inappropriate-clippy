@@ -241,20 +241,19 @@ if ! $minimal; then
     fi
   fi
 
-  if command -v git >/dev/null && [[ -d $HOME/Work ]]; then
-    dirty=0 dirtyname="" newest=0
-    for g in "$HOME/Work"/*/.git; do
-      [[ -e $g ]] || continue
-      r=${g%/.git}
-      if [[ -n $(git -C "$r" status --porcelain 2>/dev/null | head -1) ]]; then
-        ((dirty += 1))
-        dirtyname=${r##*/}
-      fi
-      ct=$(git -C "$r" log -1 --format=%ct 2>/dev/null)
-      [[ -n $ct ]] && ((ct > newest)) && newest=$ct
+  # Read out of the reflog by hand, never by running git here: git runs what
+  # a repo's own .git/config tells it to (core.fsmonitor, filters,
+  # gpg.program), and a folder unpacked into ~/Work brings its own config.
+  # awk's +0 keeps whatever is in that file a number before bash does sums
+  # with it. "Has uncommitted changes" needs git to read the worktree, so it
+  # is gone.
+  if [[ -d $HOME/Work ]]; then
+    newest=0
+    for g in "$HOME/Work"/*/.git/logs/HEAD; do
+      [[ -r $g && -f $g ]] || continue
+      ct=$(tail -n 500 "$g" | awk -F'\t' '$2 ~ /^commit/ { n = split($1, f, " "); if (f[n - 1] + 0 > t) t = f[n - 1] + 0 } END { print t + 0 }')
+      ((ct > newest)) && newest=$ct
     done
-    ((dirty == 1)) && shame "their $dirtyname repo has uncommitted changes"
-    ((dirty > 1)) && shame "$dirty of their git repos have uncommitted changes ($dirtyname, for one)"
     if ((newest > 0)); then
       cdays=$(( ($(date +%s) - newest) / 86400 ))
       ((cdays >= 3)) && shame "last git commit anywhere: $cdays days ago"
@@ -539,10 +538,14 @@ run_agent() {
   esac
 }
 
-# A neutral working directory: no CLAUDE.md / AGENTS.md / .codex to pick up.
-cd "${TMPDIR:-/tmp}" || exit 1
+# A neutral working directory: no CLAUDE.md / AGENTS.md / .codex to pick up,
+# and our own 0700 one, where any local account can plant files in /tmp.
+cd "$priv" || exit 1
 
-raw=$(run_agent 2>/dev/null) || {
+# What comes back lands in a StdioCollector in the shell's own memory, so it
+# is capped like the graveyard's reply. A batch of jabs is a few hundred
+# bytes; past 64 KiB the agent gets SIGPIPE and this is the failure below.
+raw=$(run_agent 2>/dev/null | head -c 65536) || {
   echo "clippy-ai: $agent failed or timed out" >&2
   exit 4
 }
@@ -562,6 +565,10 @@ if [[ -z $lines || $lines == "[]" ]]; then
   lines=$(printf '%s' "$raw" | tr -d '\r' | sed -e '/^```/d' -e 's/^[-*0-9.)]*[[:space:]]*//' -e 's/^"\(.*\)"$/\1/' \
     | grep -v '^[[:space:]]*$' | jq -R . | jq -sc '.')
 fi
+
+# The prompt's 140 characters is a request, not a cap. This is the cap: no
+# more lines than were asked for, and a runaway one cut short.
+[[ -n $lines ]] && lines=$(printf '%s' "$lines" | jq -c --argjson n "$count" '.[:$n] | map(.[:280])' 2>/dev/null)
 
 if [[ -z $lines || $lines == "[]" ]]; then
   echo "clippy-ai: $agent answered, but not with lines" >&2

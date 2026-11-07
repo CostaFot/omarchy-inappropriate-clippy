@@ -157,7 +157,7 @@ Item {
       store.failures = 0
       store.lastError = ""
       if (lines.length < brain.batch)
-        console.warn("clippy: asked " + brain.agent + " for " + brain.batch + " lines, got " + lines.length + ": " + String(out.text).trim())
+        console.warn("clippy: asked " + brain.agent + " for " + brain.batch + " lines, got " + lines.length)
       var keep = brain.fresh()
       store.lines = keep.concat(lines)
       store.madeAt = Date.now()
