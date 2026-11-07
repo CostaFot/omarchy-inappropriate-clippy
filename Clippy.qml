@@ -2146,7 +2146,7 @@ Item {
   // warmed, so that resolves itself in seconds.
   property var warmQueued: []
   function warmAgentLines(lines) {
-    if (!ttsOn || typeof ttsSetting !== "string" || ttsSetting.indexOf("speak-clone") === -1) return
+    if (!ttsOn || typeof ttsSetting !== "string" || ttsSetting.indexOf("speak-clone") === -1 || !ttsCmdSafe(ttsSetting)) return
     if (warmProc.running) { warmQueued = warmQueued.concat(lines); return }
     // The lines go in on stdin, not the command line: /proc/<pid>/cmdline
     // is readable by every local account.
@@ -2172,7 +2172,7 @@ Item {
   function warmBook() {
     var cmd = ttsSetting
     if (warmBookProc.running) { warmBookSuperseded = true; warmBookProc.running = false }
-    if (typeof cmd !== "string" || cmd.indexOf("speak-clone") === -1) return
+    if (typeof cmd !== "string" || cmd.indexOf("speak-clone") === -1 || !ttsCmdSafe(cmd)) return
     warmBookProc.command = [pluginDir + "/scripts/warm-voice", "--tts", cmd]
     warmBookProc.running = true
   }
@@ -2219,7 +2219,7 @@ Item {
     stderr: StdioCollector { id: sealErr }
     onExited: function (code) {
       if (code !== 0)
-        console.warn("clippy: voice cache seal failed (exit " + code + "): " + String(sealErr.text).trim())
+        console.warn("clippy: voice seal (exit " + code + "): " + String(sealErr.text).trim())
     }
     Component.onCompleted: running = true
   }
