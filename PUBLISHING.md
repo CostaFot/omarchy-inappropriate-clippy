@@ -71,7 +71,9 @@ the comment, and the marketplace's sweep closed #6429 on 2026-11-02 under its
 HANCORE-linux answered within the hour with one Medium finding: the seal
 stopped an old daemon but not the old `speak-clone` beside it. **v1.55.3**
 closes both, #14282 is retargeted to it, and `main` is frozen at `7c5010e`
-while it is open.
+while it is open. The 11-14 review confirmed that fix and kept approval
+blocked on the graveyard's default, engine and agent provenance and limits,
+and asset rights. Answered on 11-16 with no code change, by Costa's call.
 `main` moved to **v1.50.1** on 2026-09-11 regardless, released with no
 Verify issue on purpose: the badge had read "update unverified" since
 v1.50.0 landed (see flow step 5), and `omarchy plugin add` clones the
@@ -854,3 +856,21 @@ Marketplace repo: https://github.com/omacom/omarchy-plugin-marketplace
   Target edited and the reply posted the same evening; the bots rewrote
   their two comments in place: validation passed at `7c5010e`, baseline
   amber with the same four capabilities and no findings.
+- 2026-11-14: **HANCORE-linux's second comment on #14282**, at `7c5010e`.
+  The Medium is confirmed fixed. One new Low: the graveyard POSTs on mount
+  and wake by default (opt-out, not opt-in). Approval stays blocked on three
+  things named without a finding: provenance and resource limits for the
+  optional engines and agent, and permission for the third-party assets.
+  Reply due 2026-11-21.
+- 2026-11-16: **replied on #14282**, no code change, Target still `7c5010e`
+  (https://github.com/omacom/omarchy-plugin-marketplace/issues/14282#issuecomment-6923743481).
+  Costa's calls: the graveyard stays on by default, explained with what is
+  sent and what the server keeps (handle, kills, slaps, last update; no IP
+  in the app), and the Low is accepted. The assets are stated as
+  unlicensed: the sprites and Rubick as parody, the four sounds with no
+  recorded source, and an offer to replace or remove on a rights holder's
+  request. The limits are listed as they are (agent `timeout 90`, daemon
+  15-minute idle exit and single instance, 120 s client wait, 500 MB
+  cache cap, SIGTERM per replaced line), with no memory or CPU cap. If
+  this stays blocked, the cheap moves are CC0 sounds, an opt-in
+  graveyard, and a `systemd-run --user` scope with MemoryMax.
